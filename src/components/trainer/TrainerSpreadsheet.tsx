@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import * as XLSX from 'xlsx';
 
 const CHECKLIST_ITEMS = [
@@ -253,7 +253,8 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
       // For now, simulate success
       setUploadStatus("success");
       
-      toast.success("Upload gennemført", {
+      toast({
+        title: "Upload gennemført",
         description: "Dokumentet blev uploadet til Google Drive.",
       });
 
@@ -263,8 +264,10 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
       }, 2000);
     } catch (error) {
       setUploadStatus("error");
-      toast.error("Upload fejlede", {
+      toast({
+        title: "Upload fejlede",
         description: "Der opstod en fejl under upload til Google Drive.",
+        variant: "destructive",
       });
     }
   };
