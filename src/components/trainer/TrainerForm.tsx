@@ -100,6 +100,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
   const [confirmed, setConfirmed] = useState(false);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [showInfoDialog, setShowInfoDialog] = useState(false);
+  const [showYesDialog, setShowYesDialog] = useState(false);
 
   const form = useForm<TrainerFormData>({
     resolver: zodResolver(trainerFormSchema),
@@ -117,6 +118,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
     if (!newOpen) {
       setConfirmed(false);
       setSelectedOption(null);
+      setShowYesDialog(false);
     }
     onOpenChange(newOpen);
   };
@@ -130,6 +132,38 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
 
   return (
     <>
+      <AlertDialog open={showYesDialog} onOpenChange={setShowYesDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogDescription className="space-y-4 text-left pt-4">
+              <div className="space-y-2">
+                <p>Tjek i KlubOffice:</p>
+                <a
+                  href="https://kluboffice.dbu.dk/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline hover:no-underline font-medium"
+                >
+                  https://kluboffice.dbu.dk/
+                </a>
+              </div>
+
+              <p>
+                Godkend den nye frivillige (klik på den orange boks øverst til højre: "Anmodninger om holderhverv").
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button onClick={() => {
+              setShowYesDialog(false);
+              setConfirmed(true);
+            }}>
+              Fortsæt
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={showInfoDialog} onOpenChange={setShowInfoDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -230,7 +264,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                 type="button"
                 onClick={() => {
                   if (selectedOption === "yes") {
-                    setConfirmed(true);
+                    setShowYesDialog(true);
                   } else if (selectedOption === "no") {
                     setShowInfoDialog(true);
                   }
