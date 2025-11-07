@@ -44,8 +44,8 @@ Deno.serve(async (req) => {
     // Create a clean filename from trainer name (remove .xlsx extension from fileName)
     const cleanFileName = fileName.replace('.xlsx', '').replace(/[^a-zA-Z0-9_-]/g, '_');
     
-    // For Cloudinary signature - folder and use_filename need to be in alphabetical order
-    const paramsToSign = `folder=${folder}&timestamp=${timestamp}&use_filename=true${apiSecret}`;
+    // For Cloudinary signature - ALL parameters must be included in alphabetical order
+    const paramsToSign = `folder=${folder}&timestamp=${timestamp}&unique_filename=false&use_filename=true${apiSecret}`;
     const signature = await crypto.subtle.digest(
       'SHA-1',
       new TextEncoder().encode(paramsToSign)
