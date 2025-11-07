@@ -178,7 +178,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
       ["Rolle", data.rolle],
       ["Kontaktperson", data.kontaktperson],
       [""],
-      ["Tjek liste"],
+      ["Tjekliste"],
     ];
     
     // Add checklist items
@@ -208,7 +208,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
       <Dialog open={showChecklistDialog} onOpenChange={setShowChecklistDialog}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Tjek liste</DialogTitle>
+            <DialogTitle>Tjekliste</DialogTitle>
             <DialogDescription>
               Marker de opgaver, der er blevet gennemført
             </DialogDescription>
@@ -237,7 +237,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                       {item.label}
                     </label>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Noter - {item.note}
+                      {item.note}
                     </p>
                   </div>
                 </div>
@@ -617,7 +617,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                 className="w-full md:w-auto"
               >
                 <CheckSquare className="mr-2 h-4 w-4" />
-                Tjek liste
+                Tjekliste
               </Button>
             </div>
 
