@@ -130,7 +130,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
           <div className="space-y-6">
             <div className="space-y-4">
               <p className="text-sm">
-                Holdleder skal invitere ny holdkontakt til holdet. Henvis holdleder til siden –{" "}
+                Holdleder skal invitere ny holdkontakt til holdet. Henvis holdleder til siden{" "}
                 <a 
                   href="https://www.mb-boldklub.dk/traener-info/ny-frivillig/" 
                   target="_blank" 
@@ -139,7 +139,6 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                 >
                   https://www.mb-boldklub.dk/traener-info/ny-frivillig/
                 </a>
-                {" "}– før du kan fortsætte med oprettelsen.
               </p>
 
               <div className="space-y-2">
@@ -185,7 +184,9 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                   if (selectedOption === "yes") {
                     setConfirmed(true);
                   } else if (selectedOption === "no") {
-                    toast.error("Du skal først invitere ny holdkontakt før du kan fortsætte.");
+                    toast.error("Du kan ikke fortsætte før holdleder har inviteret ny frivillig som kontakt til holdet. Gå til KlubOffice - https://kluboffice.dbu.dk/ og log på med din bruger. Tjek Den Orange fane i højre hjørne hvor der står \"Anmodninger om holderhverv\". Vælg person og tryk på Godkend anmodning.", {
+                      duration: 10000,
+                    });
                   }
                 }}
                 disabled={!selectedOption}
