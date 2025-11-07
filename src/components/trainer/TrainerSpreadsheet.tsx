@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { Download, X, Upload } from "lucide-react";
+import { Download, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -226,10 +227,87 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
     }
   };
 
-  const handleUploadToDrive = () => {
-    toast.success("Upload til Google Drive", {
-      description: "Funktionen kommer snart.",
-    });
+  const handleUploadToDrive = async () => {
+    try {
+      toast.loading("Uploader til Cloudinary...");
+      
+      // Generate the Excel file as a blob
+      const wb = XLSX.utils.book_new();
+      
+      const excelData: any[][] = [
+        ["Navn/email/telefon/fødselsdato", "Årgang/rolle", "Kontaktperson"],
+        [
+          `${editableData.navn}\n${editableData.email}\n${editableData.telefon}\n${editableData.foedselsdato}`,
+          `${editableData.aargang}\n${editableData.rolle}`,
+          editableData.kontaktperson
+        ],
+        ["", "", ""],
+        ["Opgave", "Status", "Noter"]
+      ];
+      
+      CHECKLIST_ITEMS.forEach(item => {
+        const checklistItem = editableData.checklist[item.id];
+        let status = "";
+        
+        if (checklistItem) {
+          if (checklistItem.status === true && checklistItem.date) {
+            status = `Ja - ${format(new Date(checklistItem.date), "dd/MM/yyyy")}`;
+          } else if (checklistItem.status === false) {
+            status = "Nej";
+          }
+        }
+        
+        excelData.push([item.label, status, item.note]);
+      });
+      
+      const ws = XLSX.utils.aoa_to_sheet(excelData);
+      ws['!cols'] = [{ wch: 45 }, { wch: 20 }, { wch: 80 }];
+      ws['!rows'] = [{ hpt: 20 }, { hpt: 60 }];
+      
+      XLSX.utils.book_append_sheet(wb, ws, "Træner Data");
+      
+      // Convert to base64
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+      const fileName = `traener_${editableData.navn.replace(/\s+/g, '_')}_${format(new Date(), 'dd-MM-yyyy')}.xlsx`;
+      
+      // Call edge function
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session) {
+        toast.error("Du skal være logget ind for at uploade");
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('upload-to-cloudinary', {
+        body: {
+          fileData: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${wbout}`,
+          fileName: fileName,
+          trainerName: editableData.navn
+        }
+      });
+
+      toast.dismiss();
+
+      if (error) {
+        console.error('Upload error:', error);
+        toast.error("Upload fejlede", {
+          description: error.message
+        });
+        return;
+      }
+
+      if (data?.success) {
+        toast.success("Uploadet til Cloudinary!", {
+          description: `Filen er tilgængelig: ${fileName}`
+        });
+      }
+    } catch (error) {
+      toast.dismiss();
+      console.error('Error uploading:', error);
+      toast.error("Upload fejlede", {
+        description: error instanceof Error ? error.message : "Ukendt fejl"
+      });
+    }
   };
 
   const handleSave = () => {
