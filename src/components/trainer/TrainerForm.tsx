@@ -140,7 +140,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
   const [showInfoDialog, setShowInfoDialog] = useState(false);
   const [showYesDialog, setShowYesDialog] = useState(false);
   const [showChecklistDialog, setShowChecklistDialog] = useState(false);
-  const [checklist, setChecklist] = useState<Record<string, boolean>>({});
+  const [checklist, setChecklist] = useState<Record<string, { status: boolean; date: Date | null }>>({});
 
   const form = useForm<TrainerFormData>({
     resolver: zodResolver(trainerFormSchema),
@@ -185,7 +185,17 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
     
     // Add checklist items
     CHECKLIST_ITEMS.forEach(item => {
-      const status = checklist[item.id] === true ? "Ja" : checklist[item.id] === false ? "Nej" : "";
+      const checklistItem = checklist[item.id];
+      let status = "";
+      
+      if (checklistItem) {
+        if (checklistItem.status === true && checklistItem.date) {
+          status = `Ja - ${format(checklistItem.date, "dd/MM/yyyy")}`;
+        } else if (checklistItem.status === false) {
+          status = "Nej";
+        }
+      }
+      
       excelData.push([item.label, status, item.note]);
     });
     
@@ -245,11 +255,11 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                     <input
                       type="radio"
                       name={item.id}
-                      checked={checklist[item.id] === true}
+                      checked={checklist[item.id]?.status === true}
                       onChange={() => {
                         setChecklist(prev => ({
                           ...prev,
-                          [item.id]: true
+                          [item.id]: { status: true, date: new Date() }
                         }));
                       }}
                       className="h-4 w-4 text-primary focus:ring-2 focus:ring-primary cursor-pointer"
@@ -260,17 +270,22 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                     <input
                       type="radio"
                       name={item.id}
-                      checked={checklist[item.id] === false}
+                      checked={checklist[item.id]?.status === false}
                       onChange={() => {
                         setChecklist(prev => ({
                           ...prev,
-                          [item.id]: false
+                          [item.id]: { status: false, date: null }
                         }));
                       }}
                       className="h-4 w-4 text-primary focus:ring-2 focus:ring-primary cursor-pointer"
                     />
                     <span className="text-sm">Nej</span>
                   </label>
+                  {checklist[item.id]?.status === true && checklist[item.id]?.date && (
+                    <span className="text-sm text-muted-foreground ml-2">
+                      ({format(checklist[item.id].date!, "dd/MM/yyyy")})
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
