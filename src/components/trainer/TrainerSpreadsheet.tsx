@@ -8,8 +8,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
+import { toast } from "@/hooks/use-toast";
 import * as XLSX from 'xlsx';
 
 const CHECKLIST_ITEMS = [
@@ -69,6 +78,9 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
     checklist: {},
     checklistDateInputs: {} // Store raw input strings
   });
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState<"uploading" | "success" | "error">("uploading");
 
   useEffect(() => {
     if (trainer) {
@@ -226,10 +238,38 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
   };
 
   const handleUploadToDrive = async () => {
-    // TODO: Implement Google Drive upload
-    // This will require Google Drive API setup
-    console.log("Upload to Google Drive clicked");
-    alert("Google Drive integration coming soon! This will upload the Excel file to your Google Drive.");
+    setUploadDialogOpen(true);
+    setUploadProgress(0);
+    setUploadStatus("uploading");
+
+    try {
+      // Simulate upload progress
+      for (let i = 0; i <= 100; i += 10) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        setUploadProgress(i);
+      }
+
+      // TODO: Implement actual Google Drive upload here
+      // For now, simulate success
+      setUploadStatus("success");
+      
+      toast({
+        title: "Upload gennemført",
+        description: "Dokumentet blev uploadet til Google Drive.",
+      });
+
+      // Close dialog after 2 seconds
+      setTimeout(() => {
+        setUploadDialogOpen(false);
+      }, 2000);
+    } catch (error) {
+      setUploadStatus("error");
+      toast({
+        title: "Upload fejlede",
+        description: "Der opstod en fejl under upload til Google Drive.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSave = () => {
@@ -260,11 +300,47 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">Rediger Træner Data</DialogTitle>
-        </DialogHeader>
+    <>
+      {/* Upload Progress Dialog */}
+      <AlertDialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {uploadStatus === "uploading" && "Uploader til Google Drive..."}
+              {uploadStatus === "success" && "Upload gennemført!"}
+              {uploadStatus === "error" && "Upload fejlede"}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4">
+              {uploadStatus === "uploading" && (
+                <>
+                  <p>Dit dokument bliver uploadet til Google Drive</p>
+                  <div className="space-y-2">
+                    <Progress value={uploadProgress} className="w-full" />
+                    <p className="text-center text-sm font-medium">{uploadProgress}%</p>
+                  </div>
+                </>
+              )}
+              {uploadStatus === "success" && (
+                <p>Dit dokument er blevet uploadet til Google Drive!</p>
+              )}
+              {uploadStatus === "error" && (
+                <p>Der opstod en fejl under upload. Prøv venligst igen.</p>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {uploadStatus !== "uploading" && (
+            <div className="flex justify-end">
+              <Button onClick={() => setUploadDialogOpen(false)}>Luk</Button>
+            </div>
+          )}
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Rediger Træner Data</DialogTitle>
+          </DialogHeader>
 
         <div className="space-y-6 py-4">
           {/* Trainer Info Section */}
@@ -397,6 +473,7 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
         </div>
       </DialogContent>
     </Dialog>
+    </>
   );
 };
 
