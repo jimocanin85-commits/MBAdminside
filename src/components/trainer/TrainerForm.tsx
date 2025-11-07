@@ -133,8 +133,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
       <AlertDialog open={showInfoDialog} onOpenChange={setShowInfoDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Inviter ny frivillig først</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3 text-left">
+            <AlertDialogDescription className="space-y-3 text-left pt-4">
               <p>
                 Du kan ikke fortsætte før holdleder har inviteret ny frivillig som kontakt til holdet.
               </p>
