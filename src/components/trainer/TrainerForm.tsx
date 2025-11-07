@@ -327,38 +327,57 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Fødselsdato</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "dd/MM/yyyy")
-                            ) : (
-                              <span>Vælg dato</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date("1940-01-01")
-                          }
-                          initialFocus
-                          className={cn("p-3 pointer-events-auto")}
+                    <div className="relative">
+                      <FormControl>
+                        <Input
+                          placeholder="DD/MM/ÅÅÅÅ"
+                          value={field.value ? format(field.value, "dd/MM/yyyy") : ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Try to parse the date in DD/MM/YYYY format
+                            const parts = value.split('/');
+                            if (parts.length === 3) {
+                              const day = parseInt(parts[0]);
+                              const month = parseInt(parts[1]) - 1; // JS months are 0-indexed
+                              const year = parseInt(parts[2]);
+                              const date = new Date(year, month, day);
+                              // Check if the date is valid
+                              if (!isNaN(date.getTime()) && 
+                                  date.getDate() === day && 
+                                  date.getMonth() === month &&
+                                  date <= new Date() && 
+                                  date >= new Date("1940-01-01")) {
+                                field.onChange(date);
+                              }
+                            }
+                          }}
+                          className="pr-10"
                         />
-                      </PopoverContent>
-                    </Popover>
+                      </FormControl>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          >
+                            <CalendarIcon className="h-4 w-4 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date > new Date() || date < new Date("1940-01-01")
+                            }
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
