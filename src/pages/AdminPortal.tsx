@@ -14,7 +14,8 @@ type Trainer = {
   email: string;
   telefon: string;
   foedselsdato: Date;
-  aargangRolle: string;
+  aargang: string;
+  rolle: string;
   kontaktperson: string;
   createdAt: Date;
   excelData?: any;
