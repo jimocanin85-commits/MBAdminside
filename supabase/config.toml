@@ -1,1 +1,4 @@
 project_id = "fjyrktwligattfpfuhtv"
+
+[functions.upload-to-cloudinary]
+verify_jwt = false
