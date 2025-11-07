@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { Download, X, Upload } from "lucide-react";
+import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,16 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
 
@@ -78,9 +70,6 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
     checklist: {},
     checklistDateInputs: {} // Store raw input strings
   });
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadStatus, setUploadStatus] = useState<"uploading" | "success" | "error">("uploading");
 
   useEffect(() => {
     if (trainer) {
@@ -237,38 +226,6 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
     }
   };
 
-  const handleUploadToDrive = async () => {
-    setUploadDialogOpen(true);
-    setUploadProgress(0);
-    setUploadStatus("uploading");
-
-    try {
-      // Simulate upload progress
-      for (let i = 0; i <= 100; i += 10) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-        setUploadProgress(i);
-      }
-
-      // TODO: Implement actual Google Drive upload here
-      // For now, simulate success
-      setUploadStatus("success");
-      
-      toast.success("Upload gennemført", {
-        description: "Dokumentet blev uploadet til Google Drive.",
-      });
-
-      // Close dialog after 2 seconds
-      setTimeout(() => {
-        setUploadDialogOpen(false);
-      }, 2000);
-    } catch (error) {
-      setUploadStatus("error");
-      toast.error("Upload fejlede", {
-        description: "Der opstod en fejl under upload til Google Drive.",
-      });
-    }
-  };
-
   const handleSave = () => {
     const updatedTrainer = {
       ...trainer,
@@ -298,40 +255,6 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
 
   return (
     <>
-      {/* Upload Progress Dialog */}
-      <AlertDialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {uploadStatus === "uploading" && "Uploader til Google Drive..."}
-              {uploadStatus === "success" && "Upload gennemført!"}
-              {uploadStatus === "error" && "Upload fejlede"}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-4">
-              {uploadStatus === "uploading" && (
-                <>
-                  <p>Dit dokument bliver uploadet til Google Drive</p>
-                  <div className="space-y-2">
-                    <Progress value={uploadProgress} className="w-full" />
-                    <p className="text-center text-sm font-medium">{uploadProgress}%</p>
-                  </div>
-                </>
-              )}
-              {uploadStatus === "success" && (
-                <p>Dit dokument er blevet uploadet til Google Drive!</p>
-              )}
-              {uploadStatus === "error" && (
-                <p>Der opstod en fejl under upload. Prøv venligst igen.</p>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {uploadStatus !== "uploading" && (
-            <div className="flex justify-end">
-              <Button onClick={() => setUploadDialogOpen(false)}>Luk</Button>
-            </div>
-          )}
-        </AlertDialogContent>
-      </AlertDialog>
 
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
@@ -459,10 +382,6 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
           <Button onClick={handleDownload} size="default" variant="outline" className="gap-2">
             <Download className="h-4 w-4" />
             Download Excel
-          </Button>
-          <Button onClick={handleUploadToDrive} size="default" variant="outline" className="gap-2">
-            <Upload className="h-4 w-4" />
-            Upload til Google Drive
           </Button>
           <Button onClick={handleSave} size="default" variant="outline" className="gap-2">
             Gem ændringer
