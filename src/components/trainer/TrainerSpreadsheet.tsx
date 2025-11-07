@@ -271,7 +271,7 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
               </Button>
               <Button onClick={handleUploadToDrive} size="sm" variant="default" className="gap-2">
                 <Upload className="h-4 w-4" />
-                Upload to Google Drive
+                Upload til Google Drive
               </Button>
               <Button onClick={handleDownload} size="sm" variant="outline" className="gap-2">
                 <Download className="h-4 w-4" />
