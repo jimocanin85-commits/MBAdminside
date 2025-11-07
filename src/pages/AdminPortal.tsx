@@ -30,12 +30,6 @@ const AdminPortal = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <Card className="shadow-lg border-2">
-            <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
-              <CardTitle className="text-2xl">Velkommen til administrationen</CardTitle>
-              <CardDescription className="text-base">
-                Håndter trænere og klubbens informationer
-              </CardDescription>
-            </CardHeader>
             <CardContent className="pt-8">
               <Button size="lg" className="gap-2 text-base px-6 py-6">
                 <UserPlus className="h-5 w-5" />
