@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import LoginForm from "@/components/auth/LoginForm";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import TrainerForm from "@/components/trainer/TrainerForm";
+import TrainerSpreadsheet from "@/components/trainer/TrainerSpreadsheet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { UserPlus, Download } from "lucide-react";
@@ -22,6 +23,8 @@ type Trainer = {
 const AdminPortal = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isSpreadsheetOpen, setIsSpreadsheetOpen] = useState(false);
+  const [selectedTrainer, setSelectedTrainer] = useState<Trainer | null>(null);
   const [trainers, setTrainers] = useState<Trainer[]>(() => {
     const saved = localStorage.getItem('trainers');
     if (saved) {
@@ -132,8 +135,8 @@ const AdminPortal = () => {
                                   size="sm"
                                   className="gap-2"
                                   onClick={() => {
-                                    const event = new CustomEvent('downloadTrainerExcel', { detail: trainer });
-                                    window.dispatchEvent(event);
+                                    setSelectedTrainer(trainer);
+                                    setIsSpreadsheetOpen(true);
                                   }}
                                 >
                                   Åbn
@@ -156,6 +159,12 @@ const AdminPortal = () => {
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
         onSubmit={handleTrainerSubmit}
+      />
+
+      <TrainerSpreadsheet
+        open={isSpreadsheetOpen}
+        onOpenChange={setIsSpreadsheetOpen}
+        trainer={selectedTrainer}
       />
     </div>
   );
