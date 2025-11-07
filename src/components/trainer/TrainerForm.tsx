@@ -185,7 +185,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
     
     // Add checklist items
     CHECKLIST_ITEMS.forEach(item => {
-      const status = checklist[item.id] ? "Ja" : "Nej";
+      const status = checklist[item.id] === true ? "Ja" : checklist[item.id] === false ? "Nej" : "";
       excelData.push([item.label, status, item.note]);
     });
     
@@ -231,31 +231,46 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             {CHECKLIST_ITEMS.map((item) => (
-              <div key={item.id} className="space-y-2">
-                <div className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    id={item.id}
-                    checked={checklist[item.id] || false}
-                    onChange={(e) => {
-                      setChecklist(prev => ({
-                        ...prev,
-                        [item.id]: e.target.checked
-                      }));
-                    }}
-                    className="mt-1 h-4 w-4 rounded border-primary text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-pointer"
-                  />
-                  <div className="flex-1">
-                    <label
-                      htmlFor={item.id}
-                      className="text-sm font-medium leading-none cursor-pointer"
-                    >
-                      {item.label}
-                    </label>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {item.note}
-                    </p>
-                  </div>
+              <div key={item.id} className="space-y-2 border-b pb-4 last:border-b-0">
+                <div className="flex-1">
+                  <label className="text-sm font-medium leading-none">
+                    {item.label}
+                  </label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {item.note}
+                  </p>
+                </div>
+                <div className="flex gap-6 mt-2 ml-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name={item.id}
+                      checked={checklist[item.id] === true}
+                      onChange={() => {
+                        setChecklist(prev => ({
+                          ...prev,
+                          [item.id]: true
+                        }));
+                      }}
+                      className="h-4 w-4 text-primary focus:ring-2 focus:ring-primary cursor-pointer"
+                    />
+                    <span className="text-sm">Ja</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name={item.id}
+                      checked={checklist[item.id] === false}
+                      onChange={() => {
+                        setChecklist(prev => ({
+                          ...prev,
+                          [item.id]: false
+                        }));
+                      }}
+                      className="h-4 w-4 text-primary focus:ring-2 focus:ring-primary cursor-pointer"
+                    />
+                    <span className="text-sm">Nej</span>
+                  </label>
                 </div>
               </div>
             ))}
