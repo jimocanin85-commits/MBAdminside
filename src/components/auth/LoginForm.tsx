@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import mbLogo from "@/assets/mb-logo.png";
 
 interface LoginFormProps {
   onLogin: () => void;
@@ -31,10 +32,15 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
   };
 
   return (
-    <Card className="w-full max-w-md shadow-lg">
-      <CardHeader className="space-y-2">
-        <CardTitle className="text-2xl font-bold">Måløv Boldklub</CardTitle>
-        <CardDescription>Administrations Portal</CardDescription>
+    <Card className="w-full max-w-md shadow-lg border-2">
+      <CardHeader className="space-y-4 text-center">
+        <div className="flex justify-center">
+          <img src={mbLogo} alt="Måløv Boldklub Logo" className="w-24 h-24" />
+        </div>
+        <div>
+          <CardTitle className="text-3xl font-bold">Måløv Boldklub</CardTitle>
+          <CardDescription className="text-base mt-2">Administrations Portal</CardDescription>
+        </div>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
