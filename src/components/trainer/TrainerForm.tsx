@@ -229,11 +229,10 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
       createdAt: new Date(),
       excelData: { data, checklist }
     } as any);
-    generateExcelFile(data, checklist);
     form.reset();
     setChecklist({});
     onOpenChange(false);
-    toast.success("Træner oprettet og Excel fil downloadet!");
+    toast.success("Træner oprettet!");
   };
 
   // Listen for download events from AdminPortal
