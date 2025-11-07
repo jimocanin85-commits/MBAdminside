@@ -27,15 +27,56 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+
+const AARGANG_OPTIONS = [
+  "2008 Drenge",
+  "2010 Drenge",
+  "2011 Drenge",
+  "2013 Drenge",
+  "2013-14 Piger",
+  "2014 Drenge",
+  "2015 Drenge",
+  "2015-16 Piger",
+  "2016 Drenge",
+  "2017 Drenge",
+  "2017 Piger",
+  "2018 Drenge",
+  "2019 Drenge",
+  "2020-21 Mix",
+  "65+",
+  "Fodbold Fitness",
+  "GSVET",
+  "HS1 - Senior",
+  "HS 2-3 - Senior",
+  "Kvinde - Senior",
+  "Motionsfodbold M/K",
+  "OldBoys 5-mands +32",
+  "Veteran - M+45",
+];
+
+const ROLLE_OPTIONS = [
+  "Assistenttræner",
+  "Holdleder",
+  "Kampklarassistent",
+  "Træner",
+];
 
 const trainerFormSchema = z.object({
   navn: z.string().min(2, { message: "Navn skal være mindst 2 tegn" }),
   email: z.string().email({ message: "Ugyldig email adresse" }),
   telefon: z.string().min(8, { message: "Telefonnummer skal være mindst 8 cifre" }),
   foedselsdato: z.date({ required_error: "Fødselsdato er påkrævet" }),
-  aargangRolle: z.string().min(1, { message: "Årgang/rolle er påkrævet" }),
+  aargang: z.string().min(1, { message: "Hold/Årgang er påkrævet" }),
+  rolle: z.string().min(1, { message: "Rolle er påkrævet" }),
   kontaktperson: z.string().min(2, { message: "Kontaktperson er påkrævet" }),
 });
 
@@ -54,7 +95,8 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
       navn: "",
       email: "",
       telefon: "",
-      aargangRolle: "",
+      aargang: "",
+      rolle: "",
       kontaktperson: "",
     },
   });
@@ -165,13 +207,49 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
 
               <FormField
                 control={form.control}
-                name="aargangRolle"
+                name="aargang"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Årgang/rolle</FormLabel>
-                    <FormControl>
-                      <Input placeholder="F.eks. U13, Senior" {...field} />
-                    </FormControl>
+                    <FormLabel>Hold/Årgang</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Vælg hold/årgang" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {AARGANG_OPTIONS.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="rolle"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Rolle</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Vælg rolle" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {ROLLE_OPTIONS.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
