@@ -466,7 +466,7 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
           </Button>
           <Button onClick={handleUploadToDrive} size="default" variant="outline" className="gap-2">
             <Upload className="h-4 w-4" />
-            Upload til Google Drive
+            Upload til Cloud
           </Button>
           <Button onClick={handleSave} size="default" variant="outline" className="gap-2">
             Gem ændringer
