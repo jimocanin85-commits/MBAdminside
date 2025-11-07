@@ -22,19 +22,19 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
     console.log("Login attempt - Username:", username);
     console.log("Login attempt - Password length:", password.length);
     console.log("Username match:", username === "admin");
-    console.log("Password match:", password === "Mbinfo1935");
+    console.log("Password match:", password === "Monne1935");
 
     // Simulate login delay
     setTimeout(() => {
       const trimmedUsername = username.trim();
       const trimmedPassword = password.trim();
       
-      if (trimmedUsername === "admin" && trimmedPassword === "Mbinfo1935") {
+      if (trimmedUsername === "admin" && trimmedPassword === "Monne1935") {
         toast.success("Login successful!");
         onLogin();
       } else {
         toast.error("Forkert brugernavn eller adgangskode");
-        console.log("Login failed - Expected: admin / Mbinfo1935");
+        console.log("Login failed - Expected: admin / Monne1935");
         console.log("Login failed - Received:", trimmedUsername, "/", trimmedPassword);
       }
       setIsLoading(false);
@@ -75,7 +75,7 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
               id="password"
               name="password"
               type="password"
-              placeholder="Mbinfo1935"
+              placeholder="Monne1935"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
