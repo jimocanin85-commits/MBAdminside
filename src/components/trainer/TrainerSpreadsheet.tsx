@@ -54,9 +54,10 @@ interface TrainerSpreadsheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   trainer: any;
+  onSave: (updatedTrainer: any) => void;
 }
 
-const TrainerSpreadsheet = ({ open, onOpenChange, trainer }: TrainerSpreadsheetProps) => {
+const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpreadsheetProps) => {
   const [editableData, setEditableData] = useState<any>({
     navn: "",
     email: "",
@@ -138,10 +139,61 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer }: TrainerSpreadsheetP
         ...prev.checklist,
         [itemId]: {
           status,
-          date: status ? new Date() : null
+          date: status ? (prev.checklist[itemId]?.date || new Date()) : null
         }
       }
     }));
+  };
+
+  const updateChecklistDate = (itemId: string, dateString: string) => {
+    // Parse DD/MM/YYYY format
+    const parts = dateString.split('/');
+    if (parts.length === 3) {
+      const day = parseInt(parts[0]);
+      const month = parseInt(parts[1]) - 1;
+      const year = parseInt(parts[2]);
+      const date = new Date(year, month, day);
+      
+      if (!isNaN(date.getTime())) {
+        setEditableData((prev: any) => ({
+          ...prev,
+          checklist: {
+            ...prev.checklist,
+            [itemId]: {
+              ...prev.checklist[itemId],
+              date
+            }
+          }
+        }));
+      }
+    }
+  };
+
+  const handleSave = () => {
+    const updatedTrainer = {
+      ...trainer,
+      navn: editableData.navn,
+      email: editableData.email,
+      telefon: editableData.telefon,
+      foedselsdato: editableData.foedselsdato,
+      aargang: editableData.aargang,
+      rolle: editableData.rolle,
+      kontaktperson: editableData.kontaktperson,
+      excelData: {
+        data: {
+          navn: editableData.navn,
+          email: editableData.email,
+          telefon: editableData.telefon,
+          foedselsdato: editableData.foedselsdato,
+          aargang: editableData.aargang,
+          rolle: editableData.rolle,
+          kontaktperson: editableData.kontaktperson
+        },
+        checklist: editableData.checklist
+      }
+    };
+    onSave(updatedTrainer);
+    onOpenChange(false);
   };
 
   return (
@@ -150,10 +202,15 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer }: TrainerSpreadsheetP
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Rediger Træner Data</span>
-            <Button onClick={handleDownload} size="sm" className="gap-2">
-              <Download className="h-4 w-4" />
-              Download Excel
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleSave} size="sm" variant="default" className="gap-2">
+                Gem ændringer
+              </Button>
+              <Button onClick={handleDownload} size="sm" variant="outline" className="gap-2">
+                <Download className="h-4 w-4" />
+                Download Excel
+              </Button>
+            </div>
           </DialogTitle>
         </DialogHeader>
 
@@ -220,7 +277,7 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer }: TrainerSpreadsheetP
             <div className="space-y-4">
               <div className="grid grid-cols-[2fr,1fr,3fr] gap-4 font-semibold text-sm border-b pb-2">
                 <div>Opgave</div>
-                <div>Status</div>
+                <div>Status / Dato</div>
                 <div>Noter</div>
               </div>
               {CHECKLIST_ITEMS.map((item) => {
@@ -254,8 +311,13 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer }: TrainerSpreadsheetP
                           <span className="text-sm">Nej</span>
                         </label>
                       </div>
-                      {isChecked && date && (
-                        <span className="text-xs text-muted-foreground">{date}</span>
+                      {isChecked && (
+                        <Input
+                          placeholder="DD/MM/ÅÅÅÅ"
+                          value={date}
+                          onChange={(e) => updateChecklistDate(item.id, e.target.value)}
+                          className="h-8 text-xs"
+                        />
                       )}
                     </div>
                     <div className="text-sm text-muted-foreground">{item.note}</div>

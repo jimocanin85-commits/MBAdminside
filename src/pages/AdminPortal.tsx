@@ -63,6 +63,12 @@ const AdminPortal = () => {
     setTrainers([...trainers, trainerWithDate]);
   };
 
+  const handleTrainerUpdate = (updatedTrainer: Trainer) => {
+    setTrainers(trainers.map(t => 
+      t.createdAt === updatedTrainer.createdAt ? updatedTrainer : t
+    ));
+  };
+
   const getTrainersByMonth = () => {
     const grouped: Record<string, Trainer[]> = {};
     trainers.forEach(trainer => {
@@ -165,6 +171,7 @@ const AdminPortal = () => {
         open={isSpreadsheetOpen}
         onOpenChange={setIsSpreadsheetOpen}
         trainer={selectedTrainer}
+        onSave={handleTrainerUpdate}
       />
     </div>
   );
