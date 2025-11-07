@@ -19,13 +19,23 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
     e.preventDefault();
     setIsLoading(true);
 
+    console.log("Login attempt - Username:", username);
+    console.log("Login attempt - Password length:", password.length);
+    console.log("Username match:", username === "admin");
+    console.log("Password match:", password === "Mbinfo1935");
+
     // Simulate login delay
     setTimeout(() => {
-      if (username === "admin" && password === "Mbinfo1935") {
+      const trimmedUsername = username.trim();
+      const trimmedPassword = password.trim();
+      
+      if (trimmedUsername === "admin" && trimmedPassword === "Mbinfo1935") {
         toast.success("Login successful!");
         onLogin();
       } else {
         toast.error("Forkert brugernavn eller adgangskode");
+        console.log("Login failed - Expected: admin / Mbinfo1935");
+        console.log("Login failed - Received:", trimmedUsername, "/", trimmedPassword);
       }
       setIsLoading(false);
     }, 800);
@@ -48,10 +58,14 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
             <Label htmlFor="username">Brugernavn</Label>
             <Input
               id="username"
+              name="username"
               type="text"
-              placeholder="Indtast brugernavn"
+              placeholder="admin"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
               required
             />
           </div>
@@ -59,10 +73,12 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
             <Label htmlFor="password">Adgangskode</Label>
             <Input
               id="password"
+              name="password"
               type="password"
-              placeholder="Indtast adgangskode"
+              placeholder="Mbinfo1935"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
               required
             />
           </div>
