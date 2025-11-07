@@ -340,12 +340,12 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                               const value = e.target.value;
                               setInputValue(value);
                               
-                              // Try to parse the date in DD/MM/YYYY format
-                              const parts = value.split('/');
-                              if (parts.length === 3 && parts[2].length === 4) {
-                                const day = parseInt(parts[0]);
-                                const month = parseInt(parts[1]) - 1;
-                                const year = parseInt(parts[2]);
+                              // Try to parse date without slashes (DDMMYYYY format)
+                              const digitsOnly = value.replace(/\D/g, '');
+                              if (digitsOnly.length === 8) {
+                                const day = parseInt(digitsOnly.substring(0, 2));
+                                const month = parseInt(digitsOnly.substring(2, 4)) - 1;
+                                const year = parseInt(digitsOnly.substring(4, 8));
                                 const date = new Date(year, month, day);
                                 
                                 if (!isNaN(date.getTime()) && 
@@ -354,6 +354,24 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                                     date <= new Date() && 
                                     date >= new Date("1940-01-01")) {
                                   field.onChange(date);
+                                  setInputValue(format(date, "dd/MM/yyyy"));
+                                }
+                              } else {
+                                // Try to parse the date in DD/MM/YYYY format with slashes
+                                const parts = value.split('/');
+                                if (parts.length === 3 && parts[2].length === 4) {
+                                  const day = parseInt(parts[0]);
+                                  const month = parseInt(parts[1]) - 1;
+                                  const year = parseInt(parts[2]);
+                                  const date = new Date(year, month, day);
+                                  
+                                  if (!isNaN(date.getTime()) && 
+                                      date.getDate() === day && 
+                                      date.getMonth() === month &&
+                                      date <= new Date() && 
+                                      date >= new Date("1940-01-01")) {
+                                    field.onChange(date);
+                                  }
                                 }
                               }
                             }}
