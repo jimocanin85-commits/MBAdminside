@@ -143,7 +143,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
               </p>
 
               <div className="space-y-2">
-                <p className="font-medium">Has this been done?</p>
+                <p className="font-medium">Er dette blevet gjort?</p>
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -154,7 +154,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                       onChange={(e) => setSelectedOption(e.target.value)}
                       className="w-4 h-4"
                     />
-                    <span>Yes</span>
+                    <span>Ja</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -165,7 +165,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                       onChange={(e) => setSelectedOption(e.target.value)}
                       className="w-4 h-4"
                     />
-                    <span>No</span>
+                    <span>Nej</span>
                   </label>
                 </div>
               </div>
