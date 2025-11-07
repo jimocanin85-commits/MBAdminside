@@ -45,8 +45,8 @@ Deno.serve(async (req) => {
     const cleanFileName = fileName.replace('.xlsx', '').replace(/[^a-zA-Z0-9_-]/g, '_');
     const publicId = `${folder}/${cleanFileName}`;
     
-    // Create signature (must include public_id for signature to work)
-    const paramsToSign = `folder=${folder}&public_id=${publicId}&timestamp=${timestamp}${apiSecret}`;
+    // Create signature - must be alphabetically sorted parameters
+    const paramsToSign = `public_id=${publicId}&timestamp=${timestamp}${apiSecret}`;
     const signature = await crypto.subtle.digest(
       'SHA-1',
       new TextEncoder().encode(paramsToSign)
@@ -55,13 +55,14 @@ Deno.serve(async (req) => {
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
+    console.log('Using public_id:', publicId);
+
     // Prepare form data for Cloudinary
     const formData = new FormData();
     formData.append('file', fileData);
     formData.append('api_key', apiKey);
     formData.append('timestamp', timestamp.toString());
     formData.append('signature', signatureHex);
-    formData.append('folder', folder);
     formData.append('public_id', publicId);
     formData.append('resource_type', 'raw'); // For non-image files like Excel
 
