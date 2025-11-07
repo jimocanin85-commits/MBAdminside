@@ -437,7 +437,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                 name="kontaktperson"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Kontaktperson (Hvem har bedt om, at den frivillige skal blive oprettet?)</FormLabel>
+                    <FormLabel>Kontaktperson (Hvem har bedt om oprettelsen?)</FormLabel>
                     <FormControl>
                       <Input placeholder="Indtast kontaktperson" {...field} />
                     </FormControl>
