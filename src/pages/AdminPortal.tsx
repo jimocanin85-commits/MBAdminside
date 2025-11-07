@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import LoginForm from "@/components/auth/LoginForm";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import TrainerForm from "@/components/trainer/TrainerForm";
@@ -22,7 +22,27 @@ type Trainer = {
 const AdminPortal = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [trainers, setTrainers] = useState<Trainer[]>(() => {
+    const saved = localStorage.getItem('trainers');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Convert date strings back to Date objects
+        return parsed.map((trainer: any) => ({
+          ...trainer,
+          foedselsdato: new Date(trainer.foedselsdato),
+          createdAt: new Date(trainer.createdAt)
+        }));
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('trainers', JSON.stringify(trainers));
+  }, [trainers]);
 
   const handleLogin = () => {
     setIsAuthenticated(true);
