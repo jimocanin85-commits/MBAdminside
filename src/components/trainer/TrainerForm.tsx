@@ -74,7 +74,6 @@ const AARGANG_OPTIONS = [
 const ROLLE_OPTIONS = [
   "Assistenttræner",
   "Holdleder",
-  "Kampklarassistent",
   "Træner",
 ];
 
