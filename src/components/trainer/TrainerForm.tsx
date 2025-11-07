@@ -10,18 +10,9 @@ import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   Form,
   FormControl,
@@ -97,11 +88,6 @@ interface TrainerFormProps {
 }
 
 const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
-  const [confirmed, setConfirmed] = useState(false);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [showInfoDialog, setShowInfoDialog] = useState(false);
-  const [showYesDialog, setShowYesDialog] = useState(false);
-
   const form = useForm<TrainerFormData>({
     resolver: zodResolver(trainerFormSchema),
     defaultValues: {
@@ -115,36 +101,20 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
   });
 
   const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      setConfirmed(false);
-      setSelectedOption(null);
-      setShowYesDialog(false);
-    }
     onOpenChange(newOpen);
   };
 
   const handleSubmit = (data: TrainerFormData) => {
-    onSubmit(data);
-    form.reset();
-    onOpenChange(false);
-    toast.success("Træner oprettet succesfuldt!");
-  };
-
-  const handleDownloadExcel = () => {
-    const formData = form.getValues();
-    
     // Create worksheet data
     const worksheetData = [
       ["Felt", "Værdi"],
-      ["Navn", formData.navn],
-      ["Email", formData.email],
-      ["Telefon", formData.telefon],
-      ["Fødselsdato", formData.foedselsdato ? format(formData.foedselsdato, "dd/MM/yyyy") : ""],
-      ["Hold/Årgang", formData.aargang],
-      ["Rolle", formData.rolle],
-      ["Kontaktperson", formData.kontaktperson],
-      ["", ""],
-      ["Holdleder har inviteret ny frivillig", selectedOption === "yes" ? "Ja" : "Nej"],
+      ["Navn", data.navn],
+      ["Email", data.email],
+      ["Telefon", data.telefon],
+      ["Fødselsdato", data.foedselsdato ? format(data.foedselsdato, "dd/MM/yyyy") : ""],
+      ["Hold/Årgang", data.aargang],
+      ["Rolle", data.rolle],
+      ["Kontaktperson", data.kontaktperson],
     ];
 
     // Create workbook and worksheet
@@ -160,160 +130,24 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
     XLSX.utils.book_append_sheet(workbook, worksheet, "Træner Data");
 
     // Generate filename with current date and trainer name
-    const fileName = `traener_${formData.navn.replace(/\s+/g, '_')}_${format(new Date(), "dd-MM-yyyy")}.xlsx`;
+    const fileName = `traener_${data.navn.replace(/\s+/g, '_')}_${format(new Date(), "dd-MM-yyyy")}.xlsx`;
 
     // Download the file
     XLSX.writeFile(workbook, fileName);
     
-    toast.success("Excel fil downloadet!");
+    onSubmit(data);
+    form.reset();
+    onOpenChange(false);
+    toast.success("Træner oprettet og Excel fil downloadet!");
   };
 
   return (
-    <>
-      <AlertDialog open={showYesDialog} onOpenChange={setShowYesDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogDescription className="space-y-4 text-left pt-4">
-              <div className="space-y-2">
-                <p>Tjek i KlubOffice:</p>
-                <a
-                  href="https://kluboffice.dbu.dk/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary underline hover:no-underline font-medium"
-                >
-                  https://kluboffice.dbu.dk/
-                </a>
-              </div>
-
-              <p>
-                Godkend den nye frivillige (klik på den orange boks øverst til højre: "Anmodninger om holderhverv").
-              </p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <Button onClick={() => {
-              setShowYesDialog(false);
-              setConfirmed(true);
-            }}>
-              Fortsæt
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={showInfoDialog} onOpenChange={setShowInfoDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogDescription className="space-y-4 text-left pt-4">
-              <div className="space-y-2">
-                <p>Tjek, om den frivillige er kommet ind i KlubOffice:</p>
-                <a
-                  href="https://kluboffice.dbu.dk/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary underline hover:no-underline font-medium"
-                >
-                  https://kluboffice.dbu.dk/
-                </a>
-              </div>
-
-              <p>
-                Klik på den orange boks oppe i højre hjørne med teksten "Anmodninger om holderhverv".
-              </p>
-
-              <div className="space-y-2">
-                <p className="font-medium">Hvis personen ikke står der, kan det skyldes:</p>
-                <ul className="list-disc list-inside space-y-1 pl-2">
-                  <li>Forkert e-mailadresse.</li>
-                  <li>Mailen fra systemet er havnet i spam.</li>
-                  <li>Bed holdlederen om at gensende invitationen.</li>
-                </ul>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <Button onClick={() => setShowInfoDialog(false)}>
-              Forstået
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">Opret ny træner</DialogTitle>
         </DialogHeader>
 
-        {!confirmed ? (
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <p className="text-sm">
-                Holdleder skal invitere ny holdkontakt til holdet. Henvis holdleder til siden{" "}
-                <a 
-                  href="https://www.mb-boldklub.dk/traener-info/ny-frivillig/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-primary underline hover:no-underline"
-                >
-                  https://www.mb-boldklub.dk/traener-info/ny-frivillig/
-                </a>
-              </p>
-
-              <div className="space-y-2">
-                <p className="font-medium">Er dette blevet gjort?</p>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="confirmation"
-                      value="yes"
-                      checked={selectedOption === "yes"}
-                      onChange={(e) => setSelectedOption(e.target.value)}
-                      className="w-4 h-4"
-                    />
-                    <span>Ja</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="confirmation"
-                      value="no"
-                      checked={selectedOption === "no"}
-                      onChange={(e) => setSelectedOption(e.target.value)}
-                      className="w-4 h-4"
-                    />
-                    <span>Nej</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleOpenChange(false)}
-              >
-                Annuller
-              </Button>
-              <Button
-                type="button"
-                onClick={() => {
-                  if (selectedOption === "yes") {
-                    setShowYesDialog(true);
-                  } else if (selectedOption === "no") {
-                    setShowInfoDialog(true);
-                  }
-                }}
-                disabled={!selectedOption}
-              >
-                Fortsæt
-              </Button>
-            </div>
-          </div>
-        ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -531,21 +365,12 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
               >
                 Annuller
               </Button>
-              <Button 
-                type="button"
-                variant="secondary"
-                onClick={handleDownloadExcel}
-              >
-                Download Excel
-              </Button>
               <Button type="submit">Tryk for færdiggøre oprettelsen</Button>
             </div>
           </form>
         </Form>
-        )}
         </DialogContent>
       </Dialog>
-    </>
   );
 };
 
