@@ -66,11 +66,22 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
     aargang: "",
     rolle: "",
     kontaktperson: "",
-    checklist: {}
+    checklist: {},
+    checklistDateInputs: {} // Store raw input strings
   });
 
   useEffect(() => {
     if (trainer) {
+      const checklistDateInputs: any = {};
+      const checklist = trainer.excelData?.checklist || {};
+      
+      // Initialize date input strings
+      Object.keys(checklist).forEach(key => {
+        if (checklist[key]?.date) {
+          checklistDateInputs[key] = format(new Date(checklist[key].date), "dd/MM/yyyy");
+        }
+      });
+      
       setEditableData({
         navn: trainer.navn || "",
         email: trainer.email || "",
@@ -79,7 +90,8 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
         aargang: trainer.aargang || "",
         rolle: trainer.rolle || "",
         kontaktperson: trainer.kontaktperson || "",
-        checklist: trainer.excelData?.checklist || {}
+        checklist: checklist,
+        checklistDateInputs
       });
     }
   }, [trainer]);
@@ -133,19 +145,45 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
   };
 
   const updateChecklistStatus = (itemId: string, status: boolean) => {
-    setEditableData((prev: any) => ({
-      ...prev,
-      checklist: {
+    setEditableData((prev: any) => {
+      const newChecklist = {
         ...prev.checklist,
         [itemId]: {
           status,
           date: status ? (prev.checklist[itemId]?.date || new Date()) : null
         }
+      };
+      
+      const newDateInputs = { ...prev.checklistDateInputs };
+      if (status && !newDateInputs[itemId]) {
+        newDateInputs[itemId] = format(new Date(), "dd/MM/yyyy");
+      } else if (!status) {
+        delete newDateInputs[itemId];
+      }
+      
+      return {
+        ...prev,
+        checklist: newChecklist,
+        checklistDateInputs: newDateInputs
+      };
+    });
+  };
+
+  const updateChecklistDateInput = (itemId: string, dateString: string) => {
+    // Allow free typing - just update the input string
+    setEditableData((prev: any) => ({
+      ...prev,
+      checklistDateInputs: {
+        ...prev.checklistDateInputs,
+        [itemId]: dateString
       }
     }));
   };
 
-  const updateChecklistDate = (itemId: string, dateString: string) => {
+  const validateAndSaveDate = (itemId: string) => {
+    const dateString = editableData.checklistDateInputs[itemId];
+    if (!dateString) return;
+    
     // Parse DD/MM/YYYY format
     const parts = dateString.split('/');
     if (parts.length === 3) {
@@ -154,7 +192,11 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
       const year = parseInt(parts[2]);
       const date = new Date(year, month, day);
       
-      if (!isNaN(date.getTime())) {
+      // Validate the date
+      if (!isNaN(date.getTime()) && 
+          date.getDate() === day && 
+          date.getMonth() === month &&
+          year >= 1900 && year <= 2100) {
         setEditableData((prev: any) => ({
           ...prev,
           checklist: {
@@ -163,6 +205,20 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
               ...prev.checklist[itemId],
               date
             }
+          },
+          checklistDateInputs: {
+            ...prev.checklistDateInputs,
+            [itemId]: format(date, "dd/MM/yyyy") // Format to standard
+          }
+        }));
+      } else {
+        // Invalid date - reset to previous valid date or current date
+        const validDate = editableData.checklist[itemId]?.date || new Date();
+        setEditableData((prev: any) => ({
+          ...prev,
+          checklistDateInputs: {
+            ...prev.checklistDateInputs,
+            [itemId]: format(validDate, "dd/MM/yyyy")
           }
         }));
       }
@@ -283,7 +339,7 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
               {CHECKLIST_ITEMS.map((item) => {
                 const checklistItem = editableData.checklist[item.id];
                 const isChecked = checklistItem?.status === true;
-                const date = checklistItem?.date ? format(new Date(checklistItem.date), "dd/MM/yyyy") : "";
+                const dateInputValue = editableData.checklistDateInputs[item.id] || "";
 
                 return (
                   <div key={item.id} className="grid grid-cols-[2fr,1fr,3fr] gap-4 items-start border-b pb-4">
@@ -314,8 +370,9 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
                       {isChecked && (
                         <Input
                           placeholder="DD/MM/ÅÅÅÅ"
-                          value={date}
-                          onChange={(e) => updateChecklistDate(item.id, e.target.value)}
+                          value={dateInputValue}
+                          onChange={(e) => updateChecklistDateInput(item.id, e.target.value)}
+                          onBlur={() => validateAndSaveDate(item.id)}
                           className="h-8 text-xs"
                         />
                       )}
