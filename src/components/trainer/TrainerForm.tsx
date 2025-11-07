@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -43,7 +43,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import * as XLSX from 'xlsx';
 
 const AARGANG_OPTIONS = [
   "2008 Drenge",
@@ -95,11 +97,51 @@ interface TrainerFormProps {
   onSubmit: (data: TrainerFormData) => void;
 }
 
+const CHECKLIST_ITEMS = [
+  {
+    id: "ko_message",
+    label: "Modtaget besked i Kluboffice (KO)",
+    note: "https://www.mb-boldklub.dk/traener-info/ny-frivillig/"
+  },
+  {
+    id: "ko_cpr",
+    label: "Anmodet om cpr nr via Kluboffice (KO)",
+    note: "Kluboffice -> Personer / Medlemmer / Medlemsoversigt / Personstamdata, Ikon øverst til højre (anmod om CPR)"
+  },
+  {
+    id: "balk_brik",
+    label: "Bestil Brik hos Ballerup Kommune (BALK)",
+    note: 'Brug email template "Nøglebrik" og sendt til tec@balk.dk. Husk at skrive personens navn i subjekt samt arkivere korrekt.'
+  },
+  {
+    id: "brik_ready",
+    label: "Brik klar til afhentning",
+    note: "Email kommer fra tec@balk.dk"
+  },
+  {
+    id: "bornetest_ordered",
+    label: "Bestilt børneattest",
+    note: "https://politi.dk/service-og-tilladelser/straffeattest/bestil-boerneattest (For at indhente børneattester skal man have MitID til MB)"
+  },
+  {
+    id: "bornetest_received",
+    label: "Modtaget børneattest retur",
+    note: "Email modtaget i MB's E-boks"
+  },
+  {
+    id: "welcome_email",
+    label: "Email til ny træner, cc kontaktperson",
+    note: 'Brug email template "Velkommen til Måløv Boldklub" Husk at skriv personens navn i Subjekt samt arkivere korrekt'
+  }
+];
+
 const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
   const [confirmed, setConfirmed] = useState(false);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [showInfoDialog, setShowInfoDialog] = useState(false);
   const [showYesDialog, setShowYesDialog] = useState(false);
+  const [showChecklistDialog, setShowChecklistDialog] = useState(false);
+  const [checklist, setChecklist] = useState<Record<string, boolean>>({});
 
   const form = useForm<TrainerFormData>({
     resolver: zodResolver(trainerFormSchema),
@@ -123,14 +165,97 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
   };
 
   const handleSubmit = (data: TrainerFormData) => {
+    // Create Excel workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Prepare form data
+    const formData = [
+      ["Felt", "Værdi"],
+      ["Navn", data.navn],
+      ["Email", data.email],
+      ["Telefon", data.telefon],
+      ["Fødselsdato", format(data.foedselsdato, "dd/MM/yyyy")],
+      ["Hold/Årgang", data.aargang],
+      ["Rolle", data.rolle],
+      ["Kontaktperson", data.kontaktperson],
+      [""],
+      ["Tjek liste"],
+    ];
+    
+    // Add checklist items
+    CHECKLIST_ITEMS.forEach(item => {
+      const status = checklist[item.id] ? "Ja" : "Nej";
+      formData.push([item.label, status]);
+      formData.push(["  Noter", item.note]);
+    });
+    
+    // Create worksheet and add to workbook
+    const ws = XLSX.utils.aoa_to_sheet(formData);
+    XLSX.utils.book_append_sheet(wb, ws, "Træner Data");
+    
+    // Generate Excel file and trigger download
+    const fileName = `traener_${data.navn.replace(/\s+/g, '_')}_${format(new Date(), 'dd-MM-yyyy')}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    
     onSubmit(data);
     form.reset();
+    setChecklist({});
     onOpenChange(false);
-    toast.success("Træner oprettet succesfuldt!");
+    toast.success("Træner oprettet og Excel fil downloadet!");
   };
 
   return (
     <>
+      <Dialog open={showChecklistDialog} onOpenChange={setShowChecklistDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Tjek liste</DialogTitle>
+            <DialogDescription>
+              Marker de opgaver, der er blevet gennemført
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {CHECKLIST_ITEMS.map((item) => (
+              <div key={item.id} className="space-y-2">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id={item.id}
+                    checked={checklist[item.id] || false}
+                    onCheckedChange={(checked) => {
+                      setChecklist(prev => ({
+                        ...prev,
+                        [item.id]: checked === true
+                      }));
+                    }}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <label
+                      htmlFor={item.id}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      {item.label}
+                    </label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Noter - {item.note}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowChecklistDialog(false)}
+            >
+              Luk
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={showYesDialog} onOpenChange={setShowYesDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -482,6 +607,18 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                   </FormItem>
                 )}
               />
+            </div>
+
+            <div className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowChecklistDialog(true)}
+                className="w-full md:w-auto"
+              >
+                <CheckSquare className="mr-2 h-4 w-4" />
+                Tjek liste
+              </Button>
             </div>
 
             <div className="flex justify-end gap-3 pt-4">
