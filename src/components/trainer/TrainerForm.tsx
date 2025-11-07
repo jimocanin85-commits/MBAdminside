@@ -323,63 +323,81 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
               <FormField
                 control={form.control}
                 name="foedselsdato"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Fødselsdato</FormLabel>
-                    <div className="relative">
-                      <FormControl>
-                        <Input
-                          placeholder="DD/MM/ÅÅÅÅ"
-                          value={field.value ? format(field.value, "dd/MM/yyyy") : ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            // Try to parse the date in DD/MM/YYYY format
-                            const parts = value.split('/');
-                            if (parts.length === 3) {
-                              const day = parseInt(parts[0]);
-                              const month = parseInt(parts[1]) - 1; // JS months are 0-indexed
-                              const year = parseInt(parts[2]);
-                              const date = new Date(year, month, day);
-                              // Check if the date is valid
-                              if (!isNaN(date.getTime()) && 
-                                  date.getDate() === day && 
-                                  date.getMonth() === month &&
-                                  date <= new Date() && 
-                                  date >= new Date("1940-01-01")) {
-                                field.onChange(date);
+                render={({ field }) => {
+                  const [inputValue, setInputValue] = useState(
+                    field.value ? format(field.value, "dd/MM/yyyy") : ""
+                  );
+
+                  return (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Fødselsdato</FormLabel>
+                      <div className="relative">
+                        <FormControl>
+                          <Input
+                            placeholder="DD/MM/ÅÅÅÅ"
+                            value={inputValue}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setInputValue(value);
+                              
+                              // Try to parse the date in DD/MM/YYYY format
+                              const parts = value.split('/');
+                              if (parts.length === 3 && parts[2].length === 4) {
+                                const day = parseInt(parts[0]);
+                                const month = parseInt(parts[1]) - 1;
+                                const year = parseInt(parts[2]);
+                                const date = new Date(year, month, day);
+                                
+                                if (!isNaN(date.getTime()) && 
+                                    date.getDate() === day && 
+                                    date.getMonth() === month &&
+                                    date <= new Date() && 
+                                    date >= new Date("1940-01-01")) {
+                                  field.onChange(date);
+                                }
                               }
-                            }
-                          }}
-                          className="pr-10"
-                        />
-                      </FormControl>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          >
-                            <CalendarIcon className="h-4 w-4 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                              date > new Date() || date < new Date("1940-01-01")
-                            }
-                            initialFocus
-                            className={cn("p-3 pointer-events-auto")}
+                            }}
+                            className="pr-10"
                           />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                        </FormControl>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                              onClick={() => {
+                                if (field.value) {
+                                  setInputValue(format(field.value, "dd/MM/yyyy"));
+                                }
+                              }}
+                            >
+                              <CalendarIcon className="h-4 w-4 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={(date) => {
+                                field.onChange(date);
+                                if (date) {
+                                  setInputValue(format(date, "dd/MM/yyyy"));
+                                }
+                              }}
+                              disabled={(date) =>
+                                date > new Date() || date < new Date("1940-01-01")
+                              }
+                              initialFocus
+                              className={cn("p-3 pointer-events-auto")}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
 
               <FormField
