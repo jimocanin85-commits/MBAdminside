@@ -167,9 +167,9 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
     // Create Excel workbook
     const wb = XLSX.utils.book_new();
     
-    // Prepare form data
-    const formData = [
-      ["Felt", "Værdi"],
+    // Prepare trainer information section
+    const trainerInfo = [
+      ["TRÆNER INFORMATION", ""],
       ["Navn", data.navn],
       ["Email", data.email],
       ["Telefon", data.telefon],
@@ -178,18 +178,26 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
       ["Rolle", data.rolle],
       ["Kontaktperson", data.kontaktperson],
       [""],
-      ["Tjekliste"],
+      ["TJEKLISTE", "STATUS"],
     ];
     
-    // Add checklist items
+    // Add checklist items with status and notes
     CHECKLIST_ITEMS.forEach(item => {
       const status = checklist[item.id] ? "Ja" : "Nej";
-      formData.push([item.label, status]);
-      formData.push(["  Noter", item.note]);
+      trainerInfo.push([item.label, status]);
+      trainerInfo.push([item.note, ""]);
     });
     
-    // Create worksheet and add to workbook
-    const ws = XLSX.utils.aoa_to_sheet(formData);
+    // Create worksheet
+    const ws = XLSX.utils.aoa_to_sheet(trainerInfo);
+    
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 60 },  // Column A (labels/descriptions)
+      { wch: 25 }   // Column B (values/status)
+    ];
+    
+    // Add worksheet to workbook
     XLSX.utils.book_append_sheet(wb, ws, "Træner Data");
     
     // Generate Excel file and trigger download
