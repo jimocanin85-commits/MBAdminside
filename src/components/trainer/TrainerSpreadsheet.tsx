@@ -229,7 +229,7 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
 
   const handleUploadToDrive = async () => {
     try {
-      toast.loading("Uploader til Cloudinary...");
+      toast.loading("Uploader til Cloud...");
       
       // Generate the Excel file as a blob
       const wb = XLSX.utils.book_new();
@@ -297,7 +297,7 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
       }
 
       if (data?.success) {
-        toast.success("Uploadet til Cloudinary!", {
+        toast.success("Uploadet til Cloud!", {
           description: `Filen er tilgængelig: ${fileName}`
         });
       }

@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
 
     // Create timestamp and signature for Cloudinary
     const timestamp = Math.round(new Date().getTime() / 1000);
-    const folder = 'trainer-files';
+    const folder = 'Maalov_boldklub';
     
     // Create signature
     const paramsToSign = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
