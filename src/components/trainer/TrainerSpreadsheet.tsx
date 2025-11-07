@@ -263,27 +263,12 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>Rediger Træner Data</span>
-            <div className="flex gap-2">
-              <Button onClick={handleSave} size="sm" variant="default" className="gap-2">
-                Gem ændringer
-              </Button>
-              <Button onClick={handleUploadToDrive} size="sm" variant="default" className="gap-2">
-                <Upload className="h-4 w-4" />
-                Upload til Google Drive
-              </Button>
-              <Button onClick={handleDownload} size="sm" variant="outline" className="gap-2">
-                <Download className="h-4 w-4" />
-                Download Excel
-              </Button>
-            </div>
-          </DialogTitle>
+          <DialogTitle className="text-2xl">Rediger Træner Data</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-6 py-4">
           {/* Trainer Info Section */}
-          <div className="border rounded-lg p-4 bg-muted/30">
+          <div className="border rounded-lg p-6 bg-muted/30">
             <h3 className="font-semibold mb-4 text-lg">Træner Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
@@ -339,7 +324,7 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
           </div>
 
           {/* Checklist Section */}
-          <div className="border rounded-lg p-4 bg-muted/30">
+          <div className="border rounded-lg p-6 bg-muted/30">
             <h3 className="font-semibold mb-4 text-lg">Tjekliste</h3>
             <div className="space-y-4">
               <div className="grid grid-cols-[2fr,1fr,3fr] gap-4 font-semibold text-sm border-b pb-2">
@@ -394,6 +379,21 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
               })}
             </div>
           </div>
+        </div>
+
+        {/* Action Buttons at Bottom */}
+        <div className="flex justify-end gap-3 pt-4 border-t">
+          <Button onClick={handleDownload} size="default" variant="outline" className="gap-2">
+            <Download className="h-4 w-4" />
+            Download Excel
+          </Button>
+          <Button onClick={handleUploadToDrive} size="default" variant="outline" className="gap-2">
+            <Upload className="h-4 w-4" />
+            Upload til Google Drive
+          </Button>
+          <Button onClick={handleSave} size="default" variant="default" className="gap-2">
+            Gem ændringer
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
