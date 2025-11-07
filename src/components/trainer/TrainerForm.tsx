@@ -133,23 +133,31 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
       <AlertDialog open={showInfoDialog} onOpenChange={setShowInfoDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogDescription className="space-y-3 text-left pt-4">
-              <ol className="list-decimal list-inside space-y-2">
-                <li>
-                  Gå til{" "}
-                  <a
-                    href="https://kluboffice.dbu.dk/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary underline hover:no-underline font-medium"
-                  >
-                    KlubOffice
-                  </a>
-                  {" "}og log på med din bruger
-                </li>
-                <li>Tjek Den Orange fane i højre hjørne hvor der står "Anmodninger om holderhverv"</li>
-                <li>Vælg person og tryk på Godkend anmodning</li>
-              </ol>
+            <AlertDialogDescription className="space-y-4 text-left pt-4">
+              <div className="space-y-2">
+                <p>Tjek, om den nye frivillige er oprettet i KlubOffice:</p>
+                <a
+                  href="https://kluboffice.dbu.dk/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline hover:no-underline font-medium"
+                >
+                  https://kluboffice.dbu.dk/
+                </a>
+              </div>
+
+              <p>
+                Klik på den orange boks øverst i højre hjørne med teksten "Anmodninger om holderhverv".
+              </p>
+
+              <div className="space-y-2">
+                <p className="font-medium">Hvis personen ikke vises, kan det skyldes:</p>
+                <ul className="list-disc list-inside space-y-1 pl-2">
+                  <li>Forkert e-mailadresse.</li>
+                  <li>Mailen fra systemet er havnet i spam.</li>
+                  <li>Bed holdlederen om at gensende invitationen.</li>
+                </ul>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
