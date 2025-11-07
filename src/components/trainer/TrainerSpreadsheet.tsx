@@ -229,6 +229,8 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
 
   const handleUploadToDrive = async () => {
     try {
+      toast.loading("Uploader til Cloud...");
+      
       // Generate the Excel file as a blob
       const wb = XLSX.utils.book_new();
       
@@ -264,73 +266,36 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
       
       XLSX.utils.book_append_sheet(wb, ws, "Træner Data");
       
-      // Convert to blob
-      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      // Convert to base64
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
       const fileName = `${editableData.navn.replace(/\s+/g, '_')}_traener_data.xlsx`;
-      const file = new File([blob], fileName, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-
-      // Open Cloudinary upload widget
-      const cloudinaryWidget = (window as any).cloudinary.createUploadWidget(
-        {
-          cloudName: 'dp5k07orp',
-          uploadPreset: 'ml_default', // You'll need to create this in Cloudinary dashboard
-          folder: 'Maalov_boldklub',
-          publicId: fileName.replace('.xlsx', ''),
-          resourceType: 'raw',
-          clientAllowedFormats: ['xlsx', 'xls'],
-          maxFileSize: 10000000, // 10MB
-          sources: ['local'],
-          showAdvancedOptions: false,
-          cropping: false,
-          multiple: false,
-          defaultSource: 'local',
-          styles: {
-            palette: {
-              window: "#FFFFFF",
-              windowBorder: "#90A0B3",
-              tabIcon: "#0078FF",
-              menuIcons: "#5A616A",
-              textDark: "#000000",
-              textLight: "#FFFFFF",
-              link: "#0078FF",
-              action: "#FF620C",
-              inactiveTabIcon: "#0E2F5A",
-              error: "#F44235",
-              inProgress: "#0078FF",
-              complete: "#20B832",
-              sourceBg: "#E4EBF1"
-            }
-          }
-        },
-        (error: any, result: any) => {
-          if (error) {
-            console.error('Upload error:', error);
-            toast.error("Upload fejlede", {
-              description: error.message || "Ukendt fejl"
-            });
-            return;
-          }
-          
-          if (result.event === 'success') {
-            console.log('Upload successful:', result.info);
-            toast.success("Uploadet til Cloud!", {
-              description: `${fileName} blev uploadet`
-            });
-            cloudinaryWidget.close();
-          }
-        }
-      );
-
-      // Upload the file programmatically
-      cloudinaryWidget.open();
       
-      // Wait a bit for widget to initialize, then upload the file
-      setTimeout(() => {
-        cloudinaryWidget.upload(file);
-      }, 500);
+      // Call edge function without auth (edge function will handle auth internally)
+      const { data, error } = await supabase.functions.invoke('upload-to-cloudinary', {
+        body: {
+          fileData: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${wbout}`,
+          fileName: fileName,
+          trainerName: editableData.navn
+        }
+      });
 
+      toast.dismiss();
+
+      if (error) {
+        console.error('Upload error:', error);
+        toast.error("Upload fejlede", {
+          description: error.message
+        });
+        return;
+      }
+
+      if (data?.success) {
+        toast.success("Uploadet til Cloud!", {
+          description: `Filen er tilgængelig: ${fileName}`
+        });
+      }
     } catch (error) {
+      toast.dismiss();
       console.error('Error uploading:', error);
       toast.error("Upload fejlede", {
         description: error instanceof Error ? error.message : "Ukendt fejl"
