@@ -43,7 +43,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
 
@@ -218,21 +217,22 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
             {CHECKLIST_ITEMS.map((item) => (
               <div key={item.id} className="space-y-2">
                 <div className="flex items-start gap-3">
-                  <Checkbox
+                  <input
+                    type="checkbox"
                     id={item.id}
                     checked={checklist[item.id] || false}
-                    onCheckedChange={(checked) => {
+                    onChange={(e) => {
                       setChecklist(prev => ({
                         ...prev,
-                        [item.id]: checked === true
+                        [item.id]: e.target.checked
                       }));
                     }}
-                    className="mt-1"
+                    className="mt-1 h-4 w-4 rounded border-primary text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-pointer"
                   />
                   <div className="flex-1">
                     <label
                       htmlFor={item.id}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      className="text-sm font-medium leading-none cursor-pointer"
                     >
                       {item.label}
                     </label>
