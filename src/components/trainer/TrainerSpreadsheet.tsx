@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { Download, X } from "lucide-react";
+import { Download, X, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -226,6 +226,12 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
     }
   };
 
+  const handleUploadToDrive = () => {
+    toast.success("Upload til Google Drive", {
+      description: "Funktionen kommer snart.",
+    });
+  };
+
   const handleSave = () => {
     const updatedTrainer = {
       ...trainer,
@@ -258,9 +264,6 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
 
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">Rediger Træner Data</DialogTitle>
-          </DialogHeader>
 
         <div className="space-y-6 py-4">
           {/* Trainer Info Section */}
@@ -382,6 +385,10 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
           <Button onClick={handleDownload} size="default" variant="outline" className="gap-2">
             <Download className="h-4 w-4" />
             Download Excel
+          </Button>
+          <Button onClick={handleUploadToDrive} size="default" variant="outline" className="gap-2">
+            <Upload className="h-4 w-4" />
+            Upload til Google Drive
           </Button>
           <Button onClick={handleSave} size="default" variant="outline" className="gap-2">
             Gem ændringer
