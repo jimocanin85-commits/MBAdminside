@@ -43,10 +43,9 @@ Deno.serve(async (req) => {
     
     // Create a clean filename from trainer name (remove .xlsx extension from fileName)
     const cleanFileName = fileName.replace('.xlsx', '').replace(/[^a-zA-Z0-9_-]/g, '_');
-    const publicId = `${folder}/${cleanFileName}`;
     
-    // Create signature - must be alphabetically sorted parameters
-    const paramsToSign = `public_id=${publicId}&timestamp=${timestamp}${apiSecret}`;
+    // For Cloudinary signature - folder and use_filename need to be in alphabetical order
+    const paramsToSign = `folder=${folder}&timestamp=${timestamp}&use_filename=true${apiSecret}`;
     const signature = await crypto.subtle.digest(
       'SHA-1',
       new TextEncoder().encode(paramsToSign)
@@ -55,15 +54,20 @@ Deno.serve(async (req) => {
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
-    console.log('Using public_id:', publicId);
+    console.log('Uploading to folder:', folder, 'with filename:', cleanFileName);
 
-    // Prepare form data for Cloudinary
+    // Prepare form data for Cloudinary - change file to be a Blob with the clean filename
+    const blob = await fetch(fileData).then(r => r.blob());
+    const file = new File([blob], `${cleanFileName}.xlsx`, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    
     const formData = new FormData();
-    formData.append('file', fileData);
+    formData.append('file', file);
     formData.append('api_key', apiKey);
     formData.append('timestamp', timestamp.toString());
     formData.append('signature', signatureHex);
-    formData.append('public_id', publicId);
+    formData.append('folder', folder);
+    formData.append('use_filename', 'true');
+    formData.append('unique_filename', 'false');
     formData.append('resource_type', 'raw'); // For non-image files like Excel
 
     // Upload to Cloudinary
