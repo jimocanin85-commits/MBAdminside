@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 const AARGANG_OPTIONS = [
   "2008 Drenge",
@@ -127,6 +128,44 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
     form.reset();
     onOpenChange(false);
     toast.success("Træner oprettet succesfuldt!");
+  };
+
+  const handleDownloadExcel = () => {
+    const formData = form.getValues();
+    
+    // Create worksheet data
+    const worksheetData = [
+      ["Felt", "Værdi"],
+      ["Navn", formData.navn],
+      ["Email", formData.email],
+      ["Telefon", formData.telefon],
+      ["Fødselsdato", formData.foedselsdato ? format(formData.foedselsdato, "dd/MM/yyyy") : ""],
+      ["Hold/Årgang", formData.aargang],
+      ["Rolle", formData.rolle],
+      ["Kontaktperson", formData.kontaktperson],
+      ["", ""],
+      ["Holdleder har inviteret ny frivillig", selectedOption === "yes" ? "Ja" : "Nej"],
+    ];
+
+    // Create workbook and worksheet
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    
+    // Set column widths
+    worksheet['!cols'] = [
+      { wch: 35 },
+      { wch: 30 }
+    ];
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Træner Data");
+
+    // Generate filename with current date and trainer name
+    const fileName = `traener_${formData.navn.replace(/\s+/g, '_')}_${format(new Date(), "dd-MM-yyyy")}.xlsx`;
+
+    // Download the file
+    XLSX.writeFile(workbook, fileName);
+    
+    toast.success("Excel fil downloadet!");
   };
 
   return (
@@ -492,7 +531,14 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
               >
                 Annuller
               </Button>
-              <Button type="submit">Opret træner</Button>
+              <Button 
+                type="button"
+                variant="secondary"
+                onClick={handleDownloadExcel}
+              >
+                Download Excel
+              </Button>
+              <Button type="submit">Tryk for færdiggøre oprettelsen</Button>
             </div>
           </form>
         </Form>
