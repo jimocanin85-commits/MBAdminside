@@ -64,9 +64,9 @@ const AdminPortal = () => {
     <div className="min-h-screen bg-background">
       <DashboardHeader onLogout={handleLogout} />
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto">
           <Card className="shadow-lg border-2">
-            <CardContent className="pt-8">
+            <CardContent className="pt-8 space-y-6">
               <Button 
                 size="lg" 
                 className="gap-2 text-base px-6 py-6"
@@ -75,54 +75,52 @@ const AdminPortal = () => {
                 <UserPlus className="h-5 w-5" />
                 Oprettelse af ny træner
               </Button>
+
+              {trainers.length > 0 && (
+                <div className="pt-6 border-t">
+                  <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Oprettelser
+                  </h2>
+                  <div className="space-y-4">
+                    {Object.entries(getTrainersByMonth()).map(([month, monthTrainers]) => (
+                      <div key={month} className="mb-6 last:mb-0">
+                        <h3 className="text-lg font-semibold mb-3 capitalize">{month}</h3>
+                        <div className="space-y-2">
+                          {monthTrainers.map((trainer, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                            >
+                              <div>
+                                <p className="font-medium">{trainer.navn}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {format(trainer.createdAt, "d. MMMM yyyy 'kl.' HH:mm", { locale: da })}
+                                </p>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-2"
+                                onClick={() => {
+                                  // Re-generate and download the Excel
+                                  const event = new CustomEvent('downloadTrainerExcel', { detail: trainer });
+                                  window.dispatchEvent(event);
+                                }}
+                              >
+                                <Download className="h-4 w-4" />
+                                Download
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
-
-          {trainers.length > 0 && (
-            <Card className="shadow-lg border-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Oprettelser
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {Object.entries(getTrainersByMonth()).map(([month, monthTrainers]) => (
-                  <div key={month} className="mb-6 last:mb-0">
-                    <h3 className="text-lg font-semibold mb-3 capitalize">{month}</h3>
-                    <div className="space-y-2">
-                      {monthTrainers.map((trainer, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                        >
-                          <div>
-                            <p className="font-medium">{trainer.navn}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {format(trainer.createdAt, "d. MMMM yyyy 'kl.' HH:mm", { locale: da })}
-                            </p>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-2"
-                            onClick={() => {
-                              // Re-generate and download the Excel
-                              const event = new CustomEvent('downloadTrainerExcel', { detail: trainer });
-                              window.dispatchEvent(event);
-                            }}
-                          >
-                            <Download className="h-4 w-4" />
-                            Download
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
         </div>
       </main>
 
