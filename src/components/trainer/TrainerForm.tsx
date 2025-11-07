@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -163,7 +163,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
     onOpenChange(newOpen);
   };
 
-  const handleSubmit = (data: TrainerFormData) => {
+  const generateExcelFile = (data: TrainerFormData, checklistData: Record<string, { status: boolean; date: Date | null }>) => {
     // Create Excel workbook
     const wb = XLSX.utils.book_new();
     
@@ -185,7 +185,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
     
     // Add checklist items
     CHECKLIST_ITEMS.forEach(item => {
-      const checklistItem = checklist[item.id];
+      const checklistItem = checklistData[item.id];
       let status = "";
       
       if (checklistItem) {
@@ -221,13 +221,33 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
     // Generate Excel file and trigger download
     const fileName = `traener_${data.navn.replace(/\s+/g, '_')}_${format(new Date(), 'dd-MM-yyyy')}.xlsx`;
     XLSX.writeFile(wb, fileName);
-    
-    onSubmit(data);
+  };
+
+  const handleSubmit = (data: TrainerFormData) => {
+    onSubmit({
+      ...data,
+      createdAt: new Date(),
+      excelData: { data, checklist }
+    } as any);
+    generateExcelFile(data, checklist);
     form.reset();
     setChecklist({});
     onOpenChange(false);
     toast.success("Træner oprettet og Excel fil downloadet!");
   };
+
+  // Listen for download events from AdminPortal
+  useEffect(() => {
+    const handleDownload = (e: CustomEvent) => {
+      const trainer = e.detail;
+      if (trainer.excelData) {
+        generateExcelFile(trainer.excelData.data, trainer.excelData.checklist);
+      }
+    };
+    
+    window.addEventListener('downloadTrainerExcel' as any, handleDownload as any);
+    return () => window.removeEventListener('downloadTrainerExcel' as any, handleDownload as any);
+  }, []);
 
   return (
     <>
