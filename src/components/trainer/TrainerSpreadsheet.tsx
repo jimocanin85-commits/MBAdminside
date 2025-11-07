@@ -142,7 +142,7 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
     
     XLSX.utils.book_append_sheet(wb, ws, "Træner Data");
     
-    const fileName = `traener_${editableData.navn.replace(/\s+/g, '_')}_${format(new Date(), 'dd-MM-yyyy')}.xlsx`;
+    const fileName = `${editableData.navn.replace(/\s+/g, '_')}_traener_data.xlsx`;
     XLSX.writeFile(wb, fileName);
   };
 
@@ -268,7 +268,7 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
       
       // Convert to base64
       const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
-      const fileName = `traener_${editableData.navn.replace(/\s+/g, '_')}_${format(new Date(), 'dd-MM-yyyy')}.xlsx`;
+      const fileName = `${editableData.navn.replace(/\s+/g, '_')}_traener_data.xlsx`;
       
       // Call edge function without auth (edge function will handle auth internally)
       const { data, error } = await supabase.functions.invoke('upload-to-cloudinary', {
