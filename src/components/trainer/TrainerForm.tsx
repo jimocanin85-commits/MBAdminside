@@ -135,7 +135,18 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
           <AlertDialogHeader>
             <AlertDialogDescription className="space-y-3 text-left pt-4">
               <p>
-                Du kan ikke fortsætte før holdleder har inviteret ny frivillig som kontakt til holdet.
+                Holdleder skal invitere ny frivillig som kontakt til holdet.
+              </p>
+              <p>
+                Send oplysning videre til holdlederen -{" "}
+                <a
+                  href="https://www.mb-boldklub.dk/traener-info/ny-frivillig/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline hover:no-underline font-medium"
+                >
+                  https://www.mb-boldklub.dk/traener-info/ny-frivillig/
+                </a>
               </p>
               <ol className="list-decimal list-inside space-y-2">
                 <li>
