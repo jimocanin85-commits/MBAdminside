@@ -167,34 +167,42 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
     // Create Excel workbook
     const wb = XLSX.utils.book_new();
     
-    // Prepare trainer information section
-    const trainerInfo = [
-      ["TRÆNER INFORMATION", ""],
-      ["Navn", data.navn],
-      ["Email", data.email],
-      ["Telefon", data.telefon],
-      ["Fødselsdato", format(data.foedselsdato, "dd/MM/yyyy")],
-      ["Hold/Årgang", data.aargang],
-      ["Rolle", data.rolle],
-      ["Kontaktperson", data.kontaktperson],
-      [""],
-      ["TJEKLISTE", "STATUS"],
+    // Build the data structure matching the reference layout
+    const excelData: any[][] = [
+      // Header row with trainer info categories
+      ["Navn/email/telefon/fødselsdato", "Årgang/rolle", "Kontaktperson"],
+      // Trainer data row
+      [
+        `${data.navn}\n${data.email}\n${data.telefon}\n${format(data.foedselsdato, "dd/MM/yyyy")}`,
+        `${data.aargang}\n${data.rolle}`,
+        data.kontaktperson
+      ],
+      // Empty row for separation
+      ["", "", ""],
+      // Checklist table headers
+      ["Opgave", "Status", "Noter"]
     ];
     
-    // Add checklist items with status and notes
+    // Add checklist items
     CHECKLIST_ITEMS.forEach(item => {
       const status = checklist[item.id] ? "Ja" : "Nej";
-      trainerInfo.push([item.label, status]);
-      trainerInfo.push([item.note, ""]);
+      excelData.push([item.label, status, item.note]);
     });
     
     // Create worksheet
-    const ws = XLSX.utils.aoa_to_sheet(trainerInfo);
+    const ws = XLSX.utils.aoa_to_sheet(excelData);
     
     // Set column widths
     ws['!cols'] = [
-      { wch: 60 },  // Column A (labels/descriptions)
-      { wch: 25 }   // Column B (values/status)
+      { wch: 45 },  // Column A (Opgave)
+      { wch: 20 },  // Column B (Status/Årgang)
+      { wch: 80 }   // Column C (Noter/Kontaktperson)
+    ];
+    
+    // Set row heights for the data rows with line breaks
+    ws['!rows'] = [
+      { hpt: 20 },  // Row 1 (headers)
+      { hpt: 60 },  // Row 2 (trainer data with line breaks)
     ];
     
     // Add worksheet to workbook
