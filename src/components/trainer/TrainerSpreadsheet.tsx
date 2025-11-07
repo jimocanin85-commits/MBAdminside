@@ -270,14 +270,7 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
       const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
       const fileName = `traener_${editableData.navn.replace(/\s+/g, '_')}_${format(new Date(), 'dd-MM-yyyy')}.xlsx`;
       
-      // Call edge function
-      const { data: sessionData } = await supabase.auth.getSession();
-      
-      if (!sessionData.session) {
-        toast.error("Du skal være logget ind for at uploade");
-        return;
-      }
-
+      // Call edge function without auth (edge function will handle auth internally)
       const { data, error } = await supabase.functions.invoke('upload-to-cloudinary', {
         body: {
           fileData: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${wbout}`,
@@ -342,7 +335,9 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
 
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-
+        <DialogHeader>
+          <DialogTitle>Rediger Træner Data</DialogTitle>
+        </DialogHeader>
         <div className="space-y-6 py-4">
           {/* Trainer Info Section */}
           <div className="border rounded-lg p-6 bg-muted/30">
