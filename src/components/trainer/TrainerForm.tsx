@@ -135,7 +135,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
           <AlertDialogHeader>
             <AlertDialogDescription className="space-y-4 text-left pt-4">
               <div className="space-y-2">
-                <p>Tjek, om den nye frivillige er oprettet i KlubOffice:</p>
+                <p>Tjek, om den frivillige er kommet ind i KlubOffice:</p>
                 <a
                   href="https://kluboffice.dbu.dk/"
                   target="_blank"
@@ -147,11 +147,11 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
               </div>
 
               <p>
-                Klik på den orange boks øverst i højre hjørne med teksten "Anmodninger om holderhverv".
+                Klik på den orange boks oppe i højre hjørne med teksten "Anmodninger om holderhverv".
               </p>
 
               <div className="space-y-2">
-                <p className="font-medium">Hvis personen ikke vises, kan det skyldes:</p>
+                <p className="font-medium">Hvis personen ikke står der, kan det skyldes:</p>
                 <ul className="list-disc list-inside space-y-1 pl-2">
                   <li>Forkert e-mailadresse.</li>
                   <li>Mailen fra systemet er havnet i spam.</li>
