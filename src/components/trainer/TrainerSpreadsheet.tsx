@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { Download, X } from "lucide-react";
+import { Download, X, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -225,6 +225,13 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
     }
   };
 
+  const handleUploadToDrive = async () => {
+    // TODO: Implement Google Drive upload
+    // This will require Google Drive API setup
+    console.log("Upload to Google Drive clicked");
+    alert("Google Drive integration coming soon! This will upload the Excel file to your Google Drive.");
+  };
+
   const handleSave = () => {
     const updatedTrainer = {
       ...trainer,
@@ -261,6 +268,10 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
             <div className="flex gap-2">
               <Button onClick={handleSave} size="sm" variant="default" className="gap-2">
                 Gem ændringer
+              </Button>
+              <Button onClick={handleUploadToDrive} size="sm" variant="default" className="gap-2">
+                <Upload className="h-4 w-4" />
+                Upload to Google Drive
               </Button>
               <Button onClick={handleDownload} size="sm" variant="outline" className="gap-2">
                 <Download className="h-4 w-4" />
