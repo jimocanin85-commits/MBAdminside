@@ -89,6 +89,9 @@ interface TrainerFormProps {
 }
 
 const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
+  const [confirmed, setConfirmed] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+
   const form = useForm<TrainerFormData>({
     resolver: zodResolver(trainerFormSchema),
     defaultValues: {
@@ -101,6 +104,14 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
     },
   });
 
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      setConfirmed(false);
+      setSelectedOption(null);
+    }
+    onOpenChange(newOpen);
+  };
+
   const handleSubmit = (data: TrainerFormData) => {
     onSubmit(data);
     form.reset();
@@ -109,14 +120,81 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">Opret ny træner</DialogTitle>
-          <DialogDescription>
-            Udfyld alle felter for at oprette en ny træner
-          </DialogDescription>
         </DialogHeader>
+
+        {!confirmed ? (
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <p className="text-sm">
+                Holdleder skal invitere ny holdkontakt til holdet. Henvis holdleder til siden –{" "}
+                <a 
+                  href="https://www.mb-boldklub.dk/traener-info/ny-frivillig/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary underline hover:no-underline"
+                >
+                  https://www.mb-boldklub.dk/traener-info/ny-frivillig/
+                </a>
+                {" "}– før du kan fortsætte med oprettelsen.
+              </p>
+
+              <div className="space-y-2">
+                <p className="font-medium">Has this been done?</p>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="confirmation"
+                      value="yes"
+                      checked={selectedOption === "yes"}
+                      onChange={(e) => setSelectedOption(e.target.value)}
+                      className="w-4 h-4"
+                    />
+                    <span>Yes</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="confirmation"
+                      value="no"
+                      checked={selectedOption === "no"}
+                      onChange={(e) => setSelectedOption(e.target.value)}
+                      className="w-4 h-4"
+                    />
+                    <span>No</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleOpenChange(false)}
+              >
+                Annuller
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  if (selectedOption === "yes") {
+                    setConfirmed(true);
+                  } else if (selectedOption === "no") {
+                    toast.error("Du skal først invitere ny holdkontakt før du kan fortsætte.");
+                  }
+                }}
+                disabled={!selectedOption}
+              >
+                Fortsæt
+              </Button>
+            </div>
+          </div>
+        ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -282,6 +360,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
             </div>
           </form>
         </Form>
+        )}
       </DialogContent>
     </Dialog>
   );
