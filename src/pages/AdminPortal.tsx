@@ -3,8 +3,8 @@ import LoginForm from "@/components/auth/LoginForm";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import TrainerForm from "@/components/trainer/TrainerForm";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserPlus, FileText, Download } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { UserPlus, Download } from "lucide-react";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
 
@@ -98,10 +98,6 @@ const AdminPortal = () => {
 
               {trainers.length > 0 && (
                 <div className="pt-6 border-t">
-                  <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Oprettelser
-                  </h2>
                   <div className="space-y-4">
                     {Object.entries(getTrainersByMonth()).map(([month, monthTrainers]) => (
                       <div key={month} className="mb-6 last:mb-0">
@@ -118,19 +114,31 @@ const AdminPortal = () => {
                                   {format(trainer.createdAt, "d. MMMM yyyy 'kl.' HH:mm", { locale: da })}
                                 </p>
                               </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="gap-2"
-                                onClick={() => {
-                                  // Re-generate and download the Excel
-                                  const event = new CustomEvent('downloadTrainerExcel', { detail: trainer });
-                                  window.dispatchEvent(event);
-                                }}
-                              >
-                                <Download className="h-4 w-4" />
-                                Download
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-2"
+                                  onClick={() => {
+                                    const event = new CustomEvent('downloadTrainerExcel', { detail: trainer });
+                                    window.dispatchEvent(event);
+                                  }}
+                                >
+                                  <Download className="h-4 w-4" />
+                                  Download
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-2"
+                                  onClick={() => {
+                                    const event = new CustomEvent('downloadTrainerExcel', { detail: trainer });
+                                    window.dispatchEvent(event);
+                                  }}
+                                >
+                                  Åbn
+                                </Button>
+                              </div>
                             </div>
                           ))}
                         </div>
