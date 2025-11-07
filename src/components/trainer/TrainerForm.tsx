@@ -15,6 +15,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Form,
   FormControl,
   FormField,
@@ -91,6 +99,7 @@ interface TrainerFormProps {
 const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
   const [confirmed, setConfirmed] = useState(false);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [showInfoDialog, setShowInfoDialog] = useState(false);
 
   const form = useForm<TrainerFormData>({
     resolver: zodResolver(trainerFormSchema),
@@ -120,8 +129,43 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <>
+      <AlertDialog open={showInfoDialog} onOpenChange={setShowInfoDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Inviter ny frivillig først</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 text-left">
+              <p>
+                Du kan ikke fortsætte før holdleder har inviteret ny frivillig som kontakt til holdet.
+              </p>
+              <ol className="list-decimal list-inside space-y-2">
+                <li>
+                  Gå til{" "}
+                  <a
+                    href="https://kluboffice.dbu.dk/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline hover:no-underline font-medium"
+                  >
+                    KlubOffice
+                  </a>
+                  {" "}og log på med din bruger
+                </li>
+                <li>Tjek Den Orange fane i højre hjørne hvor der står "Anmodninger om holderhverv"</li>
+                <li>Vælg person og tryk på Godkend anmodning</li>
+              </ol>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button onClick={() => setShowInfoDialog(false)}>
+              Forstået
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">Opret ny træner</DialogTitle>
         </DialogHeader>
@@ -184,9 +228,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                   if (selectedOption === "yes") {
                     setConfirmed(true);
                   } else if (selectedOption === "no") {
-                    toast.error("Du kan ikke fortsætte før holdleder har inviteret ny frivillig som kontakt til holdet. Gå til KlubOffice - https://kluboffice.dbu.dk/ og log på med din bruger. Tjek Den Orange fane i højre hjørne hvor der står \"Anmodninger om holderhverv\". Vælg person og tryk på Godkend anmodning.", {
-                      duration: 10000,
-                    });
+                    setShowInfoDialog(true);
                   }
                 }}
                 disabled={!selectedOption}
@@ -362,8 +404,9 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
           </form>
         </Form>
         )}
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
