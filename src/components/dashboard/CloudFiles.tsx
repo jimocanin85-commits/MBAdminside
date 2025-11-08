@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { FileText, Loader2, Eye, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -33,6 +34,7 @@ export const CloudFiles = () => {
   const [selectedFile, setSelectedFile] = useState<{ name: string; data: string } | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<CloudFile | null>(null);
+  const [password, setPassword] = useState("");
 
   const loadFiles = async () => {
     try {
@@ -104,11 +106,18 @@ export const CloudFiles = () => {
 
   const handleDeleteClick = (file: CloudFile) => {
     setFileToDelete(file);
+    setPassword("");
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
     if (!fileToDelete) return;
+
+    // Validate password
+    if (password !== "1523") {
+      toast.error("Forkert adgangskode");
+      return;
+    }
 
     const loadingToast = toast.loading("Sletter fil...");
     
@@ -136,6 +145,7 @@ export const CloudFiles = () => {
     } finally {
       setDeleteDialogOpen(false);
       setFileToDelete(null);
+      setPassword("");
     }
   };
 
@@ -237,8 +247,20 @@ export const CloudFiles = () => {
               Denne handling kan ikke fortrydes.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="py-4">
+            <label className="text-sm font-medium mb-2 block">Indtast adgangskode</label>
+            <Input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={password}
+              onChange={(e) => setPassword(e.target.value.replace(/\D/g, ''))}
+              placeholder="4-cifret kode"
+              className="max-w-[200px]"
+            />
+          </div>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuller</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setPassword("")}>Annuller</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
