@@ -54,10 +54,51 @@ Deno.serve(async (req) => {
     const authData = await authResponse.json();
     console.log('Authorization successful');
 
-    const { authorizationToken, apiUrl, allowed } = authData;
-    const bucketId = allowed.bucketId;
+    const { authorizationToken, apiUrl } = authData;
+    const bucketName = Deno.env.get('BACKBLAZE_BUCKET_NAME');
 
-    // Step 2: Get upload URL
+    if (!bucketName) {
+      return new Response(
+        JSON.stringify({ error: 'Bucket name not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Step 2: List buckets to find the bucket ID
+    console.log('Finding bucket:', bucketName);
+    const listBucketsResponse = await fetch(`${apiUrl}/b2api/v2/b2_list_buckets`, {
+      method: 'POST',
+      headers: {
+        'Authorization': authorizationToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ accountId: authData.accountId })
+    });
+
+    if (!listBucketsResponse.ok) {
+      const errorText = await listBucketsResponse.text();
+      console.error('Failed to list buckets:', errorText);
+      return new Response(
+        JSON.stringify({ error: 'Failed to list buckets', details: errorText }),
+        { status: listBucketsResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const bucketsData = await listBucketsResponse.json();
+    const bucket = bucketsData.buckets.find((b: any) => b.bucketName === bucketName);
+
+    if (!bucket) {
+      console.error('Bucket not found:', bucketName);
+      return new Response(
+        JSON.stringify({ error: `Bucket '${bucketName}' not found` }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const bucketId = bucket.bucketId;
+    console.log('Found bucket ID:', bucketId);
+
+    // Step 3: Get upload URL
     console.log('Getting upload URL for bucket:', bucketId);
     const uploadUrlResponse = await fetch(`${apiUrl}/b2api/v2/b2_get_upload_url`, {
       method: 'POST',
@@ -81,18 +122,18 @@ Deno.serve(async (req) => {
     const { uploadUrl, authorizationToken: uploadToken } = uploadUrlData;
     console.log('Upload URL obtained');
 
-    // Step 3: Convert base64 to binary
+    // Step 4: Convert base64 to binary
     const base64Data = fileData.split(',')[1];
     const binaryData = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
     console.log('File size:', binaryData.length, 'bytes');
 
-    // Step 4: Calculate SHA1 hash
+    // Step 5: Calculate SHA1 hash
     const hashBuffer = await crypto.subtle.digest('SHA-1', binaryData);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const sha1Hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     console.log('SHA1 hash calculated');
 
-    // Step 5: Upload file
+    // Step 6: Upload file
     console.log('Uploading file...');
     const uploadResponse = await fetch(uploadUrl, {
       method: 'POST',
@@ -119,7 +160,7 @@ Deno.serve(async (req) => {
     console.log('Upload successful:', uploadResult.fileName);
 
     // Construct download URL
-    const downloadUrl = `${authData.downloadUrl}/file/${allowed.bucketName}/${fileName}`;
+    const downloadUrl = `${authData.downloadUrl}/file/${bucketName}/${fileName}`;
 
     return new Response(
       JSON.stringify({
