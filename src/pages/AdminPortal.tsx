@@ -273,7 +273,7 @@ const AdminPortal = () => {
               onClick={() => setShowCloudFiles(false)}
               className="w-full"
             >
-              Tilbage til trænere
+              Tilbage
             </Button>
           )}
         </div>
