@@ -82,9 +82,9 @@ Deno.serve(async (req) => {
     const bucketId = bucket.bucketId;
     console.log('Found bucket ID:', bucketId);
 
-    // Step 3: List ALL file names (no folder prefix filter)
-    console.log('Listing all files in bucket...');
-    const listFilesResponse = await fetch(`${apiUrl}/b2api/v2/b2_list_file_names`, {
+    // Step 3: List ALL file versions (including hidden ones)
+    console.log('Listing all file versions in bucket...');
+    const listFilesResponse = await fetch(`${apiUrl}/b2api/v2/b2_list_file_versions`, {
       method: 'POST',
       headers: {
         'Authorization': authorizationToken,
@@ -92,6 +92,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         bucketId: bucketId,
+        prefix: 'Frivillige/',
         maxFileCount: 1000
       })
     });
@@ -106,26 +107,37 @@ Deno.serve(async (req) => {
     }
 
     const filesData = await listFilesResponse.json();
-    console.log('Raw files from Backblaze:', JSON.stringify(filesData.files));
-    console.log('Found', filesData.files.length, 'total files');
+    console.log('Raw file versions from Backblaze:', JSON.stringify(filesData.files));
+    console.log('Found', filesData.files.length, 'total file versions');
 
-    // Filter out system files and format the file list
-    const files = filesData.files
-      .filter((file: any) => {
-        // Skip .bzEmpty and other hidden/system files
-        const fileName = file.fileName.split('/').pop() || file.fileName;
-        return !fileName.startsWith('.') && fileName.length > 0 && fileName.endsWith('.xlsx');
-      })
-      .map((file: any) => ({
-        fileName: file.fileName.split('/').pop() || file.fileName, // Get just the filename
-        fullPath: file.fileName,
-        fileId: file.fileId,
-        size: file.contentLength,
-        uploadTimestamp: file.uploadTimestamp,
-        downloadUrl: `${authData.downloadUrl}/file/${bucketName}/${file.fileName}`
-      }));
+    // Group files by name and get only the latest version of each
+    const fileMap = new Map<string, any>();
     
-    console.log('Filtered to', files.length, 'user files');
+    filesData.files.forEach((file: any) => {
+      const fileName = file.fileName.replace('Frivillige/', '');
+      
+      // Skip system files
+      if (fileName.startsWith('.') || fileName.length === 0 || !fileName.endsWith('.xlsx')) {
+        return;
+      }
+      
+      // Only keep the latest version (first occurrence, as they're sorted by timestamp desc)
+      if (!fileMap.has(fileName)) {
+        fileMap.set(fileName, file);
+      }
+    });
+
+    // Format the file list
+    const files = Array.from(fileMap.values()).map((file: any) => ({
+      fileName: file.fileName.replace('Frivillige/', ''),
+      fullPath: file.fileName,
+      fileId: file.fileId,
+      size: file.contentLength,
+      uploadTimestamp: file.uploadTimestamp,
+      downloadUrl: `${authData.downloadUrl}/file/${bucketName}/${file.fileName}`
+    }));
+    
+    console.log('Filtered to', files.length, 'unique user files');
 
     return new Response(
       JSON.stringify({
