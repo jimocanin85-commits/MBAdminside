@@ -306,10 +306,13 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
       // Convert to base64
       const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
       
-      // Upload to Backblaze
+      // Clean the base64 string (remove any whitespace/newlines)
+      const cleanBase64 = wbout.replace(/\s/g, '');
+      
+      // Upload to Backblaze with proper data URL format
       const { data, error } = await supabase.functions.invoke('upload-to-backblaze', {
         body: {
-          fileData: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${wbout}`,
+          fileData: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${cleanBase64}`,
           fileName: fileName
         }
       });

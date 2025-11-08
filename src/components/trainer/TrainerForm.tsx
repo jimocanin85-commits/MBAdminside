@@ -294,12 +294,14 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
       const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
       const fileName = `${data.navn.replace(/\s+/g, '_')}.xlsx`;
       
-      // Upload to Backblaze
+      // Clean the base64 string (remove any whitespace/newlines)
+      const cleanBase64 = wbout.replace(/\s/g, '');
+      
+      // Upload to Backblaze with proper data URL format
       const { data: uploadData, error: uploadError } = await supabase.functions.invoke('upload-to-backblaze', {
         body: {
           fileName,
-          fileData: wbout,
-          folder: 'Frivillige'
+          fileData: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${cleanBase64}`
         }
       });
       
