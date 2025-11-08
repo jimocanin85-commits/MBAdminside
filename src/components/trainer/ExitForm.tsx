@@ -107,12 +107,11 @@ const ExitForm = ({ open, onOpenChange }: ExitFormProps) => {
       reader.readAsDataURL(blob);
       reader.onloadend = async () => {
         const base64data = reader.result as string;
-        const base64Content = base64data.split(',')[1];
 
         // Upload back to Backblaze
         const { error: uploadError } = await supabase.functions.invoke('upload-to-backblaze', {
           body: {
-            fileData: base64Content,
+            fileData: base64data,
             fileName: selectedFile
           }
         });
