@@ -7,19 +7,9 @@ import ExitForm from "@/components/trainer/ExitForm";
 import { CloudFiles } from "@/components/dashboard/CloudFiles";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { UserPlus, Download, Cloud, Trash2 } from "lucide-react";
+import { UserPlus, Cloud } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
 
@@ -44,8 +34,6 @@ const AdminPortal = () => {
   const [refreshCloudFiles, setRefreshCloudFiles] = useState(0);
   const [selectedTrainer, setSelectedTrainer] = useState<Trainer | null>(null);
   const [isEditingCloudFile, setIsEditingCloudFile] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [trainerToDelete, setTrainerToDelete] = useState<Trainer | null>(null);
   const [trainers, setTrainers] = useState<Trainer[]>(() => {
     const saved = localStorage.getItem('trainers');
     if (saved) {
@@ -101,43 +89,6 @@ const AdminPortal = () => {
     setIsEditingCloudFile(true);
     setShowCloudFiles(false);
     setIsSpreadsheetOpen(true);
-  };
-
-  const handleDeleteTrainer = async (trainer: Trainer) => {
-    try {
-      toast.loading("Sletter træner...");
-      
-      // Try to delete from Backblaze if file exists
-      // Note: The filename in cloud includes the trainer name but may have a date suffix
-      const fileName = `${trainer.navn.replace(/\s+/g, '_')}.xlsx`;
-      
-      try {
-        const { data, error } = await supabase.functions.invoke('delete-backblaze-file', {
-          body: { fileName }
-        });
-        
-        // Ignore 400 errors (file not found) since local trainers may not be uploaded yet
-        if (error && !error.message?.includes('non-2xx')) {
-          console.warn("Could not delete from cloud, but continuing with local deletion:", error);
-        }
-      } catch (cloudError) {
-        console.warn("Could not delete from cloud, but continuing with local deletion:", cloudError);
-        // Continue with local deletion even if cloud deletion fails
-      }
-      
-      // Remove from local storage
-      setTrainers(trainers.filter(t => t.createdAt !== trainer.createdAt));
-      
-      toast.dismiss();
-      toast.success("Træner slettet!");
-      setDeleteDialogOpen(false);
-      setTrainerToDelete(null);
-      setRefreshCloudFiles(prev => prev + 1);
-    } catch (error) {
-      toast.dismiss();
-      toast.error("Fejl ved sletning af træner");
-      console.error("Delete error:", error);
-    }
   };
 
   const getTrainersByMonth = () => {
@@ -218,43 +169,17 @@ const AdminPortal = () => {
                                   {format(trainer.createdAt, "d. MMMM yyyy 'kl.' HH:mm", { locale: da })}
                                 </p>
                               </div>
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="gap-2"
-                                  onClick={() => {
-                                    const event = new CustomEvent('downloadTrainerExcel', { detail: trainer });
-                                    window.dispatchEvent(event);
-                                  }}
-                                >
-                                  <Download className="h-4 w-4" />
-                                  Download
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="gap-2"
-                                  onClick={() => {
-                                    setSelectedTrainer(trainer);
-                                    setIsSpreadsheetOpen(true);
-                                  }}
-                                >
-                                  Åbn
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  className="gap-2"
-                                  onClick={() => {
-                                    setTrainerToDelete(trainer);
-                                    setDeleteDialogOpen(true);
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  Slet
-                                </Button>
-                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-2"
+                                onClick={() => {
+                                  setSelectedTrainer(trainer);
+                                  setIsSpreadsheetOpen(true);
+                                }}
+                              >
+                                Åbn
+                              </Button>
                             </div>
                           ))}
                         </div>
@@ -297,28 +222,6 @@ const AdminPortal = () => {
         trainer={selectedTrainer}
         onSave={handleTrainerUpdate}
       />
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Slet træner</AlertDialogTitle>
-            <AlertDialogDescription>
-              Er du sikker på, at du vil slette {trainerToDelete?.navn}? 
-              Dette vil også forsøge at fjerne deres Excel-fil fra Cloud Filer. 
-              Denne handling kan ikke fortrydes.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuller</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => trainerToDelete && handleDeleteTrainer(trainerToDelete)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Slet
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
