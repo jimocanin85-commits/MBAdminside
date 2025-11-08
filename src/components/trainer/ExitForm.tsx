@@ -99,9 +99,10 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
       // Get existing data
       const existingData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as any[][];
 
-      // Create exit checklist data
+      // Create exit checklist data with extra spacing
       const exitData = [
         ['', '', ''],
+        ['', '', ''], // Extra empty row to move Exit Tjekliste down
         ['Exit Tjekliste', '', ''],
         ['', '', ''],
         ...EXIT_CHECKLIST_ITEMS.map(item => [
@@ -117,6 +118,18 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
       // Create new worksheet with combined data
       const newWorksheet = XLSX.utils.aoa_to_sheet(combinedData);
       
+      // Find the row where "Exit Tjekliste" is located
+      const exitTitleRow = existingData.length + 2; // +1 for 0-index, +1 for extra row
+      const exitTitleCell = `A${exitTitleRow}`;
+      
+      // Make "Exit Tjekliste" bold if the cell exists
+      if (newWorksheet[exitTitleCell]) {
+        newWorksheet[exitTitleCell].s = {
+          font: { bold: true, sz: 14 },
+          alignment: { vertical: 'center', horizontal: 'left' }
+        };
+      }
+      
       // Set column widths
       newWorksheet['!cols'] = [
         { wch: 45 },
@@ -127,8 +140,12 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
       // Update workbook
       workbook.Sheets[sheetName] = newWorksheet;
 
-      // Convert back to Excel
-      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      // Convert back to Excel with cell styles enabled
+      const excelBuffer = XLSX.write(workbook, { 
+        bookType: 'xlsx', 
+        type: 'array',
+        cellStyles: true 
+      });
       const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       
       // Convert to base64
