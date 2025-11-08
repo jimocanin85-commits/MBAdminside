@@ -128,6 +128,17 @@ const AdminPortal = () => {
                   
                   <Button 
                     size="lg" 
+                    className="gap-2 text-base px-6 py-6 flex-1"
+                    onClick={() => {
+                      // TODO: Add exit handler
+                    }}
+                  >
+                    <UserPlus className="h-5 w-5" />
+                    Exit af frivillig
+                  </Button>
+                  
+                  <Button 
+                    size="lg" 
                     variant="outline"
                     className="gap-2 text-base px-6 py-6 flex-1"
                     onClick={() => setShowCloudFiles(true)}
