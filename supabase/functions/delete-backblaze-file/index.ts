@@ -71,32 +71,56 @@ serve(async (req) => {
 
     console.log(`Found bucket ID: ${bucket.bucketId}`);
 
-    // Step 3: List ALL file versions to find all versions of this file
+    // Step 3: List ALL file versions to find all versions of this file (with pagination)
     console.log(`Finding all versions of: ${fileName}`);
-    const listFilesResponse = await fetch(`${authData.apiUrl}/b2api/v2/b2_list_file_versions`, {
-      method: 'POST',
-      headers: {
-        'Authorization': authData.authorizationToken,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
+    let fileVersions: any[] = [];
+    let startFileName = null;
+    let startFileId = null;
+    
+    // Handle pagination to get ALL versions
+    do {
+      const requestBody: any = {
         bucketId: bucket.bucketId,
         prefix: `Frivillige/${fileName}`,
         maxFileCount: 10000
-      })
-    });
+      };
+      
+      if (startFileName && startFileId) {
+        requestBody.startFileName = startFileName;
+        requestBody.startFileId = startFileId;
+      }
+      
+      const listFilesResponse = await fetch(`${authData.apiUrl}/b2api/v2/b2_list_file_versions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': authData.authorizationToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
 
-    if (!listFilesResponse.ok) {
-      throw new Error('Failed to list file versions');
-    }
+      if (!listFilesResponse.ok) {
+        throw new Error('Failed to list file versions');
+      }
 
-    const filesData = await listFilesResponse.json();
-    
-    // Find all versions of the file
-    const fileVersions = filesData.files.filter((f: any) => {
-      const cloudFileName = f.fileName.replace('Frivillige/', '');
-      return cloudFileName === fileName;
-    });
+      const filesData = await listFilesResponse.json();
+      
+      // Filter to get only exact matches of this file
+      const matchingVersions = filesData.files.filter((f: any) => {
+        const cloudFileName = f.fileName.replace('Frivillige/', '');
+        return cloudFileName === fileName;
+      });
+      
+      fileVersions = fileVersions.concat(matchingVersions);
+      
+      // Check if there are more versions to fetch
+      if (filesData.nextFileName && filesData.nextFileId) {
+        startFileName = filesData.nextFileName;
+        startFileId = filesData.nextFileId;
+      } else {
+        break;
+      }
+    } while (true);
 
     if (fileVersions.length === 0) {
       console.log(`No file matching ${fileName} found in Frivillige folder.`);
