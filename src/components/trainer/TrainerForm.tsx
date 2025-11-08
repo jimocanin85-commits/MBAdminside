@@ -619,8 +619,10 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                               const value = e.target.value;
                               setInputValue(value);
                               
-                              // Try to parse date without slashes (DDMMYYYY format)
+                              // Try to parse date without slashes
                               const digitsOnly = value.replace(/\D/g, '');
+                              
+                              // DDMMYYYY format (8 digits)
                               if (digitsOnly.length === 8) {
                                 const day = parseInt(digitsOnly.substring(0, 2));
                                 const month = parseInt(digitsOnly.substring(2, 4)) - 1;
@@ -635,7 +637,27 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                                   field.onChange(date);
                                   setInputValue(format(date, "dd/MM/yyyy"));
                                 }
-                              } else {
+                              } 
+                              // DDMMYY format (6 digits) - Danish CPR format
+                              else if (digitsOnly.length === 6) {
+                                const day = parseInt(digitsOnly.substring(0, 2));
+                                const month = parseInt(digitsOnly.substring(2, 4)) - 1;
+                                const yearShort = parseInt(digitsOnly.substring(4, 6));
+                                
+                                // Determine century: 00-29 = 2000s, 30-99 = 1900s
+                                const year = yearShort <= 29 ? 2000 + yearShort : 1900 + yearShort;
+                                const date = new Date(year, month, day);
+                                
+                                if (!isNaN(date.getTime()) && 
+                                    date.getDate() === day && 
+                                    date.getMonth() === month &&
+                                    date <= new Date() && 
+                                    date >= new Date("1940-01-01")) {
+                                  field.onChange(date);
+                                  setInputValue(format(date, "dd/MM/yyyy"));
+                                }
+                              } 
+                              else {
                                 // Try to parse the date in DD/MM/YYYY format with slashes
                                 const parts = value.split('/');
                                 if (parts.length === 3 && parts[2].length === 4) {
