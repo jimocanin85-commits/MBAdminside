@@ -3,9 +3,10 @@ import LoginForm from "@/components/auth/LoginForm";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import TrainerForm from "@/components/trainer/TrainerForm";
 import TrainerSpreadsheet from "@/components/trainer/TrainerSpreadsheet";
+import { CloudFiles } from "@/components/dashboard/CloudFiles";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { UserPlus, Download } from "lucide-react";
+import { UserPlus, Download, Cloud } from "lucide-react";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
 
@@ -25,6 +26,7 @@ const AdminPortal = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSpreadsheetOpen, setIsSpreadsheetOpen] = useState(false);
+  const [showCloudFiles, setShowCloudFiles] = useState(false);
   const [selectedTrainer, setSelectedTrainer] = useState<Trainer | null>(null);
   const [trainers, setTrainers] = useState<Trainer[]>(() => {
     const saved = localStorage.getItem('trainers');
@@ -94,17 +96,32 @@ const AdminPortal = () => {
     <div className="min-h-screen bg-background">
       <DashboardHeader onLogout={handleLogout} />
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <Card className="shadow-lg border-2">
-            <CardContent className="pt-8 space-y-6">
-              <Button 
-                size="lg" 
-                className="gap-2 text-base px-6 py-6"
-                onClick={() => setIsFormOpen(true)}
-              >
-                <UserPlus className="h-5 w-5" />
-                Oprettelse af ny træner
-              </Button>
+        <div className="max-w-4xl mx-auto space-y-6">
+          {showCloudFiles ? (
+            <CloudFiles />
+          ) : (
+            <Card className="shadow-lg border-2">
+              <CardContent className="pt-8 space-y-6">
+                <div className="flex gap-3">
+                  <Button 
+                    size="lg" 
+                    className="gap-2 text-base px-6 py-6 flex-1"
+                    onClick={() => setIsFormOpen(true)}
+                  >
+                    <UserPlus className="h-5 w-5" />
+                    Oprettelse af ny træner
+                  </Button>
+                  
+                  <Button 
+                    size="lg" 
+                    variant="outline"
+                    className="gap-2 text-base px-6 py-6 flex-1"
+                    onClick={() => setShowCloudFiles(true)}
+                  >
+                    <Cloud className="h-5 w-5" />
+                    Cloud Filer
+                  </Button>
+                </div>
 
               {trainers.length > 0 && (
                 <div className="pt-6 border-t">
@@ -159,6 +176,17 @@ const AdminPortal = () => {
               )}
             </CardContent>
           </Card>
+          )}
+          
+          {showCloudFiles && (
+            <Button 
+              variant="outline" 
+              onClick={() => setShowCloudFiles(false)}
+              className="w-full"
+            >
+              Tilbage til trænere
+            </Button>
+          )}
         </div>
       </main>
 
