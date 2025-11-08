@@ -133,13 +133,16 @@ Deno.serve(async (req) => {
     const sha1Hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     console.log('SHA1 hash calculated');
 
-    // Step 6: Upload file
-    console.log('Uploading file...');
+    // Step 6: Upload file (with folder path)
+    const folderPath = 'Frivillige/';
+    const fullFileName = `${folderPath}${fileName}`;
+    console.log('Uploading file to:', fullFileName);
+    
     const uploadResponse = await fetch(uploadUrl, {
       method: 'POST',
       headers: {
         'Authorization': uploadToken,
-        'X-Bz-File-Name': encodeURIComponent(fileName),
+        'X-Bz-File-Name': encodeURIComponent(fullFileName),
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'Content-Length': binaryData.length.toString(),
         'X-Bz-Content-Sha1': sha1Hash
@@ -159,8 +162,8 @@ Deno.serve(async (req) => {
     const uploadResult = await uploadResponse.json();
     console.log('Upload successful:', uploadResult.fileName);
 
-    // Construct download URL
-    const downloadUrl = `${authData.downloadUrl}/file/${bucketName}/${fileName}`;
+    // Construct download URL (with folder path)
+    const downloadUrl = `${authData.downloadUrl}/file/${bucketName}/Frivillige/${fileName}`;
 
     return new Response(
       JSON.stringify({
