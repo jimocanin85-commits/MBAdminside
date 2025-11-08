@@ -229,7 +229,7 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
 
   const handleUploadToDrive = async () => {
     try {
-      toast.loading("Uploader til Cloud...");
+      toast.loading("Uploader til Backblaze B2...");
       
       // Generate the Excel file as a blob
       const wb = XLSX.utils.book_new();
@@ -271,7 +271,7 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
       const fileName = `${editableData.navn.replace(/\s+/g, '_')}_traener_data.xlsx`;
       
       // Call edge function without auth (edge function will handle auth internally)
-      const { data, error } = await supabase.functions.invoke('upload-to-mega', {
+      const { data, error } = await supabase.functions.invoke('upload-to-backblaze', {
         body: {
           fileData: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${wbout}`,
           fileName: fileName
@@ -289,7 +289,7 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
       }
 
       if (data?.success) {
-        toast.success("Uploadet til Cloud!", {
+        toast.success("Uploadet til Backblaze B2!", {
           description: `Filen er tilgængelig: ${fileName}`
         });
       }
@@ -460,7 +460,7 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
           </Button>
           <Button onClick={handleUploadToDrive} size="default" variant="outline" className="gap-2">
             <Upload className="h-4 w-4" />
-            Upload til Cloud
+            Upload til Backblaze B2
           </Button>
           <Button onClick={handleSave} size="default" variant="outline" className="gap-2">
             Gem ændringer
