@@ -5,6 +5,7 @@ import * as z from "zod";
 import { format } from "date-fns";
 import { CalendarIcon, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -223,16 +224,92 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
     XLSX.writeFile(wb, fileName);
   };
 
-  const handleSubmit = (data: TrainerFormData) => {
-    onSubmit({
-      ...data,
-      createdAt: new Date(),
-      excelData: { data, checklist }
-    } as any);
-    form.reset();
-    setChecklist({});
-    onOpenChange(false);
-    toast.success("Træner oprettet!");
+  const handleSubmit = async (data: TrainerFormData) => {
+    try {
+      // Show loading toast
+      const loadingToast = toast.loading("Opretter træner og uploader til cloud...");
+      
+      // Submit trainer data locally first
+      onSubmit({
+        ...data,
+        createdAt: new Date(),
+        excelData: { data, checklist }
+      } as any);
+      
+      // Generate Excel file for upload
+      const wb = XLSX.utils.book_new();
+      
+      // Build the data structure
+      const excelData: any[][] = [
+        ["Navn/email/telefon/fødselsdato", "Årgang/rolle", "Kontaktperson"],
+        [
+          `${data.navn}\n${data.email}\n${data.telefon}\n${format(data.foedselsdato, "dd/MM/yyyy")}`,
+          `${data.aargang}\n${data.rolle}`,
+          data.kontaktperson
+        ],
+        ["", "", ""],
+        ["Opgave", "Status", "Noter"]
+      ];
+      
+      // Add checklist items
+      CHECKLIST_ITEMS.forEach(item => {
+        const checklistItem = checklist[item.id];
+        let status = "";
+        
+        if (checklistItem) {
+          if (checklistItem.status === true && checklistItem.date) {
+            status = `Ja - ${format(checklistItem.date, "dd/MM/yyyy")}`;
+          } else if (checklistItem.status === false) {
+            status = "Nej";
+          }
+        }
+        
+        excelData.push([item.label, status, item.note]);
+      });
+      
+      const ws = XLSX.utils.aoa_to_sheet(excelData);
+      ws['!cols'] = [
+        { wch: 45 },
+        { wch: 20 },
+        { wch: 80 }
+      ];
+      ws['!rows'] = [
+        { hpt: 20 },
+        { hpt: 60 },
+      ];
+      
+      XLSX.utils.book_append_sheet(wb, ws, "Træner Data");
+      
+      // Convert to base64 for upload
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+      const fileName = `${data.navn.replace(/\s+/g, '_')}.xlsx`;
+      
+      // Upload to Backblaze
+      const { data: uploadData, error: uploadError } = await supabase.functions.invoke('upload-to-backblaze', {
+        body: {
+          fileName,
+          fileData: wbout,
+          folder: 'Frivillige'
+        }
+      });
+      
+      toast.dismiss(loadingToast);
+      
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        toast.error("Træner oprettet, men upload til cloud fejlede");
+      } else {
+        toast.success("Træner oprettet og uploadet til cloud!");
+      }
+      
+      // Reset form
+      form.reset();
+      setChecklist({});
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error creating trainer:", error);
+      toast.error("Fejl ved oprettelse af træner");
+    }
   };
 
   // Listen for download events from AdminPortal
