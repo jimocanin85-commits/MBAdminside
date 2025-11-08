@@ -99,7 +99,16 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
       // Get existing data
       const existingData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as any[][];
 
-      // Create exit checklist data with extra spacing
+      // Find if Exit Tjekliste already exists
+      let exitStartIndex = -1;
+      for (let i = 0; i < existingData.length; i++) {
+        if (existingData[i][0] === 'Exit Tjekliste') {
+          exitStartIndex = i - 2; // Account for the 2 empty rows before it
+          break;
+        }
+      }
+
+      // Create exit checklist data
       const exitData = [
         ['', '', ''],
         ['', '', ''], // Extra empty row to move Exit Tjekliste down
@@ -122,14 +131,23 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
         })
       ];
 
-      // Append exit data to existing data
-      const combinedData = [...existingData, ...exitData];
+      let combinedData;
+      if (exitStartIndex !== -1) {
+        // Replace existing Exit Tjekliste
+        combinedData = [
+          ...existingData.slice(0, exitStartIndex),
+          ...exitData
+        ];
+      } else {
+        // Append new Exit Tjekliste
+        combinedData = [...existingData, ...exitData];
+      }
 
       // Create new worksheet with combined data
       const newWorksheet = XLSX.utils.aoa_to_sheet(combinedData);
       
       // Find the row where "Exit Tjekliste" is located
-      const exitTitleRow = existingData.length + 2; // +1 for 0-index, +1 for extra row
+      const exitTitleRow = exitStartIndex !== -1 ? exitStartIndex + 3 : existingData.length + 3;
       const exitTitleCell = `A${exitTitleRow}`;
       
       // Make "Exit Tjekliste" bold if the cell exists
@@ -174,7 +192,7 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
 
         if (uploadError) throw uploadError;
 
-        toast.success('Exit tjekliste tilføjet!', { id: loadingToast });
+        toast.success('Exit tjekliste opdateret!', { id: loadingToast });
         onSuccess?.();
         onOpenChange(false);
       };
