@@ -209,26 +209,6 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
         
         excelData.push([item.label, status, item.note]);
       });
-
-      // Add exit checklist section
-      excelData.push(["", "", ""]);
-      excelData.push(["Exit Tjekliste", "", ""]);
-      excelData.push(["", "", ""]);
-      
-      EXIT_CHECKLIST_ITEMS.forEach(item => {
-        const checklistItem = checklistData[item.id];
-        let status = "";
-        
-        if (checklistItem) {
-          if (checklistItem.status === true && checklistItem.date) {
-            status = `Ja - ${format(checklistItem.date, "dd/MM/yyyy")}`;
-          } else if (checklistItem.status === false) {
-            status = "Nej";
-          }
-        }
-        
-        excelData.push([item.label, status, item.note]);
-      });
     
     // Create worksheet
     const ws = XLSX.utils.aoa_to_sheet(excelData);
@@ -283,26 +263,6 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
       
       // Add checklist items
       CHECKLIST_ITEMS.forEach(item => {
-        const checklistItem = checklist[item.id];
-        let status = "";
-        
-        if (checklistItem) {
-          if (checklistItem.status === true && checklistItem.date) {
-            status = `Ja - ${format(checklistItem.date, "dd/MM/yyyy")}`;
-          } else if (checklistItem.status === false) {
-            status = "Nej";
-          }
-        }
-        
-        excelData.push([item.label, status, item.note]);
-      });
-
-      // Add exit checklist section
-      excelData.push(["", "", ""]);
-      excelData.push(["Exit Tjekliste", "", ""]);
-      excelData.push(["", "", ""]);
-      
-      EXIT_CHECKLIST_ITEMS.forEach(item => {
         const checklistItem = checklist[item.id];
         let status = "";
         
@@ -434,57 +394,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                   )}
                 </div>
               </div>
-            ))}
-
-            <div className="mt-6 pt-6 border-t">
-              <h3 className="text-lg font-bold mb-4">Exit Tjekliste</h3>
-              {EXIT_CHECKLIST_ITEMS.map((item) => (
-                <div key={item.id} className="space-y-2 border-b pb-4 last:border-b-0">
-                  <div className="flex-1">
-                    <label className="text-sm font-medium leading-none">
-                      {item.label}
-                    </label>
-                  </div>
-                  <div className="flex gap-6 mt-2 ml-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name={item.id}
-                        checked={checklist[item.id]?.status === true}
-                        onChange={() => {
-                          setChecklist(prev => ({
-                            ...prev,
-                            [item.id]: { status: true, date: new Date() }
-                          }));
-                        }}
-                        className="h-4 w-4 text-primary focus:ring-2 focus:ring-primary cursor-pointer"
-                      />
-                      <span className="text-sm">Ja</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name={item.id}
-                        checked={checklist[item.id]?.status === false}
-                        onChange={() => {
-                          setChecklist(prev => ({
-                            ...prev,
-                            [item.id]: { status: false, date: null }
-                          }));
-                        }}
-                        className="h-4 w-4 text-primary focus:ring-2 focus:ring-primary cursor-pointer"
-                      />
-                      <span className="text-sm">Nej</span>
-                    </label>
-                    {checklist[item.id]?.status === true && checklist[item.id]?.date && (
-                      <span className="text-sm text-muted-foreground ml-2">
-                        ({format(checklist[item.id].date!, "dd/MM/yyyy")})
-                      </span>
-                    )}
-                  </div>
-                </div>
               ))}
-            </div>
           </div>
           <div className="flex justify-end gap-3">
             <Button
