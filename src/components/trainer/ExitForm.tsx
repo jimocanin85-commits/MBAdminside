@@ -93,7 +93,14 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
         ])
       ];
 
-      // Add or update the Exit sheet
+      // Remove existing Exit sheet if it exists
+      const exitSheetIndex = workbook.SheetNames.indexOf('Exit');
+      if (exitSheetIndex > -1) {
+        workbook.SheetNames.splice(exitSheetIndex, 1);
+        delete workbook.Sheets['Exit'];
+      }
+
+      // Add the Exit sheet
       const exitSheet = XLSX.utils.aoa_to_sheet(exitData);
       workbook.SheetNames.push('Exit');
       workbook.Sheets['Exit'] = exitSheet;
