@@ -80,6 +80,8 @@ Deno.serve(async (req) => {
 
     // Step 1: Get user session ID
     console.log('Authenticating with MEGA...');
+    console.log('Email:', megaEmail);
+    
     const loginResponse = await fetch('https://g.api.mega.co.nz/cs?id=0', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -89,12 +91,18 @@ Deno.serve(async (req) => {
       }])
     });
 
-    if (!loginResponse.ok) {
-      throw new Error('MEGA API request failed');
+    const loginText = await loginResponse.text();
+    console.log('Login response status:', loginResponse.status);
+    console.log('Login response text:', loginText);
+
+    let loginData;
+    try {
+      loginData = JSON.parse(loginText);
+    } catch (e) {
+      throw new Error(`Failed to parse MEGA response: ${loginText}`);
     }
 
-    const loginData = await loginResponse.json();
-    console.log('Login response:', loginData[0]);
+    console.log('Login response parsed:', loginData[0]);
 
     if (typeof loginData[0] === 'number' && loginData[0] < 0) {
       const errorCodes: Record<number, string> = {
