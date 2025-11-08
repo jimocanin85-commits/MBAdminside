@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, Trash2, FileText, Loader2 } from "lucide-react";
+import { FileText, Loader2, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import * as XLSX from 'xlsx';
 
 interface CloudFile {
   fileName: string;
@@ -15,7 +16,11 @@ interface CloudFile {
   downloadUrl: string;
 }
 
-export const CloudFiles = () => {
+interface CloudFilesProps {
+  onEditFile: (fileData: any) => void;
+}
+
+export const CloudFiles = ({ onEditFile }: CloudFilesProps) => {
   const [files, setFiles] = useState<CloudFile[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,11 +52,92 @@ export const CloudFiles = () => {
     loadFiles();
   }, []);
 
-  const handleDownload = (file: CloudFile) => {
-    window.open(file.downloadUrl, '_blank');
-    toast.success("Downloader fil...", {
-      description: file.fileName
-    });
+  const handleEditFile = async (file: CloudFile) => {
+    try {
+      toast.loading("Henter fil...");
+      
+      // Fetch the Excel file from Backblaze
+      const response = await fetch(file.downloadUrl);
+      if (!response.ok) {
+        throw new Error('Failed to download file');
+      }
+      
+      const arrayBuffer = await response.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      
+      // Parse the Excel file
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+      
+      // Extract trainer data from the Excel structure
+      const trainerInfo = data[1][0].split('\n');
+      const yearRole = data[1][1].split('\n');
+      
+      // Build checklist from rows starting at index 4
+      const checklist: any = {};
+      for (let i = 4; i < data.length; i++) {
+        if (!data[i] || !data[i][0]) continue;
+        
+        const taskName = data[i][0];
+        const statusText = data[i][1] || '';
+        
+        // Map task names to IDs
+        const taskIdMap: Record<string, string> = {
+          'Modtaget besked i Kluboffice (KO)': 'ko_message',
+          'Anmodet om cpr nr via Kluboffice (KO)': 'ko_cpr',
+          'Bestil Brik hos Ballerup Kommune (BALK)': 'balk_brik',
+          'Brik klar til afhentning': 'brik_ready',
+          'Bestilt børneattest': 'bornetest_ordered',
+          'Modtaget børneattest retur': 'bornetest_received',
+          'Email til ny træner, cc kontaktperson': 'welcome_email'
+        };
+        
+        const taskId = taskIdMap[taskName];
+        if (taskId) {
+          if (statusText.includes('Ja -')) {
+            const dateStr = statusText.replace('Ja - ', '').trim();
+            const [day, month, year] = dateStr.split('/');
+            const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            checklist[taskId] = { status: true, date };
+          } else if (statusText === 'Nej') {
+            checklist[taskId] = { status: false, date: null };
+          }
+        }
+      }
+      
+      const trainerData = {
+        navn: trainerInfo[0] || '',
+        email: trainerInfo[1] || '',
+        telefon: trainerInfo[2] || '',
+        foedselsdato: trainerInfo[3] || '',
+        aargang: yearRole[0] || '',
+        rolle: yearRole[1] || '',
+        kontaktperson: data[1][2] || '',
+        createdAt: new Date(file.uploadTimestamp),
+        excelData: {
+          data: {
+            navn: trainerInfo[0] || '',
+            email: trainerInfo[1] || '',
+            telefon: trainerInfo[2] || '',
+            foedselsdato: trainerInfo[3] || '',
+            aargang: yearRole[0] || '',
+            rolle: yearRole[1] || '',
+            kontaktperson: data[1][2] || ''
+          },
+          checklist
+        }
+      };
+      
+      toast.dismiss();
+      toast.success("Fil indlæst!");
+      onEditFile(trainerData);
+    } catch (error) {
+      toast.dismiss();
+      console.error('Error loading file:', error);
+      toast.error("Kunne ikke indlæse fil", {
+        description: error instanceof Error ? error.message : "Ukendt fejl"
+      });
+    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -112,10 +198,10 @@ export const CloudFiles = () => {
                     variant="outline"
                     size="sm"
                     className="gap-2"
-                    onClick={() => handleDownload(file)}
+                    onClick={() => handleEditFile(file)}
                   >
-                    <Download className="h-4 w-4" />
-                    Download
+                    <Edit className="h-4 w-4" />
+                    Rediger
                   </Button>
                 </div>
               </div>

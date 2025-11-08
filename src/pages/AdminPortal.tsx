@@ -28,6 +28,7 @@ const AdminPortal = () => {
   const [isSpreadsheetOpen, setIsSpreadsheetOpen] = useState(false);
   const [showCloudFiles, setShowCloudFiles] = useState(false);
   const [selectedTrainer, setSelectedTrainer] = useState<Trainer | null>(null);
+  const [isEditingCloudFile, setIsEditingCloudFile] = useState(false);
   const [trainers, setTrainers] = useState<Trainer[]>(() => {
     const saved = localStorage.getItem('trainers');
     if (saved) {
@@ -70,6 +71,19 @@ const AdminPortal = () => {
     setTrainers(trainers.map(t => 
       t.createdAt === updatedTrainer.createdAt ? updatedTrainer : t
     ));
+    
+    // If this was a cloud file edit, go back to cloud files view
+    if (isEditingCloudFile) {
+      setIsEditingCloudFile(false);
+      setShowCloudFiles(true);
+    }
+  };
+
+  const handleEditCloudFile = (fileData: any) => {
+    setSelectedTrainer(fileData);
+    setIsEditingCloudFile(true);
+    setShowCloudFiles(false);
+    setIsSpreadsheetOpen(true);
   };
 
   const getTrainersByMonth = () => {
@@ -98,7 +112,7 @@ const AdminPortal = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-6">
           {showCloudFiles ? (
-            <CloudFiles />
+            <CloudFiles onEditFile={handleEditCloudFile} />
           ) : (
             <Card className="shadow-lg border-2">
               <CardContent className="pt-8 space-y-6">
