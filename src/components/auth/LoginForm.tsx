@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import mbLogo from "@/assets/mb-logo.png";
 
 interface LoginFormProps {
-  onLogin: (email: string, password: string) => Promise<void>;
+  onLogin: () => void;
 }
 
 const LoginForm = ({ onLogin }: LoginFormProps) => {
@@ -15,19 +15,22 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    try {
-      await onLogin(username, password);
-      toast.success("Login successful!");
-    } catch (error: any) {
-      console.error("Login error:", error);
-      toast.error(error.message || "Forkert brugernavn eller adgangskode");
-    } finally {
+    setTimeout(() => {
+      const trimmedUsername = username.trim();
+      const trimmedPassword = password.trim();
+      
+      if (trimmedUsername === "admin" && trimmedPassword === "Monne1935") {
+        toast.success("Login successful!");
+        onLogin();
+      } else {
+        toast.error("Forkert brugernavn eller adgangskode");
+      }
       setIsLoading(false);
-    }
+    }, 500);
   };
 
   return (

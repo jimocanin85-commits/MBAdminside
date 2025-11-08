@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Session, User } from "@supabase/supabase-js";
 import LoginForm from "@/components/auth/LoginForm";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import TrainerForm from "@/components/trainer/TrainerForm";
@@ -29,8 +28,9 @@ type Trainer = {
 };
 
 const AdminPortal = () => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('isAuthenticated') === 'true';
+  });
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isExitFormOpen, setIsExitFormOpen] = useState(false);
   const [isSpreadsheetOpen, setIsSpreadsheetOpen] = useState(false);
@@ -64,39 +64,18 @@ const AdminPortal = () => {
     localStorage.setItem('trainers', JSON.stringify(trainers));
   }, [trainers]);
 
-  // Set up auth state listener and check for existing session
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-      }
-    );
+    localStorage.setItem('isAuthenticated', isAuthenticated.toString());
+  }, [isAuthenticated]);
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const handleLogin = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      throw error;
-    }
+  const handleLogin = () => {
+    setIsAuthenticated(true);
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
+    setIsAuthenticated(false);
     setIsAdminMode(false);
+    localStorage.removeItem('isAuthenticated');
   };
 
   const handleTrainerSubmit = (data: Omit<Trainer, 'createdAt'>) => {
@@ -175,7 +154,7 @@ const AdminPortal = () => {
     return grouped;
   };
 
-  if (!user) {
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-muted p-4">
         <LoginForm onLogin={handleLogin} />
