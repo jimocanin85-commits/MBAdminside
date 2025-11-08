@@ -132,11 +132,7 @@ const ExitForm = ({ open, onOpenChange }: ExitFormProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Exit af frivillig</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-6">
+        <div className="space-y-6 pt-6">
           <div className="space-y-2">
             <Label>Vælg frivillig</Label>
             <Select value={selectedFile} onValueChange={setSelectedFile}>
