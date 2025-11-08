@@ -82,8 +82,8 @@ Deno.serve(async (req) => {
     const bucketId = bucket.bucketId;
     console.log('Found bucket ID:', bucketId);
 
-    // Step 3: List ALL file versions (including hidden ones)
-    console.log('Listing all file versions in bucket...');
+    // Step 3: List ALL file versions (no prefix to see everything)
+    console.log('Listing all file versions in bucket (no prefix)...');
     const listFilesResponse = await fetch(`${apiUrl}/b2api/v2/b2_list_file_versions`, {
       method: 'POST',
       headers: {
@@ -92,8 +92,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         bucketId: bucketId,
-        prefix: 'Frivillige/',
-        maxFileCount: 1000
+        maxFileCount: 10000
       })
     });
 
@@ -107,37 +106,73 @@ Deno.serve(async (req) => {
     }
 
     const filesData = await listFilesResponse.json();
-    console.log('Raw file versions from Backblaze:', JSON.stringify(filesData.files));
-    console.log('Found', filesData.files.length, 'total file versions');
+    console.log('RAW RESPONSE FROM BACKBLAZE:', JSON.stringify(filesData, null, 2));
+    console.log('Total file versions found:', filesData.files?.length || 0);
+
+    if (!filesData.files || filesData.files.length === 0) {
+      console.log('No files returned from Backblaze at all');
+      return new Response(
+        JSON.stringify({
+          success: true,
+          files: [],
+          bucketName,
+          debug: 'No files found in bucket'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Group files by name and get only the latest version of each
     const fileMap = new Map<string, any>();
     
-    filesData.files.forEach((file: any) => {
-      const fileName = file.fileName.replace('Frivillige/', '');
+    filesData.files.forEach((file: any, index: number) => {
+      console.log(`File ${index}:`, {
+        fileName: file.fileName,
+        fileId: file.fileId,
+        size: file.contentLength,
+        action: file.action
+      });
       
-      // Skip system files
-      if (fileName.startsWith('.') || fileName.length === 0 || !fileName.endsWith('.xlsx')) {
+      // Extract just the filename, handling various path formats
+      let displayName = file.fileName;
+      if (displayName.includes('/')) {
+        displayName = displayName.split('/').pop() || displayName;
+      }
+      
+      console.log(`Display name: ${displayName}`);
+      
+      // Skip system files and non-xlsx files
+      if (displayName.startsWith('.') || !displayName.endsWith('.xlsx')) {
+        console.log(`Skipping ${displayName} - system file or not xlsx`);
         return;
       }
       
       // Only keep the latest version (first occurrence, as they're sorted by timestamp desc)
-      if (!fileMap.has(fileName)) {
-        fileMap.set(fileName, file);
+      if (!fileMap.has(displayName)) {
+        console.log(`Adding ${displayName} to file map`);
+        fileMap.set(displayName, file);
+      } else {
+        console.log(`${displayName} already in map, skipping older version`);
       }
     });
 
     // Format the file list
-    const files = Array.from(fileMap.values()).map((file: any) => ({
-      fileName: file.fileName.replace('Frivillige/', ''),
-      fullPath: file.fileName,
-      fileId: file.fileId,
-      size: file.contentLength,
-      uploadTimestamp: file.uploadTimestamp,
-      downloadUrl: `${authData.downloadUrl}/file/${bucketName}/${file.fileName}`
-    }));
+    const files = Array.from(fileMap.values()).map((file: any) => {
+      const displayName = file.fileName.includes('/') 
+        ? file.fileName.split('/').pop() 
+        : file.fileName;
+      
+      return {
+        fileName: displayName,
+        fullPath: file.fileName,
+        fileId: file.fileId,
+        size: file.contentLength,
+        uploadTimestamp: file.uploadTimestamp,
+        downloadUrl: `${authData.downloadUrl}/file/${bucketName}/${file.fileName}`
+      };
+    });
     
-    console.log('Filtered to', files.length, 'unique user files');
+    console.log('Final file list:', JSON.stringify(files, null, 2));
 
     return new Response(
       JSON.stringify({
