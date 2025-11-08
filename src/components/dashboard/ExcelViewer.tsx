@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { X, Save } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
@@ -16,6 +17,8 @@ interface ExcelViewerProps {
 }
 
 export const ExcelViewer = ({ open, onOpenChange, fileName, fileData, onSaved }: ExcelViewerProps) => {
+  const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
+  const [currentSheetIndex, setCurrentSheetIndex] = useState(0);
   const [sheetData, setSheetData] = useState<any[][]>(() => {
     if (!fileData) return [];
     const binaryString = atob(fileData);
@@ -23,10 +26,19 @@ export const ExcelViewer = ({ open, onOpenChange, fileName, fileData, onSaved }:
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i);
     }
-    const workbook = XLSX.read(bytes, { type: 'array' });
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    const wb = XLSX.read(bytes, { type: 'array' });
+    setWorkbook(wb);
+    const worksheet = wb.Sheets[wb.SheetNames[0]];
     return XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as any[][];
   });
+
+  const switchSheet = (index: number) => {
+    if (!workbook) return;
+    setCurrentSheetIndex(index);
+    const worksheet = workbook.Sheets[workbook.SheetNames[index]];
+    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as any[][];
+    setSheetData(data);
+  };
 
   const updateCell = (rowIndex: number, colIndex: number, value: string) => {
     const newData = [...sheetData];
@@ -38,30 +50,33 @@ export const ExcelViewer = ({ open, onOpenChange, fileName, fileData, onSaved }:
   };
 
   const handleSave = async () => {
+    if (!workbook) return;
+    
     try {
       toast.loading("Gemmer fil...");
 
-      // Create workbook from updated data
+      // Update current sheet with edited data
       const ws = XLSX.utils.aoa_to_sheet(sheetData);
       
-      // Set column widths
-      ws['!cols'] = [
-        { wch: 45 },
-        { wch: 20 },
-        { wch: 80 }
-      ];
-      
-      // Set row heights
-      ws['!rows'] = [
-        { hpt: 20 },
-        { hpt: 60 },
-      ];
+      // Set column widths for trainer data sheet
+      if (currentSheetIndex === 0) {
+        ws['!cols'] = [
+          { wch: 45 },
+          { wch: 20 },
+          { wch: 80 }
+        ];
+        
+        ws['!rows'] = [
+          { hpt: 20 },
+          { hpt: 60 },
+        ];
+      }
 
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Træner Data");
+      // Update the workbook with current sheet
+      workbook.Sheets[workbook.SheetNames[currentSheetIndex]] = ws;
 
-      // Convert to base64
-      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+      // Convert entire workbook to base64
+      const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
 
       // Upload to Backblaze
       const { data, error } = await supabase.functions.invoke('upload-to-backblaze', {
@@ -117,6 +132,18 @@ export const ExcelViewer = ({ open, onOpenChange, fileName, fileData, onSaved }:
             </div>
           </div>
         </DialogHeader>
+        
+        {workbook && workbook.SheetNames.length > 1 && (
+          <Tabs value={currentSheetIndex.toString()} onValueChange={(v) => switchSheet(parseInt(v))}>
+            <TabsList>
+              {workbook.SheetNames.map((name, index) => (
+                <TabsTrigger key={index} value={index.toString()}>
+                  {name}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        )}
         
         <div className="flex-1 overflow-auto border rounded-lg">
           <table className="w-full border-collapse">
