@@ -732,7 +732,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                           <SelectValue placeholder="" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent position="popper" sideOffset={5} className="z-[99999]">
                         {AARGANG_OPTIONS.map((option) => (
                           <SelectItem key={option} value={option}>
                             {option}
@@ -757,7 +757,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
                           <SelectValue placeholder="" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent position="popper" sideOffset={5} className="z-[99999]">
                         {ROLLE_OPTIONS.map((option) => (
                           <SelectItem key={option} value={option}>
                             {option}
