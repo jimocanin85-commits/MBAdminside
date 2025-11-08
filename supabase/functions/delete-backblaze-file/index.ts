@@ -71,9 +71,9 @@ serve(async (req) => {
 
     console.log(`Found bucket ID: ${bucket.bucketId}`);
 
-    // Step 3: List files to find the file ID (match by name pattern)
-    console.log(`Finding files matching: ${fileName}`);
-    const listFilesResponse = await fetch(`${authData.apiUrl}/b2api/v2/b2_list_file_names`, {
+    // Step 3: List ALL file versions to find all versions of this file
+    console.log(`Finding all versions of: ${fileName}`);
+    const listFilesResponse = await fetch(`${authData.apiUrl}/b2api/v2/b2_list_file_versions`, {
       method: 'POST',
       headers: {
         'Authorization': authData.authorizationToken,
@@ -81,27 +81,25 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         bucketId: bucket.bucketId,
-        prefix: 'Frivillige/',
-        maxFileCount: 1000
+        prefix: `Frivillige/${fileName}`,
+        maxFileCount: 10000
       })
     });
 
     if (!listFilesResponse.ok) {
-      throw new Error('Failed to list files');
+      throw new Error('Failed to list file versions');
     }
 
     const filesData = await listFilesResponse.json();
     
-    // Find file by matching the name (with or without date suffix)
-    // Files in cloud may be named like: traener_Name.xlsx or Name.xlsx or traener_Name_01-01-2025.xlsx
-    const file = filesData.files.find((f: any) => {
+    // Find all versions of the file
+    const fileVersions = filesData.files.filter((f: any) => {
       const cloudFileName = f.fileName.replace('Frivillige/', '');
-      // Match if filename contains the search name
-      return cloudFileName.includes(fileName.replace('.xlsx', '')) && cloudFileName.endsWith('.xlsx');
+      return cloudFileName === fileName;
     });
 
-    if (!file) {
-      console.log(`No file matching ${fileName} found in Frivillige folder. This is normal for trainers that haven't been uploaded yet.`);
+    if (fileVersions.length === 0) {
+      console.log(`No file matching ${fileName} found in Frivillige folder.`);
       return new Response(
         JSON.stringify({ 
           success: true,
@@ -114,28 +112,33 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Found file with ID: ${file.fileId}`);
+    console.log(`Found ${fileVersions.length} version(s) of the file. Deleting all...`);
 
-    // Step 4: Delete the file
-    console.log("Deleting file...");
-    const deleteResponse = await fetch(`${authData.apiUrl}/b2api/v2/b2_delete_file_version`, {
-      method: 'POST',
-      headers: {
-        'Authorization': authData.authorizationToken,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        fileId: file.fileId,
-        fileName: file.fileName
-      })
-    });
+    // Step 4: Delete ALL versions of the file
+    for (const fileVersion of fileVersions) {
+      console.log(`Deleting version: ${fileVersion.fileId}`);
+      const deleteResponse = await fetch(`${authData.apiUrl}/b2api/v2/b2_delete_file_version`, {
+        method: 'POST',
+        headers: {
+          'Authorization': authData.authorizationToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          fileId: fileVersion.fileId,
+          fileName: fileVersion.fileName
+        })
+      });
 
-    if (!deleteResponse.ok) {
-      const errorText = await deleteResponse.text();
-      throw new Error(`Failed to delete file: ${errorText}`);
+      if (!deleteResponse.ok) {
+        const errorText = await deleteResponse.text();
+        console.error(`Failed to delete version ${fileVersion.fileId}: ${errorText}`);
+        // Continue deleting other versions even if one fails
+      } else {
+        console.log(`Successfully deleted version: ${fileVersion.fileId}`);
+      }
     }
 
-    console.log("File deleted successfully");
+    console.log(`All ${fileVersions.length} version(s) deleted successfully`);
 
     return new Response(
       JSON.stringify({ 
