@@ -164,16 +164,23 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="space-y-6 pt-6">
           <div className="space-y-2">
+            <Label className="text-base font-medium">Vælg frivillig</Label>
             <Select value={selectedFile} onValueChange={setSelectedFile}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Vælg en frivillig..." />
               </SelectTrigger>
-              <SelectContent>
-                {files.map((file) => (
-                  <SelectItem key={file.fileId} value={file.fileName}>
-                    {file.fileName}
-                  </SelectItem>
-                ))}
+              <SelectContent className="z-[100] bg-background">
+                {files.length === 0 ? (
+                  <SelectItem value="none" disabled>Ingen filer fundet</SelectItem>
+                ) : (
+                  files
+                    .filter((file) => file.fileName !== '.bzEmpty')
+                    .map((file) => (
+                      <SelectItem key={file.fileId} value={file.fileName}>
+                        {file.fileName.replace('Frivillige/', '')}
+                      </SelectItem>
+                    ))
+                )}
               </SelectContent>
             </Select>
           </div>
