@@ -222,6 +222,7 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
+                        disabled={!checklist[item.id]?.status}
                         className={cn(
                           "justify-start text-left font-normal",
                           !checklist[item.id]?.date && "text-muted-foreground"
