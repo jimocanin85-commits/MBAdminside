@@ -98,7 +98,59 @@ Deno.serve(async (req) => {
     const bucketId = bucket.bucketId;
     console.log('Found bucket ID:', bucketId);
 
-    // Step 3: Get upload URL
+    // Step 3: Check for existing file and delete all versions
+    const folderPath = 'Frivillige/';
+    const fullFileName = `${folderPath}${fileName}`;
+    
+    console.log('Checking for existing versions of:', fullFileName);
+    const listFilesResponse = await fetch(`${apiUrl}/b2api/v2/b2_list_file_names`, {
+      method: 'POST',
+      headers: {
+        'Authorization': authorizationToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        bucketId: bucketId,
+        prefix: fullFileName,
+        maxFileCount: 100
+      })
+    });
+
+    if (listFilesResponse.ok) {
+      const filesData = await listFilesResponse.json();
+      const existingFiles = filesData.files.filter((f: any) => f.fileName === fullFileName);
+      
+      if (existingFiles.length > 0) {
+        console.log(`Found ${existingFiles.length} existing version(s), deleting...`);
+        
+        // Delete all existing versions
+        for (const file of existingFiles) {
+          try {
+            const deleteResponse = await fetch(`${apiUrl}/b2api/v2/b2_delete_file_version`, {
+              method: 'POST',
+              headers: {
+                'Authorization': authorizationToken,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                fileId: file.fileId,
+                fileName: file.fileName
+              })
+            });
+            
+            if (deleteResponse.ok) {
+              console.log(`Deleted version: ${file.fileId}`);
+            }
+          } catch (deleteError) {
+            console.warn(`Failed to delete version ${file.fileId}:`, deleteError);
+          }
+        }
+      } else {
+        console.log('No existing versions found');
+      }
+    }
+
+    // Step 4: Get upload URL
     console.log('Getting upload URL for bucket:', bucketId);
     const uploadUrlResponse = await fetch(`${apiUrl}/b2api/v2/b2_get_upload_url`, {
       method: 'POST',
@@ -122,7 +174,7 @@ Deno.serve(async (req) => {
     const { uploadUrl, authorizationToken: uploadToken } = uploadUrlData;
     console.log('Upload URL obtained');
 
-    // Step 4: Convert base64 to binary
+    // Step 5: Convert base64 to binary
     const base64Data = fileData.split(',')[1];
     const binaryData = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
     console.log('File size:', binaryData.length, 'bytes');
@@ -133,9 +185,7 @@ Deno.serve(async (req) => {
     const sha1Hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     console.log('SHA1 hash calculated');
 
-    // Step 6: Upload file (with folder path)
-    const folderPath = 'Frivillige/';
-    const fullFileName = `${folderPath}${fileName}`;
+    // Step 6: Upload file
     console.log('Uploading file to:', fullFileName);
     
     const uploadResponse = await fetch(uploadUrl, {
