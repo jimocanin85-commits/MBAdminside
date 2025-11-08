@@ -182,20 +182,20 @@ export const CloudFiles = () => {
 
   return (
     <Card className="shadow-lg">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Cloud Filer</CardTitle>
-        <Button variant="outline" size="sm" onClick={loadFiles}>
-          Opdater
-        </Button>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         {files.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>Ingen filer uploadet endnu</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <>
+            <div className="flex justify-end mb-4">
+              <Button variant="outline" size="sm" onClick={loadFiles}>
+                Opdater
+              </Button>
+            </div>
+            <div className="space-y-3">
             {files.map((file) => (
               <div
                 key={file.fileId}
@@ -232,7 +232,8 @@ export const CloudFiles = () => {
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+          </>
         )}
       </CardContent>
 
