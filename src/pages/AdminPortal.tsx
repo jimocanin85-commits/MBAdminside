@@ -7,11 +7,13 @@ import ExitForm from "@/components/trainer/ExitForm";
 import { CloudFiles } from "@/components/dashboard/CloudFiles";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { UserPlus, Cloud } from "lucide-react";
+import { UserPlus, Cloud, Settings, Trash2, GripVertical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 type Trainer = {
   navn: string;
@@ -34,6 +36,10 @@ const AdminPortal = () => {
   const [refreshCloudFiles, setRefreshCloudFiles] = useState(0);
   const [selectedTrainer, setSelectedTrainer] = useState<Trainer | null>(null);
   const [isEditingCloudFile, setIsEditingCloudFile] = useState(false);
+  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [showAdminDialog, setShowAdminDialog] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [trainers, setTrainers] = useState<Trainer[]>(() => {
     const saved = localStorage.getItem('trainers');
     if (saved) {
@@ -89,6 +95,43 @@ const AdminPortal = () => {
     setIsEditingCloudFile(true);
     setShowCloudFiles(false);
     setIsSpreadsheetOpen(true);
+  };
+
+  const handleAdminLogin = () => {
+    if (adminPassword === "1523") {
+      setIsAdminMode(true);
+      setShowAdminDialog(false);
+      setAdminPassword("");
+      toast.success("Admin mode aktiveret");
+    } else {
+      toast.error("Forkert adgangskode");
+    }
+  };
+
+  const handleDeleteTrainer = (trainer: Trainer) => {
+    setTrainers(trainers.filter(t => t.createdAt !== trainer.createdAt));
+    toast.success("Træner slettet");
+  };
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    const newTrainers = [...trainers];
+    const draggedTrainer = newTrainers[draggedIndex];
+    newTrainers.splice(draggedIndex, 1);
+    newTrainers.splice(index, 0, draggedTrainer);
+    
+    setTrainers(newTrainers);
+    setDraggedIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
   };
 
   const getTrainersByMonth = () => {
@@ -154,37 +197,88 @@ const AdminPortal = () => {
               {trainers.length > 0 && (
                 <div className="pt-6 border-t">
                   <div className="space-y-4">
-                    {Object.entries(getTrainersByMonth()).map(([month, monthTrainers]) => (
-                      <div key={month} className="mb-6 last:mb-0">
-                        <h3 className="text-lg font-semibold mb-3 capitalize">{month}</h3>
-                        <div className="space-y-2">
-                          {monthTrainers.map((trainer, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                            >
-                              <div>
-                                <p className="font-medium">{trainer.navn}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {format(trainer.createdAt, "d. MMMM yyyy 'kl.' HH:mm", { locale: da })}
-                                </p>
-                              </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="gap-2"
-                                onClick={() => {
-                                  setSelectedTrainer(trainer);
-                                  setIsSpreadsheetOpen(true);
-                                }}
-                              >
-                                Åbn
-                              </Button>
-                            </div>
-                          ))}
+                    {isAdminMode ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-sm text-muted-foreground">Admin tilstand - Træk for at omorganisere</p>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setIsAdminMode(false)}
+                          >
+                            Afslut admin tilstand
+                          </Button>
                         </div>
+                        {trainers.map((trainer, index) => (
+                          <div
+                            key={index}
+                            draggable
+                            onDragStart={() => handleDragStart(index)}
+                            onDragOver={(e) => handleDragOver(e, index)}
+                            onDragEnd={handleDragEnd}
+                            className="flex items-center gap-2 p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors cursor-move"
+                          >
+                            <GripVertical className="h-5 w-5 text-muted-foreground" />
+                            <div className="flex-1">
+                              <p className="font-medium">{trainer.navn}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {format(trainer.createdAt, "d. MMMM yyyy 'kl.' HH:mm", { locale: da })}
+                              </p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-2"
+                              onClick={() => {
+                                setSelectedTrainer(trainer);
+                                setIsSpreadsheetOpen(true);
+                              }}
+                            >
+                              Åbn
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteTrainer(trainer)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    ) : (
+                      Object.entries(getTrainersByMonth()).map(([month, monthTrainers]) => (
+                        <div key={month} className="mb-6 last:mb-0">
+                          <h3 className="text-lg font-semibold mb-3 capitalize">{month}</h3>
+                          <div className="space-y-2">
+                            {monthTrainers.map((trainer, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                              >
+                                <div>
+                                  <p className="font-medium">{trainer.navn}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {format(trainer.createdAt, "d. MMMM yyyy 'kl.' HH:mm", { locale: da })}
+                                  </p>
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-2"
+                                  onClick={() => {
+                                    setSelectedTrainer(trainer);
+                                    setIsSpreadsheetOpen(true);
+                                  }}
+                                >
+                                  Åbn
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               )}
@@ -222,6 +316,34 @@ const AdminPortal = () => {
         trainer={selectedTrainer}
         onSave={handleTrainerUpdate}
       />
+
+      <Button
+        size="icon"
+        variant="outline"
+        className="fixed bottom-4 left-4 h-10 w-10 rounded-full shadow-lg"
+        onClick={() => setShowAdminDialog(true)}
+      >
+        <Settings className="h-5 w-5" />
+      </Button>
+
+      <Dialog open={showAdminDialog} onOpenChange={setShowAdminDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Admin adgang</DialogTitle>
+            <DialogDescription>Indtast adgangskode for at aktivere admin tilstand</DialogDescription>
+          </DialogHeader>
+          <Input
+            type="password"
+            placeholder="Adgangskode"
+            value={adminPassword}
+            onChange={(e) => setAdminPassword(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
+          />
+          <DialogFooter>
+            <Button onClick={handleAdminLogin}>Log ind</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
