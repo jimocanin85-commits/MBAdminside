@@ -107,17 +107,26 @@ Deno.serve(async (req) => {
     }
 
     const filesData = await listFilesResponse.json();
-    console.log('Found', filesData.files.length, 'files');
+    console.log('Raw files from Backblaze:', JSON.stringify(filesData.files));
+    console.log('Found', filesData.files.length, 'total files');
 
-    // Format the file list
-    const files = filesData.files.map((file: any) => ({
-      fileName: file.fileName.replace('Frivillige/', ''), // Remove folder prefix
-      fullPath: file.fileName,
-      fileId: file.fileId,
-      size: file.contentLength,
-      uploadTimestamp: file.uploadTimestamp,
-      downloadUrl: `${authData.downloadUrl}/file/${bucketName}/${file.fileName}`
-    }));
+    // Filter out system files and format the file list
+    const files = filesData.files
+      .filter((file: any) => {
+        // Skip .bzEmpty and other hidden files
+        const fileName = file.fileName.replace('Frivillige/', '');
+        return !fileName.startsWith('.') && fileName.length > 0;
+      })
+      .map((file: any) => ({
+        fileName: file.fileName.replace('Frivillige/', ''), // Remove folder prefix
+        fullPath: file.fileName,
+        fileId: file.fileId,
+        size: file.contentLength,
+        uploadTimestamp: file.uploadTimestamp,
+        downloadUrl: `${authData.downloadUrl}/file/${bucketName}/${file.fileName}`
+      }));
+    
+    console.log('Filtered to', files.length, 'user files');
 
     return new Response(
       JSON.stringify({

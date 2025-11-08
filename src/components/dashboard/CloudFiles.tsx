@@ -39,10 +39,14 @@ export const CloudFiles = () => {
   const loadFiles = async () => {
     try {
       setLoading(true);
+      console.log('CloudFiles: Loading files from Backblaze...');
+      
       const { data, error } = await supabase.functions.invoke('list-backblaze-files');
 
+      console.log('CloudFiles: Response:', { data, error });
+
       if (error) {
-        console.error('Error loading files:', error);
+        console.error('CloudFiles: Error loading files:', error);
         toast.error("Kunne ikke indlæse filer", {
           description: error.message
         });
@@ -50,10 +54,13 @@ export const CloudFiles = () => {
       }
 
       if (data?.success) {
+        console.log('CloudFiles: Setting files:', data.files);
         setFiles(data.files);
+      } else {
+        console.log('CloudFiles: No success flag or no files returned');
       }
     } catch (error) {
-      console.error('Error loading files:', error);
+      console.error('CloudFiles: Exception loading files:', error);
       toast.error("Kunne ikke indlæse filer");
     } finally {
       setLoading(false);
