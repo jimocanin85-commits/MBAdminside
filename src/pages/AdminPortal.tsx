@@ -172,10 +172,10 @@ const AdminPortal = () => {
           ) : (
             <Card className="shadow-lg border-2">
               <CardContent className="pt-8 space-y-6">
-                <div className="flex gap-3">
+                <div className="flex flex-col md:flex-row gap-3">
                   <Button 
                     size="lg" 
-                    className="gap-2 text-base px-6 py-6 flex-1"
+                    className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
                     onClick={() => setIsFormOpen(true)}
                   >
                     <UserPlus className="h-5 w-5" />
@@ -184,7 +184,7 @@ const AdminPortal = () => {
                   
                   <Button 
                     size="lg" 
-                    className="gap-2 text-base px-6 py-6 flex-1"
+                    className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
                     onClick={() => setIsExitFormOpen(true)}
                   >
                     <UserPlus className="h-5 w-5" />
@@ -194,7 +194,7 @@ const AdminPortal = () => {
                   <Button 
                     size="lg" 
                     variant="outline"
-                    className="gap-2 text-base px-6 py-6 flex-1"
+                    className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
                     onClick={() => setShowCloudFiles(true)}
                   >
                     <Cloud className="h-5 w-5" />
@@ -260,28 +260,28 @@ const AdminPortal = () => {
                           <h3 className="text-lg font-semibold mb-3 capitalize">{month}</h3>
                           <div className="space-y-2">
                             {monthTrainers.map((trainer, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                              >
-                                <div>
-                                  <p className="font-medium">{trainer.navn}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    {format(trainer.createdAt, "d. MMMM yyyy 'kl.' HH:mm", { locale: da })}
-                                  </p>
-                                </div>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="gap-2"
-                                  onClick={() => {
-                                    setSelectedTrainer(trainer);
-                                    setIsSpreadsheetOpen(true);
-                                  }}
-                                >
-                                  Åbn
-                                </Button>
-                              </div>
+                               <div
+                                 key={index}
+                                 className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors gap-3"
+                               >
+                                 <div className="flex-1">
+                                   <p className="font-medium">{trainer.navn}</p>
+                                   <p className="text-sm text-muted-foreground">
+                                     {format(trainer.createdAt, "d. MMMM yyyy 'kl.' HH:mm", { locale: da })}
+                                   </p>
+                                 </div>
+                                 <Button
+                                   variant="outline"
+                                   size="sm"
+                                   className="gap-2 w-full sm:w-auto min-h-[44px]"
+                                   onClick={() => {
+                                     setSelectedTrainer(trainer);
+                                     setIsSpreadsheetOpen(true);
+                                   }}
+                                 >
+                                   Åbn
+                                 </Button>
+                               </div>
                             ))}
                           </div>
                         </div>
@@ -328,7 +328,7 @@ const AdminPortal = () => {
       <Button
         size="icon"
         variant="outline"
-        className="fixed bottom-4 left-4 h-10 w-10 rounded-full shadow-lg"
+        className="fixed bottom-4 left-4 h-12 w-12 rounded-full shadow-lg z-50"
         onClick={() => setShowAdminDialog(true)}
       >
         <Settings className="h-5 w-5" />

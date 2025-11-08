@@ -117,16 +117,16 @@ export const ExcelViewer = ({ open, onOpenChange, fileName, fileData, onSaved }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-[95vw] max-h-[90vh] flex flex-col p-3 sm:p-6">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>{fileName}</DialogTitle>
-            <div className="flex gap-2">
-              <Button onClick={handleSave} size="sm" className="gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <DialogTitle className="truncate text-sm sm:text-base">{fileName}</DialogTitle>
+            <div className="flex gap-1 sm:gap-2 flex-shrink-0">
+              <Button onClick={handleSave} size="sm" className="gap-1 sm:gap-2 min-h-[44px]">
                 <Save className="h-4 w-4" />
-                Gem
+                <span className="hidden sm:inline">Gem</span>
               </Button>
-              <Button onClick={() => onOpenChange(false)} size="sm" variant="ghost">
+              <Button onClick={() => onOpenChange(false)} size="sm" variant="ghost" className="min-h-[44px]">
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -145,8 +145,8 @@ export const ExcelViewer = ({ open, onOpenChange, fileName, fileData, onSaved }:
           </Tabs>
         )}
         
-        <div className="flex-1 overflow-auto border rounded-lg">
-          <table className="w-full border-collapse">
+        <div className="flex-1 overflow-auto border rounded-lg -mx-3 sm:mx-0">
+          <table className="w-full border-collapse text-sm">
             <tbody>
               {sheetData.map((row, rowIndex) => (
                 <tr key={rowIndex} className="border-b">
@@ -155,7 +155,7 @@ export const ExcelViewer = ({ open, onOpenChange, fileName, fileData, onSaved }:
                       key={colIndex} 
                       className="border-r p-0"
                       style={{ 
-                        minWidth: colIndex === 0 ? '300px' : colIndex === 2 ? '500px' : '150px' 
+                        minWidth: colIndex === 0 ? '250px' : colIndex === 2 ? '400px' : '120px' 
                       }}
                     >
                       {rowIndex === 0 || rowIndex === 3 ? (

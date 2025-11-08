@@ -219,12 +219,12 @@ export const CloudFiles = () => {
               </Button>
             </div>
             <div className="space-y-3">
-            {files.map((file) => (
+             {files.map((file) => (
               <div
                 key={file.fileId}
-                className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors gap-3"
               >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="flex items-center gap-3 flex-1 min-w-0 w-full sm:w-auto">
                   <FileText className="h-5 w-5 text-primary flex-shrink-0" />
                   <div className="min-w-0 flex-1">
                     <p className="font-medium truncate">{file.fileName}</p>
@@ -233,11 +233,11 @@ export const CloudFiles = () => {
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-2 ml-4">
+                <div className="flex gap-2 w-full sm:w-auto">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2"
+                    className="gap-2 flex-1 sm:flex-initial min-h-[44px]"
                     onClick={() => handleEditFile(file)}
                   >
                     <Eye className="h-4 w-4" />
@@ -246,7 +246,7 @@ export const CloudFiles = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 text-destructive hover:text-destructive"
+                    className="gap-2 text-destructive hover:text-destructive flex-1 sm:flex-initial min-h-[44px]"
                     onClick={() => handleDeleteClick(file)}
                   >
                     <Trash2 className="h-4 w-4" />
