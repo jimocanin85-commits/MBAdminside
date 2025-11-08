@@ -60,7 +60,7 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
               id="username"
               name="username"
               type="text"
-              placeholder="admin"
+              placeholder="Indtast brugernavn"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               autoComplete="username"
@@ -75,7 +75,7 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
               id="password"
               name="password"
               type="password"
-              placeholder="Monne1935"
+              placeholder="Indtast adgangskode"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
