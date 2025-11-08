@@ -3,6 +3,7 @@ import LoginForm from "@/components/auth/LoginForm";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import TrainerForm from "@/components/trainer/TrainerForm";
 import TrainerSpreadsheet from "@/components/trainer/TrainerSpreadsheet";
+import ExitForm from "@/components/trainer/ExitForm";
 import { CloudFiles } from "@/components/dashboard/CloudFiles";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +26,7 @@ type Trainer = {
 const AdminPortal = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isExitFormOpen, setIsExitFormOpen] = useState(false);
   const [isSpreadsheetOpen, setIsSpreadsheetOpen] = useState(false);
   const [showCloudFiles, setShowCloudFiles] = useState(false);
   const [selectedTrainer, setSelectedTrainer] = useState<Trainer | null>(null);
@@ -129,9 +131,7 @@ const AdminPortal = () => {
                   <Button 
                     size="lg" 
                     className="gap-2 text-base px-6 py-6 flex-1"
-                    onClick={() => {
-                      // TODO: Add exit handler
-                    }}
+                    onClick={() => setIsExitFormOpen(true)}
                   >
                     <UserPlus className="h-5 w-5" />
                     Exit af frivillig
@@ -219,6 +219,11 @@ const AdminPortal = () => {
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
         onSubmit={handleTrainerSubmit}
+      />
+
+      <ExitForm
+        open={isExitFormOpen}
+        onOpenChange={setIsExitFormOpen}
       />
 
       <TrainerSpreadsheet
