@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Loader2, Edit } from "lucide-react";
+import { FileText, Loader2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import * as XLSX from 'xlsx';
+import { ExcelViewer } from "./ExcelViewer";
 
 interface CloudFile {
   fileName: string;
@@ -16,13 +16,11 @@ interface CloudFile {
   downloadUrl: string;
 }
 
-interface CloudFilesProps {
-  onEditFile: (fileData: any) => void;
-}
-
-export const CloudFiles = ({ onEditFile }: CloudFilesProps) => {
+export const CloudFiles = () => {
   const [files, setFiles] = useState<CloudFile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<{ name: string; data: string } | null>(null);
 
   const loadFiles = async () => {
     try {
@@ -69,81 +67,15 @@ export const CloudFiles = ({ onEditFile }: CloudFilesProps) => {
         throw new Error('Failed to download file');
       }
 
-      // Convert base64 to array buffer
-      const binaryString = atob(downloadData.fileData);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      
-      const workbook = XLSX.read(bytes, { type: 'array' });
-      
-      // Parse the Excel file
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const excelData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
-      
-      // Extract trainer data from the Excel structure
-      const trainerInfo = excelData[1][0].split('\n');
-      const yearRole = excelData[1][1].split('\n');
-      
-      // Build checklist from rows starting at index 4
-      const checklist: any = {};
-      for (let i = 4; i < excelData.length; i++) {
-        if (!excelData[i] || !excelData[i][0]) continue;
-        
-        const taskName = excelData[i][0];
-        const statusText = excelData[i][1] || '';
-        
-        // Map task names to IDs
-        const taskIdMap: Record<string, string> = {
-          'Modtaget besked i Kluboffice (KO)': 'ko_message',
-          'Anmodet om cpr nr via Kluboffice (KO)': 'ko_cpr',
-          'Bestil Brik hos Ballerup Kommune (BALK)': 'balk_brik',
-          'Brik klar til afhentning': 'brik_ready',
-          'Bestilt børneattest': 'bornetest_ordered',
-          'Modtaget børneattest retur': 'bornetest_received',
-          'Email til ny træner, cc kontaktperson': 'welcome_email'
-        };
-        
-        const taskId = taskIdMap[taskName];
-        if (taskId) {
-          if (statusText.includes('Ja -')) {
-            const dateStr = statusText.replace('Ja - ', '').trim();
-            const [day, month, year] = dateStr.split('/');
-            const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-            checklist[taskId] = { status: true, date };
-          } else if (statusText === 'Nej') {
-            checklist[taskId] = { status: false, date: null };
-          }
-        }
-      }
-      
-      const trainerData = {
-        navn: trainerInfo[0] || '',
-        email: trainerInfo[1] || '',
-        telefon: trainerInfo[2] || '',
-        foedselsdato: trainerInfo[3] || '',
-        aargang: yearRole[0] || '',
-        rolle: yearRole[1] || '',
-        kontaktperson: excelData[1][2] || '',
-        createdAt: new Date(file.uploadTimestamp),
-        excelData: {
-          data: {
-            navn: trainerInfo[0] || '',
-            email: trainerInfo[1] || '',
-            telefon: trainerInfo[2] || '',
-            foedselsdato: trainerInfo[3] || '',
-            aargang: yearRole[0] || '',
-            rolle: yearRole[1] || '',
-            kontaktperson: excelData[1][2] || ''
-          },
-          checklist
-        }
-      };
-      
       toast.dismiss();
-      toast.success("Fil indlæst!");
-      onEditFile(trainerData);
+      
+      // Open viewer with file data
+      setSelectedFile({
+        name: file.fileName,
+        data: downloadData.fileData
+      });
+      setViewerOpen(true);
+      
     } catch (error) {
       toast.dismiss();
       console.error('Error loading file:', error);
@@ -151,6 +83,11 @@ export const CloudFiles = ({ onEditFile }: CloudFilesProps) => {
         description: error instanceof Error ? error.message : "Ukendt fejl"
       });
     }
+  };
+
+  const handleViewerSaved = () => {
+    // Reload file list after saving
+    loadFiles();
   };
 
   const formatFileSize = (bytes: number) => {
@@ -213,8 +150,8 @@ export const CloudFiles = ({ onEditFile }: CloudFilesProps) => {
                     className="gap-2"
                     onClick={() => handleEditFile(file)}
                   >
-                    <Edit className="h-4 w-4" />
-                    Rediger
+                    <Eye className="h-4 w-4" />
+                    Åbn
                   </Button>
                 </div>
               </div>
@@ -222,6 +159,16 @@ export const CloudFiles = ({ onEditFile }: CloudFilesProps) => {
           </div>
         )}
       </CardContent>
+
+      {selectedFile && (
+        <ExcelViewer
+          open={viewerOpen}
+          onOpenChange={setViewerOpen}
+          fileName={selectedFile.name}
+          fileData={selectedFile.data}
+          onSaved={handleViewerSaved}
+        />
+      )}
     </Card>
   );
 };
