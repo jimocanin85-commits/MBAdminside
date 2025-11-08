@@ -62,7 +62,7 @@ const AdminPortal = () => {
     setIsAuthenticated(false);
   };
 
-  const handleTrainerSubmit = (data: Trainer) => {
+  const handleTrainerSubmit = (data: Omit<Trainer, 'createdAt'>) => {
     const trainerWithDate = {
       ...data,
       createdAt: new Date()
