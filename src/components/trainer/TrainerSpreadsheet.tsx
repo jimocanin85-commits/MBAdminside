@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { Download, Upload } from "lucide-react";
+import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -227,11 +227,48 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
     }
   };
 
-  const handleUploadToDrive = async () => {
+  const handleSave = async () => {
+    // First, save the data locally
+    const updatedTrainer = {
+      ...trainer,
+      navn: editableData.navn,
+      email: editableData.email,
+      telefon: editableData.telefon,
+      foedselsdato: editableData.foedselsdato,
+      aargang: editableData.aargang,
+      rolle: editableData.rolle,
+      kontaktperson: editableData.kontaktperson,
+      excelData: {
+        data: {
+          navn: editableData.navn,
+          email: editableData.email,
+          telefon: editableData.telefon,
+          foedselsdato: editableData.foedselsdato,
+          aargang: editableData.aargang,
+          rolle: editableData.rolle,
+          kontaktperson: editableData.kontaktperson
+        },
+        checklist: editableData.checklist
+      }
+    };
+    
+    // Upload to Cloud Files
     try {
-      toast.loading("Uploader til Backblaze B2...");
+      toast.loading("Gemmer og uploader til Cloud Files...");
       
-      // Generate the Excel file as a blob
+      const fileName = `${editableData.navn.replace(/\s+/g, '_')}.xlsx`;
+      
+      // Step 1: Delete all existing versions first
+      try {
+        await supabase.functions.invoke('delete-backblaze-file', {
+          body: { fileName }
+        });
+      } catch (deleteError) {
+        // Ignore if file doesn't exist yet
+        console.log("No existing file to delete, proceeding with upload");
+      }
+      
+      // Step 2: Generate and upload the new Excel file
       const wb = XLSX.utils.book_new();
       
       const excelData: any[][] = [
@@ -268,9 +305,8 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
       
       // Convert to base64
       const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
-      const fileName = `${editableData.navn.replace(/\s+/g, '_')}.xlsx`;
       
-      // Call edge function without auth (edge function will handle auth internally)
+      // Upload to Backblaze
       const { data, error } = await supabase.functions.invoke('upload-to-backblaze', {
         body: {
           fileData: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${wbout}`,
@@ -282,51 +318,24 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
 
       if (error) {
         console.error('Upload error:', error);
-        toast.error("Upload fejlede", {
+        toast.error("Kunne ikke uploade til Cloud Files", {
           description: error.message
         });
         return;
       }
 
       if (data?.success) {
-        toast.success("Uploadet til Backblaze B2!", {
-          description: `Filen er tilgængelig: ${fileName}`
-        });
+        toast.success("Gemt og uploadet til Cloud Files!");
+        onSave(updatedTrainer);
+        onOpenChange(false);
       }
     } catch (error) {
       toast.dismiss();
-      console.error('Error uploading:', error);
-      toast.error("Upload fejlede", {
+      console.error('Error saving:', error);
+      toast.error("Fejl ved gemning", {
         description: error instanceof Error ? error.message : "Ukendt fejl"
       });
     }
-  };
-
-  const handleSave = () => {
-    const updatedTrainer = {
-      ...trainer,
-      navn: editableData.navn,
-      email: editableData.email,
-      telefon: editableData.telefon,
-      foedselsdato: editableData.foedselsdato,
-      aargang: editableData.aargang,
-      rolle: editableData.rolle,
-      kontaktperson: editableData.kontaktperson,
-      excelData: {
-        data: {
-          navn: editableData.navn,
-          email: editableData.email,
-          telefon: editableData.telefon,
-          foedselsdato: editableData.foedselsdato,
-          aargang: editableData.aargang,
-          rolle: editableData.rolle,
-          kontaktperson: editableData.kontaktperson
-        },
-        checklist: editableData.checklist
-      }
-    };
-    onSave(updatedTrainer);
-    onOpenChange(false);
   };
 
   return (
@@ -458,11 +467,7 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
             <Download className="h-4 w-4" />
             Download Excel
           </Button>
-          <Button onClick={handleUploadToDrive} size="default" variant="outline" className="gap-2">
-            <Upload className="h-4 w-4" />
-            Upload til Backblaze B2
-          </Button>
-          <Button onClick={handleSave} size="default" variant="outline" className="gap-2">
+          <Button onClick={handleSave} size="default" variant="default" className="gap-2">
             Gem ændringer
           </Button>
         </div>
