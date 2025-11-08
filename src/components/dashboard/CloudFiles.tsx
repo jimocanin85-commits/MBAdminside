@@ -122,30 +122,38 @@ export const CloudFiles = () => {
     const loadingToast = toast.loading("Sletter fil...");
     
     try {
+      console.log('Attempting to delete file:', fileToDelete.fileName);
+      
       const { data, error } = await supabase.functions.invoke('delete-backblaze-file', {
         body: { fileName: fileToDelete.fileName }
       });
+
+      console.log('Delete response:', { data, error });
 
       if (error) {
         throw new Error(error.message);
       }
 
       if (!data?.success) {
-        throw new Error('Kunne ikke slette filen');
+        throw new Error(data?.message || 'Kunne ikke slette filen');
       }
 
       toast.success("Fil slettet!", { id: loadingToast });
-      loadFiles(); // Refresh the list
+      
+      // Close dialog first
+      setDeleteDialogOpen(false);
+      setFileToDelete(null);
+      setPassword("");
+      
+      // Then refresh the list
+      await loadFiles();
     } catch (error) {
       console.error('Error deleting file:', error);
       toast.error("Kunne ikke slette fil", {
         id: loadingToast,
         description: error instanceof Error ? error.message : "Ukendt fejl"
       });
-    } finally {
-      setDeleteDialogOpen(false);
-      setFileToDelete(null);
-      setPassword("");
+      // Don't close dialog on error so user can see what happened
     }
   };
 
