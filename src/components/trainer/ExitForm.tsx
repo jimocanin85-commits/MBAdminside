@@ -70,7 +70,7 @@ const ExitForm = ({ open, onOpenChange }: ExitFormProps) => {
       // Download the existing Excel file
       const { data: downloadData, error: downloadError } = await supabase.functions.invoke(
         'download-backblaze-file',
-        { body: { fileName: `Frivillige/${selectedFile}` } }
+        { body: { fileName: selectedFile } }
       );
 
       if (downloadError) throw downloadError;
