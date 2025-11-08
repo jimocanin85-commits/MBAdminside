@@ -482,9 +482,6 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">Opret ny træner</DialogTitle>
-        </DialogHeader>
 
         {!confirmed ? (
           <div className="space-y-6">
@@ -805,7 +802,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
               >
                 Annuller
               </Button>
-              <Button type="submit">Opret træner</Button>
+              <Button type="submit">Opret</Button>
             </div>
           </form>
         </Form>
