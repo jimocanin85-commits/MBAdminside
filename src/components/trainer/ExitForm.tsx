@@ -154,7 +154,6 @@ const ExitForm = ({ open, onOpenChange }: ExitFormProps) => {
           </div>
 
           <div className="space-y-4 border-t pt-4">
-            <h3 className="font-semibold">Exit Tjekliste</h3>
             {EXIT_CHECKLIST_ITEMS.map((item) => (
               <div key={item.id} className="space-y-2">
                 <Label className="text-base">{item.label}</Label>
