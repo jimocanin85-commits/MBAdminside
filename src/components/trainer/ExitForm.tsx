@@ -135,10 +135,9 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="space-y-6 pt-6">
           <div className="space-y-2">
-            <Label>Vælg frivillig</Label>
             <Select value={selectedFile} onValueChange={setSelectedFile}>
               <SelectTrigger>
-                <SelectValue placeholder="Vælg en træner..." />
+                <SelectValue placeholder="Vælg en frivillig..." />
               </SelectTrigger>
               <SelectContent>
                 {files.map((file) => (
