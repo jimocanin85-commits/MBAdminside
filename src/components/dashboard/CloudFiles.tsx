@@ -145,7 +145,20 @@ export const CloudFiles = () => {
         throw new Error(data?.message || 'Kunne ikke slette filen');
       }
 
-      toast.success("Fil slettet!", { id: loadingToast });
+      // Also remove from localStorage trainers if it exists
+      const saved = localStorage.getItem('trainers');
+      if (saved) {
+        try {
+          const trainers = JSON.parse(saved);
+          const fileName = fileToDelete.fileName.replace('.xlsx', '');
+          const filtered = trainers.filter((t: any) => t.navn !== fileName);
+          localStorage.setItem('trainers', JSON.stringify(filtered));
+        } catch (e) {
+          console.error('Error updating localStorage:', e);
+        }
+      }
+
+      toast.success("Fil og træner slettet!", { id: loadingToast });
       
       // Close dialog first
       setDeleteDialogOpen(false);
@@ -154,6 +167,9 @@ export const CloudFiles = () => {
       
       // Then refresh the list
       await loadFiles();
+      
+      // Trigger a page reload to refresh the trainer list
+      window.location.reload();
     } catch (error) {
       console.error('Error deleting file:', error);
       toast.error("Kunne ikke slette fil", {
