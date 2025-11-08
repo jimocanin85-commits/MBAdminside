@@ -21,9 +21,10 @@ const EXIT_CHECKLIST_ITEMS = [
 interface ExitFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
-const ExitForm = ({ open, onOpenChange }: ExitFormProps) => {
+const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
   const [files, setFiles] = useState<any[]>([]);
   const [selectedFile, setSelectedFile] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
@@ -118,6 +119,7 @@ const ExitForm = ({ open, onOpenChange }: ExitFormProps) => {
         if (uploadError) throw uploadError;
 
         toast.success('Exit tjekliste tilføjet!', { id: loadingToast });
+        onSuccess?.();
         onOpenChange(false);
       };
     } catch (error) {

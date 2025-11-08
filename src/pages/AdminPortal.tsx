@@ -29,6 +29,7 @@ const AdminPortal = () => {
   const [isExitFormOpen, setIsExitFormOpen] = useState(false);
   const [isSpreadsheetOpen, setIsSpreadsheetOpen] = useState(false);
   const [showCloudFiles, setShowCloudFiles] = useState(false);
+  const [refreshCloudFiles, setRefreshCloudFiles] = useState(0);
   const [selectedTrainer, setSelectedTrainer] = useState<Trainer | null>(null);
   const [isEditingCloudFile, setIsEditingCloudFile] = useState(false);
   const [trainers, setTrainers] = useState<Trainer[]>(() => {
@@ -114,7 +115,7 @@ const AdminPortal = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-6">
           {showCloudFiles ? (
-            <CloudFiles />
+            <CloudFiles key={refreshCloudFiles} />
           ) : (
             <Card className="shadow-lg border-2">
               <CardContent className="pt-8 space-y-6">
@@ -224,6 +225,7 @@ const AdminPortal = () => {
       <ExitForm
         open={isExitFormOpen}
         onOpenChange={setIsExitFormOpen}
+        onSuccess={() => setRefreshCloudFiles(prev => prev + 1)}
       />
 
       <TrainerSpreadsheet
