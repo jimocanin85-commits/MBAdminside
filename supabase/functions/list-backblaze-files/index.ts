@@ -82,8 +82,8 @@ Deno.serve(async (req) => {
     const bucketId = bucket.bucketId;
     console.log('Found bucket ID:', bucketId);
 
-    // Step 3: List file names in the Frivillige folder
-    console.log('Listing files in Frivillige folder...');
+    // Step 3: List ALL file names (no folder prefix filter)
+    console.log('Listing all files in bucket...');
     const listFilesResponse = await fetch(`${apiUrl}/b2api/v2/b2_list_file_names`, {
       method: 'POST',
       headers: {
@@ -92,7 +92,6 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         bucketId: bucketId,
-        prefix: 'Frivillige/',
         maxFileCount: 1000
       })
     });
@@ -113,12 +112,12 @@ Deno.serve(async (req) => {
     // Filter out system files and format the file list
     const files = filesData.files
       .filter((file: any) => {
-        // Skip .bzEmpty and other hidden files
-        const fileName = file.fileName.replace('Frivillige/', '');
-        return !fileName.startsWith('.') && fileName.length > 0;
+        // Skip .bzEmpty and other hidden/system files
+        const fileName = file.fileName.split('/').pop() || file.fileName;
+        return !fileName.startsWith('.') && fileName.length > 0 && fileName.endsWith('.xlsx');
       })
       .map((file: any) => ({
-        fileName: file.fileName.replace('Frivillige/', ''), // Remove folder prefix
+        fileName: file.fileName.split('/').pop() || file.fileName, // Get just the filename
         fullPath: file.fileName,
         fileId: file.fileId,
         size: file.contentLength,

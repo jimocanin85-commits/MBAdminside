@@ -81,7 +81,6 @@ serve(async (req) => {
     do {
       const requestBody: any = {
         bucketId: bucket.bucketId,
-        prefix: `Frivillige/${fileName}`,
         maxFileCount: 10000
       };
       
@@ -107,7 +106,7 @@ serve(async (req) => {
       
       // Filter to get only exact matches of this file
       const matchingVersions = filesData.files.filter((f: any) => {
-        const cloudFileName = f.fileName.replace('Frivillige/', '');
+        const cloudFileName = f.fileName.split('/').pop() || f.fileName;
         return cloudFileName === fileName;
       });
       
@@ -123,7 +122,7 @@ serve(async (req) => {
     } while (true);
 
     if (fileVersions.length === 0) {
-      console.log(`No file matching ${fileName} found in Frivillige folder.`);
+      console.log(`No file matching ${fileName} found.`);
       return new Response(
         JSON.stringify({ 
           success: true,
