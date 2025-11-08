@@ -10,7 +10,6 @@ import * as XLSX from 'xlsx';
 
 const EXIT_CHECKLIST_ITEMS = [
   { id: 'contract', label: 'Er der kontrakt?' },
-  { id: 'key_comment', label: 'Skriv kommentar i nøgleoversigt' },
   { id: 'kluboffice', label: 'Meldt af Kluboffice' },
   { id: 'facebook', label: 'Meldt af Facebook gruppe' },
   { id: 'email_return', label: 'Send email om retur ting' },
