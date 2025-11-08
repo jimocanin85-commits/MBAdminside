@@ -179,7 +179,7 @@ const AdminPortal = () => {
                     onClick={() => setIsFormOpen(true)}
                   >
                     <UserPlus className="h-5 w-5" />
-                    Oprettelse af ny træner
+                    Opret ny frivillig
                   </Button>
                   
                   <Button 
