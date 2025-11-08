@@ -271,11 +271,10 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
       const fileName = `${editableData.navn.replace(/\s+/g, '_')}_traener_data.xlsx`;
       
       // Call edge function without auth (edge function will handle auth internally)
-      const { data, error } = await supabase.functions.invoke('upload-to-cloudinary', {
+      const { data, error } = await supabase.functions.invoke('upload-to-mega', {
         body: {
           fileData: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${wbout}`,
-          fileName: fileName,
-          trainerName: editableData.navn
+          fileName: fileName
         }
       });
 
