@@ -71,8 +71,8 @@ serve(async (req) => {
 
     console.log(`Found bucket ID: ${bucket.bucketId}`);
 
-    // Step 3: List files to find the file ID
-    console.log(`Finding file: Frivillige/${fileName}`);
+    // Step 3: List files to find the file ID (match by name pattern)
+    console.log(`Finding files matching: ${fileName}`);
     const listFilesResponse = await fetch(`${authData.apiUrl}/b2api/v2/b2_list_file_names`, {
       method: 'POST',
       headers: {
@@ -91,10 +91,27 @@ serve(async (req) => {
     }
 
     const filesData = await listFilesResponse.json();
-    const file = filesData.files.find((f: any) => f.fileName === `Frivillige/${fileName}`);
+    
+    // Find file by matching the name (with or without date suffix)
+    // Files in cloud may be named like: traener_Name.xlsx or Name.xlsx or traener_Name_01-01-2025.xlsx
+    const file = filesData.files.find((f: any) => {
+      const cloudFileName = f.fileName.replace('Frivillige/', '');
+      // Match if filename contains the search name
+      return cloudFileName.includes(fileName.replace('.xlsx', '')) && cloudFileName.endsWith('.xlsx');
+    });
 
     if (!file) {
-      throw new Error(`File ${fileName} not found in Frivillige folder`);
+      console.log(`No file matching ${fileName} found in Frivillige folder. This is normal for trainers that haven't been uploaded yet.`);
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: `No cloud file found for ${fileName}. Trainer only exists locally.`
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 
+        }
+      );
     }
 
     console.log(`Found file with ID: ${file.fileId}`);

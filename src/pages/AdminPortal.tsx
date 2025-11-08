@@ -107,20 +107,21 @@ const AdminPortal = () => {
     try {
       toast.loading("Sletter træner...");
       
-      // Generate the filename that would have been used
-      const fileName = `traener_${trainer.navn.replace(/\s+/g, '_')}.xlsx`;
+      // Try to delete from Backblaze if file exists
+      // Note: The filename in cloud includes the trainer name but may have a date suffix
+      const fileName = `${trainer.navn.replace(/\s+/g, '_')}.xlsx`;
       
-      // Try to delete from Backblaze
       try {
         const { data, error } = await supabase.functions.invoke('delete-backblaze-file', {
           body: { fileName }
         });
         
-        if (error) {
-          console.error("Error deleting from cloud:", error);
+        // Ignore 400 errors (file not found) since local trainers may not be uploaded yet
+        if (error && !error.message?.includes('non-2xx')) {
+          console.warn("Could not delete from cloud, but continuing with local deletion:", error);
         }
       } catch (cloudError) {
-        console.error("Could not delete from cloud:", cloudError);
+        console.warn("Could not delete from cloud, but continuing with local deletion:", cloudError);
         // Continue with local deletion even if cloud deletion fails
       }
       
