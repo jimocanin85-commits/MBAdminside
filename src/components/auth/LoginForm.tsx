@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import mbLogo from "@/assets/mb-logo.png";
 
 interface LoginFormProps {
-  onLogin: () => void;
+  onLogin: (email: string, password: string) => Promise<void>;
 }
 
 const LoginForm = ({ onLogin }: LoginFormProps) => {
@@ -15,30 +15,19 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    console.log("Login attempt - Username:", username);
-    console.log("Login attempt - Password length:", password.length);
-    console.log("Username match:", username === "admin");
-    console.log("Password match:", password === "Monne1935");
-
-    // Simulate login delay
-    setTimeout(() => {
-      const trimmedUsername = username.trim();
-      const trimmedPassword = password.trim();
-      
-      if (trimmedUsername === "admin" && trimmedPassword === "Monne1935") {
-        toast.success("Login successful!");
-        onLogin();
-      } else {
-        toast.error("Forkert brugernavn eller adgangskode");
-        console.log("Login failed - Expected: admin / Monne1935");
-        console.log("Login failed - Received:", trimmedUsername, "/", trimmedPassword);
-      }
+    try {
+      await onLogin(username, password);
+      toast.success("Login successful!");
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast.error(error.message || "Forkert brugernavn eller adgangskode");
+    } finally {
       setIsLoading(false);
-    }, 800);
+    }
   };
 
   return (
