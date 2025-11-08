@@ -105,11 +105,21 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
         ['', '', ''], // Extra empty row to move Exit Tjekliste down
         ['Exit Tjekliste', '', ''],
         ['', '', ''],
-        ...EXIT_CHECKLIST_ITEMS.map(item => [
-          item.label,
-          checklist[item.id]?.status ? 'Ja' : 'Nej',
-          checklist[item.id]?.date ? format(checklist[item.id].date!, 'd. MMMM yyyy', { locale: da }) : ''
-        ])
+        ...EXIT_CHECKLIST_ITEMS.map(item => {
+          const status = checklist[item.id]?.status;
+          const date = checklist[item.id]?.date;
+          
+          let statusText = status ? 'Ja' : 'Nej';
+          if (status && date) {
+            statusText = `Ja - ${format(date, 'd. MMMM yyyy', { locale: da })}`;
+          }
+          
+          return [
+            item.label,
+            statusText,
+            ''
+          ];
+        })
       ];
 
       // Append exit data to existing data
