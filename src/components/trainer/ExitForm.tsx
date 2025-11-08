@@ -136,9 +136,9 @@ const ExitForm = ({ open, onOpenChange }: ExitFormProps) => {
           <DialogTitle>Exit af frivillig</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-6">
           <div className="space-y-2">
-            <Label>Vælg træner</Label>
+            <Label>Vælg frivillig</Label>
             <Select value={selectedFile} onValueChange={setSelectedFile}>
               <SelectTrigger>
                 <SelectValue placeholder="Vælg en træner..." />
