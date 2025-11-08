@@ -56,30 +56,43 @@ export const CloudFiles = ({ onEditFile }: CloudFilesProps) => {
     try {
       toast.loading("Henter fil...");
       
-      // Fetch the Excel file from Backblaze
-      const response = await fetch(file.downloadUrl);
-      if (!response.ok) {
+      // Download file through edge function
+      const { data: downloadData, error } = await supabase.functions.invoke('download-backblaze-file', {
+        body: { fileName: file.fileName }
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!downloadData?.success) {
         throw new Error('Failed to download file');
       }
+
+      // Convert base64 to array buffer
+      const binaryString = atob(downloadData.fileData);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
       
-      const arrayBuffer = await response.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const workbook = XLSX.read(bytes, { type: 'array' });
       
       // Parse the Excel file
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+      const excelData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
       
       // Extract trainer data from the Excel structure
-      const trainerInfo = data[1][0].split('\n');
-      const yearRole = data[1][1].split('\n');
+      const trainerInfo = excelData[1][0].split('\n');
+      const yearRole = excelData[1][1].split('\n');
       
       // Build checklist from rows starting at index 4
       const checklist: any = {};
-      for (let i = 4; i < data.length; i++) {
-        if (!data[i] || !data[i][0]) continue;
+      for (let i = 4; i < excelData.length; i++) {
+        if (!excelData[i] || !excelData[i][0]) continue;
         
-        const taskName = data[i][0];
-        const statusText = data[i][1] || '';
+        const taskName = excelData[i][0];
+        const statusText = excelData[i][1] || '';
         
         // Map task names to IDs
         const taskIdMap: Record<string, string> = {
@@ -112,7 +125,7 @@ export const CloudFiles = ({ onEditFile }: CloudFilesProps) => {
         foedselsdato: trainerInfo[3] || '',
         aargang: yearRole[0] || '',
         rolle: yearRole[1] || '',
-        kontaktperson: data[1][2] || '',
+        kontaktperson: excelData[1][2] || '',
         createdAt: new Date(file.uploadTimestamp),
         excelData: {
           data: {
@@ -122,7 +135,7 @@ export const CloudFiles = ({ onEditFile }: CloudFilesProps) => {
             foedselsdato: trainerInfo[3] || '',
             aargang: yearRole[0] || '',
             rolle: yearRole[1] || '',
-            kontaktperson: data[1][2] || ''
+            kontaktperson: excelData[1][2] || ''
           },
           checklist
         }
