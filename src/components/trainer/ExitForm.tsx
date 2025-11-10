@@ -120,7 +120,7 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
           
           let statusText = status ? 'Ja' : 'Nej';
           if (status && date) {
-            statusText = `Ja - ${format(date, 'd. MMMM yyyy', { locale: da })}`;
+            statusText = `Ja - ${format(date, 'dd/MM/yyyy')}`;
           }
           
           return [
