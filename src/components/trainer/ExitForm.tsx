@@ -158,10 +158,10 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
         };
       }
       
-      // Set column widths
+      // Set column widths - using larger values to ensure dates display fully
       newWorksheet['!cols'] = [
         { wch: 45 },
-        { wch: 70 },
+        { wch: 100 },
         { wch: 80 }
       ];
 
