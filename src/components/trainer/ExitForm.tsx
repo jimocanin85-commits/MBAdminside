@@ -158,11 +158,11 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
         };
       }
       
-      // Set column widths - using larger values to ensure dates display fully
+      // Set column widths using pixel values for better consistency
       newWorksheet['!cols'] = [
-        { wch: 45 },
-        { wch: 100 },
-        { wch: 80 }
+        { wpx: 300 },  // Column A - Checklist item
+        { wpx: 400 },  // Column B - Status (with full date)
+        { wpx: 500 }   // Column C - Additional info
       ];
 
       // Update workbook
