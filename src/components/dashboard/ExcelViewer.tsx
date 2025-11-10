@@ -58,12 +58,12 @@ export const ExcelViewer = ({ open, onOpenChange, fileName, fileData, onSaved }:
       // Update current sheet with edited data
       const ws = XLSX.utils.aoa_to_sheet(sheetData);
       
-      // Set column widths for trainer data sheet
+      // Set column widths for trainer data sheet - larger column B for dates
       if (currentSheetIndex === 0) {
         ws['!cols'] = [
-          { wch: 45 },
-          { wch: 20 },
-          { wch: 80 }
+          { wpx: 300 },  // Column A
+          { wpx: 400 },  // Column B - wider for full dates like "Ja - 10. november 2025"
+          { wpx: 500 }   // Column C
         ];
         
         ws['!rows'] = [
@@ -117,7 +117,7 @@ export const ExcelViewer = ({ open, onOpenChange, fileName, fileData, onSaved }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] max-h-[90vh] flex flex-col p-3 sm:p-6">
+      <DialogContent className="max-w-[95vw] max-h-[90vh] flex flex-col p-3 sm:p-6 [&>button]:hidden">
         <DialogHeader>
           <div className="flex items-center justify-between gap-2">
             <DialogTitle className="truncate text-sm sm:text-base">{fileName}</DialogTitle>
