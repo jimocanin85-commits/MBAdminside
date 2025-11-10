@@ -161,7 +161,7 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
       // Set column widths
       newWorksheet['!cols'] = [
         { wch: 45 },
-        { wch: 40 },
+        { wch: 50 },
         { wch: 80 }
       ];
 
