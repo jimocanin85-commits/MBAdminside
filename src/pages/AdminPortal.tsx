@@ -61,6 +61,7 @@ const AdminPortal = () => {
   });
 
   useEffect(() => {
+    console.log('Saving trainers to localStorage:', trainers);
     localStorage.setItem('trainers', JSON.stringify(trainers));
   }, [trainers]);
 
@@ -83,7 +84,12 @@ const AdminPortal = () => {
       ...data,
       createdAt: new Date()
     };
-    setTrainers([...trainers, trainerWithDate]);
+    console.log('Adding trainer:', trainerWithDate);
+    console.log('Current trainers:', trainers);
+    const newTrainers = [...trainers, trainerWithDate];
+    setTrainers(newTrainers);
+    console.log('New trainers array:', newTrainers);
+    toast.success(`${trainerWithDate.navn} tilføjet til oversigten`);
   };
 
   const handleTrainerUpdate = (updatedTrainer: Trainer) => {
