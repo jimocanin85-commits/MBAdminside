@@ -191,7 +191,7 @@ const AdminPortal = () => {
                         size="lg" 
                         className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
                       >
-                        Ny frivillig
+                        Frivillig
                         <ChevronDown className="h-5 w-5" />
                       </Button>
                     </DropdownMenuTrigger>
