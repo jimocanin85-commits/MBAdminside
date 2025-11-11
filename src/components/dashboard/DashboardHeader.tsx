@@ -14,7 +14,6 @@ const DashboardHeader = ({ onLogout }: DashboardHeaderProps) => {
           <img src={mbLogo} alt="Måløv Boldklub Logo" className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0" />
           <div className="min-w-0">
             <h1 className="text-lg md:text-2xl font-bold truncate">Måløv Boldklub</h1>
-            <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">Administrations Portal</p>
           </div>
         </div>
         <Button variant="outline" onClick={onLogout} className="gap-2 flex-shrink-0 min-h-[44px]">
