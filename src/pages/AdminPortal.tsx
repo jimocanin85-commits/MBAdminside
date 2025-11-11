@@ -198,11 +198,11 @@ const AdminPortal = () => {
                     <DropdownMenuContent align="start" className="w-56">
                       <DropdownMenuItem onClick={() => setIsFormOpen(true)} className="gap-2 py-3 cursor-pointer">
                         <UserPlus className="h-4 w-4" />
-                        Opret ny frivillig
+                        Opret
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setIsExitFormOpen(true)} className="gap-2 py-3 cursor-pointer">
                         <DoorOpen className="h-4 w-4" />
-                        Exit af frivillig
+                        Exit
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setShowCloudFiles(true)} className="gap-2 py-3 cursor-pointer">
                         <Cloud className="h-4 w-4" />
