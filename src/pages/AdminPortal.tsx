@@ -7,7 +7,7 @@ import ExitForm from "@/components/trainer/ExitForm";
 import { CloudFiles } from "@/components/dashboard/CloudFiles";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { UserPlus, Cloud, Settings, Trash2, GripVertical } from "lucide-react";
+import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -193,7 +193,7 @@ const AdminPortal = () => {
                     className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
                     onClick={() => setIsExitFormOpen(true)}
                   >
-                    <UserPlus className="h-5 w-5" />
+                    <DoorOpen className="h-5 w-5" />
                     Exit af frivillig
                   </Button>
                   
