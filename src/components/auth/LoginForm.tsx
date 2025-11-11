@@ -41,7 +41,6 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
         </div>
         <div>
           <CardTitle className="text-3xl font-bold">Måløv Boldklub</CardTitle>
-          <CardDescription className="text-base mt-2">Administrations Portal</CardDescription>
         </div>
       </CardHeader>
       <CardContent>
