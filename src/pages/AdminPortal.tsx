@@ -7,13 +7,19 @@ import ExitForm from "@/components/trainer/ExitForm";
 import { CloudFiles } from "@/components/dashboard/CloudFiles";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc } from "lucide-react";
+import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type Trainer = {
   navn: string;
@@ -179,23 +185,31 @@ const AdminPortal = () => {
             <Card className="shadow-lg border-2">
               <CardContent className="pt-8 space-y-6">
                 <div className="flex flex-col md:flex-row gap-3">
-                  <Button 
-                    size="lg" 
-                    className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
-                    onClick={() => setIsFormOpen(true)}
-                  >
-                    <UserPlus className="h-5 w-5" />
-                    Opret ny frivillig
-                  </Button>
-                  
-                  <Button 
-                    size="lg" 
-                    className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
-                    onClick={() => setIsExitFormOpen(true)}
-                  >
-                    <DoorOpen className="h-5 w-5" />
-                    Exit af frivillig
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        size="lg" 
+                        className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
+                      >
+                        Ny frivillig
+                        <ChevronDown className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56">
+                      <DropdownMenuItem onClick={() => setIsFormOpen(true)} className="gap-2 py-3 cursor-pointer">
+                        <UserPlus className="h-4 w-4" />
+                        Opret ny frivillig
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setIsExitFormOpen(true)} className="gap-2 py-3 cursor-pointer">
+                        <DoorOpen className="h-4 w-4" />
+                        Exit af frivillig
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setShowCloudFiles(true)} className="gap-2 py-3 cursor-pointer">
+                        <Cloud className="h-4 w-4" />
+                        Cloud Filer
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   
                   <Button 
                     size="lg" 
@@ -213,16 +227,6 @@ const AdminPortal = () => {
                   >
                     <UserPlus className="h-5 w-5" />
                     Frivilligfest 2026
-                  </Button>
-                  
-                  <Button 
-                    size="lg" 
-                    variant="outline"
-                    className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
-                    onClick={() => setShowCloudFiles(true)}
-                  >
-                    <Cloud className="h-5 w-5" />
-                    Cloud Filer
                   </Button>
                 </div>
 
