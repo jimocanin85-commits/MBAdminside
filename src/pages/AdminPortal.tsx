@@ -260,6 +260,38 @@ const AdminPortal = () => {
                   </Button>
                 </div>
 
+                {/* Mobile Action Buttons - Visible on Mobile Only */}
+                <div className="md:hidden flex flex-col gap-3">
+                  <Button
+                    size="lg"
+                    className="gap-2 w-full min-h-[52px] text-base"
+                    onClick={() => setIsFormOpen(true)}
+                  >
+                    <UserPlus className="h-5 w-5" />
+                    Opret Frivillig
+                  </Button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="gap-2 min-h-[52px] text-base"
+                      onClick={() => setIsExitFormOpen(true)}
+                    >
+                      <DoorOpen className="h-5 w-5" />
+                      Exit Form
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="gap-2 min-h-[52px] text-base"
+                      onClick={() => setShowCloudFiles(true)}
+                    >
+                      <Cloud className="h-5 w-5" />
+                      Cloud Filer
+                    </Button>
+                  </div>
+                </div>
+
               {trainers.length > 0 ? (
                 <div className="pt-6 border-t">
                   <div className="space-y-4">
