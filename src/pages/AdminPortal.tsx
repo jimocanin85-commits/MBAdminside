@@ -197,6 +197,7 @@ const AdminPortal = () => {
   }
 
   return (
+    <>
     <div className="min-h-screen bg-background pb-16 md:pb-0">
       <DashboardHeader 
         onLogout={handleLogout}
@@ -426,15 +427,6 @@ const AdminPortal = () => {
         <Settings className="h-5 w-5" />
       </Button>
 
-      {/* Mobile Bottom Navigation */}
-      <BottomNavigation
-        currentView={currentView}
-        onNavigate={handleNavigate}
-        onOpenForm={() => setIsFormOpen(true)}
-        onShowCloudFiles={() => setShowCloudFiles(true)}
-        onOpenAdminDialog={() => setShowAdminDialog(true)}
-      />
-
       <Dialog open={showAdminDialog} onOpenChange={setShowAdminDialog}>
         <DialogContent>
           <DialogHeader>
@@ -454,6 +446,18 @@ const AdminPortal = () => {
         </DialogContent>
       </Dialog>
     </div>
+    
+    {/* Always render BottomNavigation to maintain hook order - hidden when not authenticated */}
+    {isAuthenticated && (
+      <BottomNavigation
+        currentView={currentView}
+        onNavigate={handleNavigate}
+        onOpenForm={() => setIsFormOpen(true)}
+        onShowCloudFiles={() => setShowCloudFiles(true)}
+        onOpenAdminDialog={() => setShowAdminDialog(true)}
+      />
+    )}
+    </>
   );
 };
 
