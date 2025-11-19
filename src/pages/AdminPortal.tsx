@@ -77,6 +77,18 @@ const AdminPortal = () => {
     localStorage.setItem('isAuthenticated', isAuthenticated.toString());
   }, [isAuthenticated]);
 
+  // Update current view based on state - MUST be before early return
+  useEffect(() => {
+    if (!isAuthenticated) return; // Don't update view if not authenticated
+    if (showCloudFiles) {
+      setCurrentView("cloud");
+    } else if (isFormOpen || isExitFormOpen || isSpreadsheetOpen) {
+      setCurrentView("form");
+    } else {
+      setCurrentView("home");
+    }
+  }, [isAuthenticated, showCloudFiles, isFormOpen, isExitFormOpen, isSpreadsheetOpen]);
+
   const handleLogin = () => {
     setIsAuthenticated(true);
   };
@@ -168,6 +180,14 @@ const AdminPortal = () => {
     return grouped;
   };
 
+  const handleNavigate = (view: "home" | "cloud" | "form" | "settings") => {
+    setCurrentView(view);
+    if (view === "home" && showCloudFiles) {
+      setShowCloudFiles(false);
+    }
+  };
+
+  // Early return for unauthenticated users - AFTER all hooks
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-muted p-4">
@@ -175,24 +195,6 @@ const AdminPortal = () => {
       </div>
     );
   }
-
-  // Update current view based on state
-  useEffect(() => {
-    if (showCloudFiles) {
-      setCurrentView("cloud");
-    } else if (isFormOpen || isExitFormOpen || isSpreadsheetOpen) {
-      setCurrentView("form");
-    } else {
-      setCurrentView("home");
-    }
-  }, [showCloudFiles, isFormOpen, isExitFormOpen, isSpreadsheetOpen]);
-
-  const handleNavigate = (view: "home" | "cloud" | "form" | "settings") => {
-    setCurrentView(view);
-    if (view === "home" && showCloudFiles) {
-      setShowCloudFiles(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background pb-16 md:pb-0">
