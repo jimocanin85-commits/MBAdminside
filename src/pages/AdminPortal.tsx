@@ -213,8 +213,8 @@ const AdminPortal = () => {
           ) : (
             <Card className="shadow-lg border-2">
               <CardContent className="pt-4 sm:pt-6 md:pt-8 space-y-4 sm:space-y-6">
-                {/* Desktop Action Buttons - Hidden on Mobile */}
-                <div className="hidden md:flex flex-col md:flex-row gap-3">
+                {/* Action Buttons - Same on Mobile and Desktop */}
+                <div className="flex flex-col sm:flex-row gap-3">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button 
@@ -258,38 +258,6 @@ const AdminPortal = () => {
                     <UserPlus className="h-5 w-5" />
                     Frivilligfest 2026
                   </Button>
-                </div>
-
-                {/* Mobile Action Buttons - Visible on Mobile Only */}
-                <div className="md:hidden flex flex-col gap-3">
-                  <Button
-                    size="lg"
-                    className="gap-2 w-full min-h-[52px] text-base"
-                    onClick={() => setIsFormOpen(true)}
-                  >
-                    <UserPlus className="h-5 w-5" />
-                    Opret Frivillig
-                  </Button>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      className="gap-2 min-h-[52px] text-base"
-                      onClick={() => setIsExitFormOpen(true)}
-                    >
-                      <DoorOpen className="h-5 w-5" />
-                      Exit Form
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      className="gap-2 min-h-[52px] text-base"
-                      onClick={() => setShowCloudFiles(true)}
-                    >
-                      <Cloud className="h-5 w-5" />
-                      Cloud Filer
-                    </Button>
-                  </div>
                 </div>
 
               {trainers.length > 0 ? (
@@ -387,26 +355,6 @@ const AdminPortal = () => {
                     <p className="text-sm sm:text-base text-muted-foreground mb-6">
                       Brug menuen eller knapperne nedenfor for at tilføje din første frivillige
                     </p>
-                    {/* Mobile-only quick action buttons */}
-                    <div className="md:hidden flex flex-col gap-3 max-w-xs mx-auto">
-                      <Button
-                        size="lg"
-                        className="gap-2 min-h-[48px]"
-                        onClick={() => setIsFormOpen(true)}
-                      >
-                        <UserPlus className="h-5 w-5" />
-                        Opret Frivillig
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        className="gap-2 min-h-[48px]"
-                        onClick={() => setIsExitFormOpen(true)}
-                      >
-                        <DoorOpen className="h-5 w-5" />
-                        Exit Form
-                      </Button>
-                    </div>
                   </div>
                 </div>
               )}
