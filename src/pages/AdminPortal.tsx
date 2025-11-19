@@ -257,7 +257,7 @@ const AdminPortal = () => {
                   </Button>
                 </div>
 
-              {trainers.length > 0 && (
+              {trainers.length > 0 ? (
                 <div className="pt-6 border-t">
                   <div className="space-y-4">
                     {isAdminMode ? (
@@ -342,6 +342,36 @@ const AdminPortal = () => {
                         </div>
                       ))
                     )}
+                  </div>
+                </div>
+              ) : (
+                <div className="pt-6 border-t">
+                  <div className="text-center py-8 sm:py-12">
+                    <UserPlus className="h-12 w-12 sm:h-16 sm:w-16 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg sm:text-xl font-semibold mb-2">Ingen frivillige endnu</h3>
+                    <p className="text-sm sm:text-base text-muted-foreground mb-6">
+                      Brug menuen eller knapperne nedenfor for at tilføje din første frivillige
+                    </p>
+                    {/* Mobile-only quick action buttons */}
+                    <div className="md:hidden flex flex-col gap-3 max-w-xs mx-auto">
+                      <Button
+                        size="lg"
+                        className="gap-2 min-h-[48px]"
+                        onClick={() => setIsFormOpen(true)}
+                      >
+                        <UserPlus className="h-5 w-5" />
+                        Opret Frivillig
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        className="gap-2 min-h-[48px]"
+                        onClick={() => setIsExitFormOpen(true)}
+                      >
+                        <DoorOpen className="h-5 w-5" />
+                        Exit Form
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
