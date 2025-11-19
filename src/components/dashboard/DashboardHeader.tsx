@@ -1,22 +1,47 @@
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import mbLogo from "@/assets/mb-logo.png";
+import MobileMenu from "./MobileMenu";
 
 interface DashboardHeaderProps {
   onLogout: () => void;
+  onOpenForm: () => void;
+  onOpenExitForm: () => void;
+  onShowCloudFiles: () => void;
+  onOpenAdminDialog: () => void;
 }
 
-const DashboardHeader = ({ onLogout }: DashboardHeaderProps) => {
+const DashboardHeader = ({ 
+  onLogout, 
+  onOpenForm, 
+  onOpenExitForm, 
+  onShowCloudFiles, 
+  onOpenAdminDialog 
+}: DashboardHeaderProps) => {
   return (
-    <header className="border-b-2 bg-card shadow-sm">
-      <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 md:gap-4 min-w-0">
-          <img src={mbLogo} alt="Måløv Boldklub Logo" className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0" />
+    <header className="sticky top-0 z-40 border-b-2 bg-card shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/95">
+      <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
+          <MobileMenu
+            onOpenForm={onOpenForm}
+            onOpenExitForm={onOpenExitForm}
+            onShowCloudFiles={onShowCloudFiles}
+            onOpenAdminDialog={onOpenAdminDialog}
+          />
+          <img 
+            src={mbLogo} 
+            alt="Måløv Boldklub Logo" 
+            className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex-shrink-0" 
+          />
           <div className="min-w-0">
-            <h1 className="text-lg md:text-2xl font-bold truncate">Måløv Boldklub</h1>
+            <h1 className="text-base sm:text-lg md:text-2xl font-bold truncate">Måløv Boldklub</h1>
           </div>
         </div>
-        <Button variant="outline" onClick={onLogout} className="gap-2 flex-shrink-0 min-h-[44px]">
+        <Button 
+          variant="outline" 
+          onClick={onLogout} 
+          className="gap-2 flex-shrink-0 min-h-[44px] px-3 sm:px-4"
+        >
           <LogOut className="h-4 w-4" />
           <span className="hidden sm:inline">Log ud</span>
         </Button>

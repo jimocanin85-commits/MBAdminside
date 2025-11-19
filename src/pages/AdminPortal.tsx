@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import LoginForm from "@/components/auth/LoginForm";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import BottomNavigation from "@/components/dashboard/BottomNavigation";
 import TrainerForm from "@/components/trainer/TrainerForm";
 import TrainerSpreadsheet from "@/components/trainer/TrainerSpreadsheet";
 import ExitForm from "@/components/trainer/ExitForm";
@@ -48,6 +49,7 @@ const AdminPortal = () => {
   const [showAdminDialog, setShowAdminDialog] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [currentView, setCurrentView] = useState<"home" | "cloud" | "form" | "settings">("home");
   const [trainers, setTrainers] = useState<Trainer[]>(() => {
     const saved = localStorage.getItem('trainers');
     if (saved) {
@@ -174,17 +176,42 @@ const AdminPortal = () => {
     );
   }
 
+  // Update current view based on state
+  useEffect(() => {
+    if (showCloudFiles) {
+      setCurrentView("cloud");
+    } else if (isFormOpen || isExitFormOpen || isSpreadsheetOpen) {
+      setCurrentView("form");
+    } else {
+      setCurrentView("home");
+    }
+  }, [showCloudFiles, isFormOpen, isExitFormOpen, isSpreadsheetOpen]);
+
+  const handleNavigate = (view: "home" | "cloud" | "form" | "settings") => {
+    setCurrentView(view);
+    if (view === "home" && showCloudFiles) {
+      setShowCloudFiles(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader onLogout={handleLogout} />
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background pb-16 md:pb-0">
+      <DashboardHeader 
+        onLogout={handleLogout}
+        onOpenForm={() => setIsFormOpen(true)}
+        onOpenExitForm={() => setIsExitFormOpen(true)}
+        onShowCloudFiles={() => setShowCloudFiles(true)}
+        onOpenAdminDialog={() => setShowAdminDialog(true)}
+      />
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8">
+        <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
           {showCloudFiles ? (
             <CloudFiles key={refreshCloudFiles} />
           ) : (
             <Card className="shadow-lg border-2">
-              <CardContent className="pt-8 space-y-6">
-                <div className="flex flex-col md:flex-row gap-3">
+              <CardContent className="pt-4 sm:pt-6 md:pt-8 space-y-4 sm:space-y-6">
+                {/* Desktop Action Buttons - Hidden on Mobile */}
+                <div className="hidden md:flex flex-col md:flex-row gap-3">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button 
@@ -196,15 +223,15 @@ const AdminPortal = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="w-56">
-                      <DropdownMenuItem onClick={() => setIsFormOpen(true)} className="gap-2 py-3 cursor-pointer">
+                      <DropdownMenuItem onClick={() => setIsFormOpen(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
                         <UserPlus className="h-4 w-4" />
                         Opret
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setIsExitFormOpen(true)} className="gap-2 py-3 cursor-pointer">
+                      <DropdownMenuItem onClick={() => setIsExitFormOpen(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
                         <DoorOpen className="h-4 w-4" />
                         Exit
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setShowCloudFiles(true)} className="gap-2 py-3 cursor-pointer">
+                      <DropdownMenuItem onClick={() => setShowCloudFiles(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
                         <Cloud className="h-4 w-4" />
                         Cloud Filer
                       </DropdownMenuItem>
@@ -290,18 +317,18 @@ const AdminPortal = () => {
                             {monthTrainers.map((trainer, index) => (
                                <div
                                  key={index}
-                                 className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors gap-3"
+                                 className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted active:bg-muted transition-colors gap-3 touch-manipulation"
                                >
-                                 <div className="flex-1">
-                                   <p className="font-medium">{trainer.navn}</p>
-                                   <p className="text-sm text-muted-foreground">
+                                 <div className="flex-1 min-w-0">
+                                   <p className="font-medium text-base sm:text-lg truncate">{trainer.navn}</p>
+                                   <p className="text-xs sm:text-sm text-muted-foreground">
                                      {format(trainer.createdAt, "d. MMMM yyyy 'kl.' HH:mm", { locale: da })}
                                    </p>
                                  </div>
                                  <Button
                                    variant="outline"
                                    size="sm"
-                                   className="gap-2 w-full sm:w-auto min-h-[44px]"
+                                   className="gap-2 w-full sm:w-auto min-h-[44px] text-sm sm:text-base"
                                    onClick={() => {
                                      setSelectedTrainer(trainer);
                                      setIsSpreadsheetOpen(true);
@@ -325,8 +352,11 @@ const AdminPortal = () => {
           {showCloudFiles && (
             <Button 
               variant="outline" 
-              onClick={() => setShowCloudFiles(false)}
-              className="w-full"
+              onClick={() => {
+                setShowCloudFiles(false);
+                setCurrentView("home");
+              }}
+              className="w-full min-h-[44px] md:hidden"
             >
               Tilbage
             </Button>
@@ -353,14 +383,25 @@ const AdminPortal = () => {
         onSave={handleTrainerUpdate}
       />
 
+      {/* Desktop Settings Button - Hidden on Mobile (use bottom nav instead) */}
       <Button
         size="icon"
         variant="outline"
-        className="fixed bottom-4 left-4 h-12 w-12 rounded-full shadow-lg z-50"
+        className="hidden md:flex fixed bottom-4 left-4 h-12 w-12 rounded-full shadow-lg z-50 min-h-[48px] min-w-[48px]"
         onClick={() => setShowAdminDialog(true)}
+        aria-label="Settings"
       >
         <Settings className="h-5 w-5" />
       </Button>
+
+      {/* Mobile Bottom Navigation */}
+      <BottomNavigation
+        currentView={currentView}
+        onNavigate={handleNavigate}
+        onOpenForm={() => setIsFormOpen(true)}
+        onShowCloudFiles={() => setShowCloudFiles(true)}
+        onOpenAdminDialog={() => setShowAdminDialog(true)}
+      />
 
       <Dialog open={showAdminDialog} onOpenChange={setShowAdminDialog}>
         <DialogContent>

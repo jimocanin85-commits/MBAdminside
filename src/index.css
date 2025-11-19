@@ -111,4 +111,28 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Mobile optimizations */
+  @supports (padding: max(0px)) {
+    .safe-area-bottom {
+      padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+    
+    .safe-area-top {
+      padding-top: max(1rem, env(safe-area-inset-top));
+    }
+  }
+
+  /* Touch optimization */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Improved scrolling on mobile */
+  @media (max-width: 768px) {
+    html {
+      -webkit-overflow-scrolling: touch;
+    }
+  }
 }
