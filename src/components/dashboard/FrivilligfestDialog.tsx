@@ -327,7 +327,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] z-50 p-3 sm:p-6 w-full sm:w-auto flex flex-col">
+      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] h-[90vh] sm:h-auto z-50 p-3 sm:p-6 w-full sm:w-auto flex flex-col">
         <DialogHeader className="flex-shrink-0 pb-2">
           <DialogTitle className="text-base sm:text-lg">Frivilligfest 2026</DialogTitle>
           <DialogDescription className="sr-only">
@@ -358,11 +358,13 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                 </Button>
               </div>
             </div>
-            <div className="space-y-4 md:space-y-2">
+            <div className="space-y-4 md:space-y-2 min-h-[200px]">
               {/* Debug info - visible on mobile */}
-              <div className="md:hidden text-xs text-muted-foreground p-2 bg-muted rounded mb-2 border">
-                Debug: {displayItems.length} opgaver | State: {checklistItems.length} items
-              </div>
+              {displayItems.length > 0 && (
+                <div className="md:hidden text-xs text-muted-foreground p-2 bg-blue-50 dark:bg-blue-950 rounded mb-2 border border-blue-200 dark:border-blue-800">
+                  <strong>{displayItems.length}</strong> opgave{displayItems.length !== 1 ? 'r' : ''} vises nedenfor
+                </div>
+              )}
               
               {/* Desktop Header - Hidden on Mobile */}
               <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,3fr,auto] gap-4 font-semibold text-sm border-b pb-2">
