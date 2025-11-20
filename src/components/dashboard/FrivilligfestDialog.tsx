@@ -219,7 +219,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto z-50 p-3 sm:p-6">
+      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto z-50 p-3 sm:p-6 w-full sm:w-auto">
         <DialogHeader>
           <DialogTitle className="text-base sm:text-lg">Frivilligfest 2026 - Tjekliste</DialogTitle>
         </DialogHeader>
