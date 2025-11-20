@@ -43,6 +43,13 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   const [checklistDateInputs, setChecklistDateInputs] = useState<Record<string, string>>({});
   const [newTaskLabel, setNewTaskLabel] = useState("");
 
+  // Debug: Log when dialog opens
+  useEffect(() => {
+    if (open) {
+      console.log('Frivilligfest dialog opened, checklistItems:', checklistItems);
+    }
+  }, [open, checklistItems]);
+
   useEffect(() => {
     // Load from localStorage on mount
     const saved = localStorage.getItem('frivilligfest2026');
@@ -50,8 +57,8 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
       try {
         const parsed = JSON.parse(saved);
         
-        // Load checklist items
-        if (parsed.items && Array.isArray(parsed.items)) {
+        // Load checklist items - only if there are items, otherwise keep default
+        if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
           setChecklistItems(parsed.items);
         }
         
