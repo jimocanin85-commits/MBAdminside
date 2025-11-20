@@ -229,15 +229,14 @@ const AdminPortal = () => {
             <Card className="shadow-lg border-2">
               <CardContent className="pt-4 sm:pt-6 md:pt-8 space-y-4 sm:space-y-6">
                 <div className="text-center py-8">
-                  <h2 className="text-2xl font-bold mb-4">Velkommen, {currentUser}!</h2>
-                  <p className="text-muted-foreground mb-6">Du har adgang til Frivilligfest 2026 tjeklisten</p>
+                  <h2 className="text-2xl font-bold mb-6">Velkommen, {currentUser}!</h2>
                   <Button 
                     size="lg" 
                     className="gap-2 text-base px-8 py-6 min-h-[60px]"
                     onClick={() => setShowFrivilligfestDialog(true)}
                   >
                     <UserPlus className="h-5 w-5" />
-                    Åbn Frivilligfest 2026
+                    Frivilligfest2026
                   </Button>
                 </div>
               </CardContent>
