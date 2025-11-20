@@ -44,32 +44,50 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   const [checklistDateInputs, setChecklistDateInputs] = useState<Record<string, string>>({});
   const [newTaskLabel, setNewTaskLabel] = useState("");
 
+  // Debug: Log state changes
+  useEffect(() => {
+    console.log('[FrivilligfestDialog] checklistItems changed:', checklistItems);
+    console.log('[FrivilligfestDialog] checklistItems length:', checklistItems.length);
+  }, [checklistItems]);
+
   // Load from localStorage when dialog opens - use ref to track if we've loaded
   const hasLoadedRef = useRef(false);
   
   useEffect(() => {
+    console.log('[LOAD] useEffect triggered, open:', open, 'hasLoadedRef.current:', hasLoadedRef.current);
+    
     if (!open) {
       // Reset the ref when dialog closes so we reload next time
+      console.log('[LOAD] Dialog closed, resetting hasLoadedRef');
       hasLoadedRef.current = false;
       return;
     }
     
     // Only load once when dialog opens, not on every open change
     if (hasLoadedRef.current) {
+      console.log('[LOAD] Already loaded, skipping');
       return;
     }
     
+    console.log('[LOAD] Loading from localStorage...');
     const saved = localStorage.getItem('frivilligfest2026');
+    console.log('[LOAD] Raw localStorage data:', saved);
+    
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
+        console.log('[LOAD] Parsed data:', parsed);
+        console.log('[LOAD] Items in parsed data:', parsed.items);
+        console.log('[LOAD] Items array check:', Array.isArray(parsed.items));
+        console.log('[LOAD] Items length:', parsed.items?.length);
         
         // Load checklist items - only if there are items, otherwise keep default
         if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
-          console.log('Loading checklist items from localStorage:', parsed.items);
+          console.log('[LOAD] Loading', parsed.items.length, 'items from localStorage:', parsed.items);
           setChecklistItems(parsed.items);
+          console.log('[LOAD] State updated with items');
         } else {
-          console.log('No items in localStorage, using default');
+          console.log('[LOAD] No valid items in localStorage, keeping default state');
         }
         
         // Load checklist data
@@ -91,13 +109,14 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         setChecklist(restoredChecklist);
         setChecklistDateInputs(restoredDateInputs);
         hasLoadedRef.current = true;
+        console.log('[LOAD] Load complete, hasLoadedRef set to true');
       } catch (e) {
-        console.error('Error loading Frivilligfest data:', e);
+        console.error('[LOAD] Error loading Frivilligfest data:', e);
         // On error, keep the default item that's already in state
         hasLoadedRef.current = true;
       }
     } else {
-      console.log('No saved data in localStorage');
+      console.log('[LOAD] No saved data in localStorage');
       hasLoadedRef.current = true;
     }
   }, [open]);
@@ -105,7 +124,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   useEffect(() => {
     // Don't save if items array is empty (shouldn't happen, but safety check)
     if (checklistItems.length === 0) {
-      console.log('Skipping save - checklistItems is empty');
+      console.log('[SAVE] Skipping save - checklistItems is empty');
       return;
     }
     
@@ -114,26 +133,52 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
       items: checklistItems,
       checklist
     };
-    console.log('Saving to localStorage:', dataToSave);
-    localStorage.setItem('frivilligfest2026', JSON.stringify(dataToSave));
+    console.log('[SAVE] Saving to localStorage, items count:', checklistItems.length);
+    console.log('[SAVE] Data:', JSON.stringify(dataToSave, null, 2));
+    
+    try {
+      localStorage.setItem('frivilligfest2026', JSON.stringify(dataToSave));
+      console.log('[SAVE] Successfully saved to localStorage');
+      
+      // Verify it was saved
+      const verify = localStorage.getItem('frivilligfest2026');
+      if (verify) {
+        const parsed = JSON.parse(verify);
+        console.log('[SAVE] Verification - saved items count:', parsed.items?.length);
+      }
+    } catch (e) {
+      console.error('[SAVE] Error saving to localStorage:', e);
+    }
   }, [checklist, checklistItems]);
 
   const addNewTask = () => {
-    if (!newTaskLabel.trim()) return;
+    const trimmedLabel = newTaskLabel.trim();
+    console.log('[addNewTask] Called with label:', trimmedLabel);
+    
+    if (!trimmedLabel) {
+      console.log('[addNewTask] Empty label, returning');
+      return;
+    }
     
     const newId = `task_${Date.now()}`;
     const newItem: ChecklistItem = {
       id: newId,
-      label: newTaskLabel.trim(),
+      label: trimmedLabel,
       note: ""
     };
     
+    console.log('[addNewTask] Creating new item:', newItem);
+    
     // Use functional update to ensure we have the latest state
     setChecklistItems((prevItems) => {
+      console.log('[addNewTask] Previous items:', prevItems);
       const updated = [...prevItems, newItem];
-      console.log('Adding new task:', newItem, 'Updated items:', updated);
+      console.log('[addNewTask] Updated items:', updated);
+      console.log('[addNewTask] Updated items length:', updated.length);
       return updated;
     });
+    
+    console.log('[addNewTask] Clearing input field');
     setNewTaskLabel("");
   };
 
@@ -268,13 +313,15 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     note: ""
   }];
   
-  // Debug: Log display items
+  // Debug: Log display items and rendering
   useEffect(() => {
-    if (open) {
-      console.log('Display items:', displayItems);
-      console.log('Checklist items state:', checklistItems);
-    }
-  }, [open, displayItems, checklistItems]);
+    console.log('[FrivilligfestDialog] Dialog open:', open);
+    console.log('[FrivilligfestDialog] checklistItems:', checklistItems);
+    console.log('[FrivilligfestDialog] checklistItems.length:', checklistItems.length);
+    console.log('[FrivilligfestDialog] displayItems:', displayItems);
+    console.log('[FrivilligfestDialog] displayItems.length:', displayItems.length);
+    console.log('[FrivilligfestDialog] Will render', displayItems.length, 'items');
+  }, [open, checklistItems, displayItems]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -318,22 +365,33 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                 <div>Noter</div>
                 <div></div>
               </div>
-              {displayItems.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>Ingen opgaver endnu. Tilføj en opgave ovenfor.</p>
-                </div>
-              ) : (
-                displayItems.map((item, index) => {
-                const checklistItem = checklist[item.id];
-                const isChecked = checklistItem?.status === true;
-                const dateInputValue = checklistDateInputs[item.id] || "";
-                const noteValue = checklistItem?.note || "";
-                const assignedTo = checklistItem?.assignedTo || "";
+              {(() => {
+                console.log('[RENDER] Rendering displayItems, count:', displayItems.length);
+                console.log('[RENDER] displayItems:', displayItems);
+                
+                if (displayItems.length === 0) {
+                  console.log('[RENDER] Showing empty state');
+                  return (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>Ingen opgaver endnu. Tilføj en opgave ovenfor.</p>
+                    </div>
+                  );
+                }
+                
+                console.log('[RENDER] Mapping', displayItems.length, 'items');
+                return displayItems.map((item, index) => {
+                  console.log(`[RENDER] Rendering item ${index}:`, item);
+                  const checklistItem = checklist[item.id];
+                  const isChecked = checklistItem?.status === true;
+                  const dateInputValue = checklistDateInputs[item.id] || "";
+                  const noteValue = checklistItem?.note || "";
+                  const assignedTo = checklistItem?.assignedTo || "";
 
-                return (
-                  <div key={item.id} className={`border rounded-lg p-3 sm:p-0 sm:border-b sm:rounded-none ${index === displayItems.length - 1 ? 'sm:border-b-0' : ''} pb-4 sm:pb-2 space-y-3 bg-card sm:bg-transparent`}>
-                    {/* Mobile Layout - Stacked */}
-                    <div className="md:hidden space-y-3">
+                  return (
+                    <div key={item.id} className={`border rounded-lg p-3 sm:p-0 sm:border-b sm:rounded-none ${index === displayItems.length - 1 ? 'sm:border-b-0' : ''} pb-4 sm:pb-2 space-y-3 bg-card sm:bg-transparent`}>
+                      {/* Mobile Layout - Stacked */}
+                      <div className="md:hidden space-y-3">
+                        <div className="text-xs text-muted-foreground mb-1">Task ID: {item.id}</div>
                       <div className="flex items-center justify-between gap-2">
                         <Input
                           value={item.label}
@@ -493,8 +551,9 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                       </Button>
                     </div>
                   </div>
-                );
-              }))}
+                  );
+                });
+              })()}
             </div>
           </div>
         </div>
