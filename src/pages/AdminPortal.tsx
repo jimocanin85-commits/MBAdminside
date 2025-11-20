@@ -43,8 +43,9 @@ const AdminPortal = () => {
     return !!localStorage.getItem('currentUser');
   });
   
-  // Check if user is restricted (Karina or Brian)
-  const isRestrictedUser = currentUser === 'Karina' || currentUser === 'Brian';
+  // Check if user is restricted (Karina - only Frivilligfest, Brian - Frivilligfest + Årshjul + Frivillig)
+  const isRestrictedUser = currentUser === 'Karina';
+  const isBrianUser = currentUser === 'Brian';
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isExitFormOpen, setIsExitFormOpen] = useState(false);
   const [isSpreadsheetOpen, setIsSpreadsheetOpen] = useState(false);
@@ -224,7 +225,7 @@ const AdminPortal = () => {
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8">
         <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
           {isRestrictedUser ? (
-            // Restricted users (Karina, Brian) - Only Frivilligfest access
+            // Karina - Only Frivilligfest access
             <Card className="shadow-lg border-2">
               <CardContent className="pt-4 sm:pt-6 md:pt-8 space-y-4 sm:space-y-6">
                 <div className="text-center py-8">
@@ -270,41 +271,52 @@ const AdminPortal = () => {
               <CardContent className="pt-4 sm:pt-6 md:pt-8 space-y-4 sm:space-y-6">
                 {/* Action Buttons - Visible on all screen sizes */}
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button 
-                        size="lg" 
-                        className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
-                      >
-                        Frivillig
-                        <ChevronDown className="h-5 w-5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-56">
-                      <DropdownMenuItem onClick={() => setIsFormOpen(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
-                        <UserPlus className="h-4 w-4" />
-                        Opret
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setIsExitFormOpen(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
-                        <DoorOpen className="h-4 w-4" />
-                        Exit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setShowCloudFiles(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
-                        <Cloud className="h-4 w-4" />
-                        Cloud Filer
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {/* Frivillig dropdown - Show for admin and Brian */}
+                  {!isRestrictedUser && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          size="lg" 
+                          className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
+                        >
+                          Frivillig
+                          <ChevronDown className="h-5 w-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-56">
+                        {!isBrianUser && (
+                          <>
+                            <DropdownMenuItem onClick={() => setIsFormOpen(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
+                              <UserPlus className="h-4 w-4" />
+                              Opret
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setIsExitFormOpen(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
+                              <DoorOpen className="h-4 w-4" />
+                              Exit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setShowCloudFiles(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
+                              <Cloud className="h-4 w-4" />
+                              Cloud Filer
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                   
-                  <Button 
-                    size="lg" 
-                    className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
-                    onClick={() => {}}
-                  >
-                    <Disc className="h-5 w-5" />
-                    Årshjul
-                  </Button>
+                  {/* Årshjul - Show for admin and Brian */}
+                  {!isRestrictedUser && (
+                    <Button 
+                      size="lg" 
+                      className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
+                      onClick={() => {}}
+                    >
+                      <Disc className="h-5 w-5" />
+                      Årshjul
+                    </Button>
+                  )}
                   
+                  {/* Frivilligfest - Show for all authenticated users */}
                   <Button 
                     size="lg" 
                     className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
@@ -318,7 +330,7 @@ const AdminPortal = () => {
                   </Button>
                 </div>
 
-              {!isRestrictedUser && trainers.length > 0 ? (
+              {!isRestrictedUser && !isBrianUser && trainers.length > 0 ? (
                 <div className="pt-6 border-t">
                   <div className="space-y-4">
                     {isAdminMode ? (
@@ -405,7 +417,7 @@ const AdminPortal = () => {
                     )}
                   </div>
                 </div>
-              ) : !isRestrictedUser ? (
+              ) : !isRestrictedUser && !isBrianUser ? (
                 <div className="pt-6 border-t">
                   <div className="text-center py-8 sm:py-12">
                     <UserPlus className="h-12 w-12 sm:h-16 sm:w-16 mx-auto text-muted-foreground mb-4" />
