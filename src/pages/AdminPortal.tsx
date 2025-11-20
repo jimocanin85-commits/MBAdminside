@@ -283,26 +283,18 @@ const AdminPortal = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" className="w-56">
-                        {!isBrianUser ? (
-                          <>
-                            <DropdownMenuItem onClick={() => setIsFormOpen(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
-                              <UserPlus className="h-4 w-4" />
-                              Opret
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setIsExitFormOpen(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
-                              <DoorOpen className="h-4 w-4" />
-                              Exit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setShowCloudFiles(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
-                              <Cloud className="h-4 w-4" />
-                              Cloud Filer
-                            </DropdownMenuItem>
-                          </>
-                        ) : (
-                          <DropdownMenuItem disabled className="gap-2 py-3 min-h-[44px] text-muted-foreground">
-                            <span className="text-sm">Ingen tilgængelige indstillinger</span>
-                          </DropdownMenuItem>
-                        )}
+                        <DropdownMenuItem onClick={() => setIsFormOpen(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
+                          <UserPlus className="h-4 w-4" />
+                          Opret
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setIsExitFormOpen(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
+                          <DoorOpen className="h-4 w-4" />
+                          Exit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setShowCloudFiles(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
+                          <Cloud className="h-4 w-4" />
+                          Cloud Filer
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
