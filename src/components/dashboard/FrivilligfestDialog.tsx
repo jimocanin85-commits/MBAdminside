@@ -51,7 +51,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   }, [open, checklistItems]);
 
   useEffect(() => {
-    // Load from localStorage on mount
+    // Load from localStorage on mount - only run once
     const saved = localStorage.getItem('frivilligfest2026');
     if (saved) {
       try {
@@ -60,14 +60,8 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         // Load checklist items - only if there are items, otherwise keep default
         if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
           setChecklistItems(parsed.items);
-        } else {
-          // Ensure we always have at least the default DJ item
-          setChecklistItems([{
-            id: "dj",
-            label: "DJ",
-            note: ""
-          }]);
         }
+        // If no items or empty array, keep the default DJ item that's already in state
         
         // Load checklist data
         const restoredChecklist: Record<string, { status: boolean; date: Date | null; note: string; assignedTo: string }> = {};
@@ -89,24 +83,14 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         setChecklistDateInputs(restoredDateInputs);
       } catch (e) {
         console.error('Error loading Frivilligfest data:', e);
-        // On error, ensure we have at least the default item
-        setChecklistItems([{
-          id: "dj",
-          label: "DJ",
-          note: ""
-        }]);
+        // On error, keep the default item that's already in state
       }
     }
   }, []);
 
   useEffect(() => {
-    // Ensure we always have at least one item
+    // Don't save if items array is empty (shouldn't happen, but safety check)
     if (checklistItems.length === 0) {
-      setChecklistItems([{
-        id: "dj",
-        label: "DJ",
-        note: ""
-      }]);
       return;
     }
     
@@ -132,7 +116,12 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   };
 
   const removeTask = (itemId: string) => {
-    setChecklistItems(checklistItems.filter(item => item.id !== itemId));
+    const newItems = checklistItems.filter(item => item.id !== itemId);
+    // Prevent removing the last item - always keep at least one
+    if (newItems.length === 0) {
+      return;
+    }
+    setChecklistItems(newItems);
     setChecklist((prev) => {
       const newChecklist = { ...prev };
       delete newChecklist[itemId];
@@ -247,6 +236,13 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     }
   };
 
+  // Ensure we always have items to display
+  const displayItems = checklistItems.length > 0 ? checklistItems : [{
+    id: "dj",
+    label: "DJ",
+    note: ""
+  }];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto z-50 p-3 sm:p-6 w-full sm:w-auto">
@@ -286,7 +282,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                 <div>Noter</div>
                 <div></div>
               </div>
-              {checklistItems.map((item) => {
+              {displayItems.map((item) => {
                 const checklistItem = checklist[item.id];
                 const isChecked = checklistItem?.status === true;
                 const dateInputValue = checklistDateInputs[item.id] || "";
@@ -452,11 +448,6 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                   </div>
                 );
               })}
-              {checklistItems.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>Ingen opgaver endnu. Tilføj en opgave for at komme i gang.</p>
-                </div>
-              )}
             </div>
           </div>
         </div>
