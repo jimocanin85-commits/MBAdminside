@@ -219,36 +219,37 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto z-50">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto z-50 p-3 sm:p-6">
         <DialogHeader>
-          <DialogTitle>Frivilligfest 2026 - Tjekliste</DialogTitle>
+          <DialogTitle className="text-base sm:text-lg">Frivilligfest 2026 - Tjekliste</DialogTitle>
         </DialogHeader>
-        <div className="space-y-6 py-4">
+        <div className="space-y-4 sm:space-y-6 py-2 sm:py-4">
           {/* Checklist Section */}
-          <div className="border rounded-lg p-6 bg-muted/30">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-semibold text-lg">Tjekliste</h3>
-              <div className="flex gap-2">
+          <div className="border rounded-lg p-3 sm:p-6 bg-muted/30">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+              <h3 className="font-semibold text-base sm:text-lg">Tjekliste</h3>
+              <div className="flex gap-2 w-full sm:w-auto">
                 <Input
                   placeholder="Tilføj ny opgave..."
                   value={newTaskLabel}
                   onChange={(e) => setNewTaskLabel(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && addNewTask()}
-                  className="w-48 h-9"
+                  className="flex-1 sm:w-48 h-9 sm:h-9 min-h-[44px]"
                 />
                 <Button 
                   onClick={addNewTask} 
                   size="sm"
-                  className="gap-2"
+                  className="gap-2 min-h-[44px]"
                   disabled={!newTaskLabel.trim()}
                 >
                   <Plus className="h-4 w-4" />
-                  Tilføj
+                  <span className="hidden sm:inline">Tilføj</span>
                 </Button>
               </div>
             </div>
             <div className="space-y-4">
-              <div className="grid grid-cols-[2fr,1fr,1fr,3fr,auto] gap-4 font-semibold text-sm border-b pb-2">
+              {/* Desktop Header - Hidden on Mobile */}
+              <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,3fr,auto] gap-4 font-semibold text-sm border-b pb-2">
                 <div>Opgave</div>
                 <div>Status / Dato</div>
                 <div>Tildelt til</div>
@@ -263,76 +264,161 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                 const assignedTo = checklistItem?.assignedTo || "";
 
                 return (
-                  <div key={item.id} className="grid grid-cols-[2fr,1fr,1fr,3fr,auto] gap-4 items-start border-b pb-4">
-                    <Input
-                      value={item.label}
-                      onChange={(e) => updateTaskLabel(item.id, e.target.value)}
-                      className="h-8 text-sm"
-                      placeholder="Opgave navn"
-                    />
-                    <div className="flex flex-col gap-2">
-                      <div className="flex gap-4">
-                        <label className="flex items-center gap-1 cursor-pointer">
-                          <input
-                            type="radio"
-                            name={item.id}
-                            checked={checklistItem?.status === true}
-                            onChange={() => updateChecklistStatus(item.id, true)}
-                            className="h-4 w-4"
-                          />
-                          <span className="text-sm">Ja</span>
-                        </label>
-                        <label className="flex items-center gap-1 cursor-pointer">
-                          <input
-                            type="radio"
-                            name={item.id}
-                            checked={checklistItem?.status === false}
-                            onChange={() => updateChecklistStatus(item.id, false)}
-                            className="h-4 w-4"
-                          />
-                          <span className="text-sm">Nej</span>
-                        </label>
-                      </div>
-                      {isChecked && (
+                  <div key={item.id} className="border-b pb-4 space-y-3">
+                    {/* Mobile Layout - Stacked */}
+                    <div className="md:hidden space-y-3">
+                      <div className="flex items-center justify-between gap-2">
                         <Input
-                          placeholder="DD/MM/ÅÅÅÅ"
-                          value={dateInputValue}
-                          onChange={(e) => updateChecklistDateInput(item.id, e.target.value)}
-                          onBlur={() => validateAndSaveDate(item.id)}
-                          className="h-8 text-xs"
+                          value={item.label}
+                          onChange={(e) => updateTaskLabel(item.id, e.target.value)}
+                          className="h-9 text-sm flex-1 min-h-[44px]"
+                          placeholder="Opgave navn"
                         />
-                      )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeTask(item.id)}
+                          className="text-destructive hover:text-destructive min-h-[44px] min-w-[44px]"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-xs font-medium text-muted-foreground">Status</label>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer min-h-[44px]">
+                            <input
+                              type="radio"
+                              name={item.id}
+                              checked={checklistItem?.status === true}
+                              onChange={() => updateChecklistStatus(item.id, true)}
+                              className="h-5 w-5"
+                            />
+                            <span className="text-sm">Ja</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer min-h-[44px]">
+                            <input
+                              type="radio"
+                              name={item.id}
+                              checked={checklistItem?.status === false}
+                              onChange={() => updateChecklistStatus(item.id, false)}
+                              className="h-5 w-5"
+                            />
+                            <span className="text-sm">Nej</span>
+                          </label>
+                        </div>
+                        {isChecked && (
+                          <Input
+                            placeholder="DD/MM/ÅÅÅÅ"
+                            value={dateInputValue}
+                            onChange={(e) => updateChecklistDateInput(item.id, e.target.value)}
+                            onBlur={() => validateAndSaveDate(item.id)}
+                            className="h-9 text-sm min-h-[44px]"
+                          />
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-xs font-medium text-muted-foreground">Tildelt til</label>
+                        <Select
+                          value={assignedTo}
+                          onValueChange={(value) => updateTaskAssignment(item.id, value)}
+                        >
+                          <SelectTrigger className="h-9 text-sm min-h-[44px]">
+                            <SelectValue placeholder="Vælg person" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Ingen</SelectItem>
+                            {ASSIGNABLE_PERSONS.map((person) => (
+                              <SelectItem key={person} value={person}>
+                                {person}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-xs font-medium text-muted-foreground">Noter</label>
+                        <Textarea
+                          value={noteValue}
+                          onChange={(e) => updateTaskNote(item.id, e.target.value)}
+                          placeholder="Tilføj kommentar..."
+                          className="min-h-[80px] text-sm resize-none"
+                        />
+                      </div>
                     </div>
-                    <Select
-                      value={assignedTo}
-                      onValueChange={(value) => updateTaskAssignment(item.id, value)}
-                    >
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="Vælg person" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Ingen</SelectItem>
-                        {ASSIGNABLE_PERSONS.map((person) => (
-                          <SelectItem key={person} value={person}>
-                            {person}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Textarea
-                      value={noteValue}
-                      onChange={(e) => updateTaskNote(item.id, e.target.value)}
-                      placeholder="Tilføj kommentar..."
-                      className="min-h-[60px] text-sm resize-none"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeTask(item.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+
+                    {/* Desktop Layout - Grid */}
+                    <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,3fr,auto] gap-4 items-start">
+                      <Input
+                        value={item.label}
+                        onChange={(e) => updateTaskLabel(item.id, e.target.value)}
+                        className="h-8 text-sm"
+                        placeholder="Opgave navn"
+                      />
+                      <div className="flex flex-col gap-2">
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-1 cursor-pointer">
+                            <input
+                              type="radio"
+                              name={item.id}
+                              checked={checklistItem?.status === true}
+                              onChange={() => updateChecklistStatus(item.id, true)}
+                              className="h-4 w-4"
+                            />
+                            <span className="text-sm">Ja</span>
+                          </label>
+                          <label className="flex items-center gap-1 cursor-pointer">
+                            <input
+                              type="radio"
+                              name={item.id}
+                              checked={checklistItem?.status === false}
+                              onChange={() => updateChecklistStatus(item.id, false)}
+                              className="h-4 w-4"
+                            />
+                            <span className="text-sm">Nej</span>
+                          </label>
+                        </div>
+                        {isChecked && (
+                          <Input
+                            placeholder="DD/MM/ÅÅÅÅ"
+                            value={dateInputValue}
+                            onChange={(e) => updateChecklistDateInput(item.id, e.target.value)}
+                            onBlur={() => validateAndSaveDate(item.id)}
+                            className="h-8 text-xs"
+                          />
+                        )}
+                      </div>
+                      <Select
+                        value={assignedTo}
+                        onValueChange={(value) => updateTaskAssignment(item.id, value)}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Vælg person" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Ingen</SelectItem>
+                          {ASSIGNABLE_PERSONS.map((person) => (
+                            <SelectItem key={person} value={person}>
+                              {person}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Textarea
+                        value={noteValue}
+                        onChange={(e) => updateTaskNote(item.id, e.target.value)}
+                        placeholder="Tilføj kommentar..."
+                        className="min-h-[60px] text-sm resize-none"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeTask(item.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 );
               })}
