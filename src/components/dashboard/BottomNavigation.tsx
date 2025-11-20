@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Settings } from "lucide-react";
+import { UserPlus, Cloud, Home, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BottomNavigationProps {
@@ -19,6 +19,30 @@ const BottomNavigation = ({
 }: BottomNavigationProps) => {
   const navItems = [
     {
+      id: "home" as const,
+      label: "Hjem",
+      icon: Home,
+      onClick: () => onNavigate("home"),
+    },
+    {
+      id: "form" as const,
+      label: "Tilføj",
+      icon: UserPlus,
+      onClick: () => {
+        onOpenForm();
+        onNavigate("form");
+      },
+    },
+    {
+      id: "cloud" as const,
+      label: "Filer",
+      icon: Cloud,
+      onClick: () => {
+        onShowCloudFiles();
+        onNavigate("cloud");
+      },
+    },
+    {
       id: "settings" as const,
       label: "Indstillinger",
       icon: Settings,
@@ -31,7 +55,7 @@ const BottomNavigation = ({
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t-2 z-50 md:hidden safe-area-bottom">
-      <div className="flex justify-end h-16">
+      <div className="grid grid-cols-4 h-16">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentView === item.id;
@@ -40,7 +64,7 @@ const BottomNavigation = ({
               key={item.id}
               onClick={item.onClick}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 transition-colors min-h-[44px] px-6",
+                "flex flex-col items-center justify-center gap-1 transition-colors min-h-[44px]",
                 isActive
                   ? "text-primary bg-primary/10"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
