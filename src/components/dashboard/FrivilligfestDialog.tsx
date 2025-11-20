@@ -328,13 +328,13 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] z-50 p-3 sm:p-6 w-full sm:w-auto flex flex-col">
-        <DialogHeader className="flex-shrink-0">
+        <DialogHeader className="flex-shrink-0 pb-2">
           <DialogTitle className="text-base sm:text-lg">Frivilligfest 2026</DialogTitle>
           <DialogDescription className="sr-only">
             Administrer opgaver og tildel dem til personer
           </DialogDescription>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto space-y-4 sm:space-y-6 py-2 sm:py-4 -mx-3 sm:-mx-6 px-3 sm:px-6">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-4 sm:space-y-6 py-2 sm:py-4 -mx-3 sm:-mx-6 px-3 sm:px-6 min-h-0">
           {/* Checklist Section */}
           <div className="border rounded-lg p-3 sm:p-6 bg-muted/30">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
@@ -360,7 +360,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
             </div>
             <div className="space-y-4 md:space-y-2">
               {/* Debug info - visible on mobile */}
-              <div className="md:hidden text-xs text-muted-foreground p-2 bg-muted rounded mb-2">
+              <div className="md:hidden text-xs text-muted-foreground p-2 bg-muted rounded mb-2 border">
                 Debug: {displayItems.length} opgaver | State: {checklistItems.length} items
               </div>
               
@@ -395,28 +395,33 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                   const assignedTo = checklistItem?.assignedTo || "";
 
                   return (
-                    <div key={item.id} className={`border rounded-lg p-3 sm:p-0 sm:border-b sm:rounded-none ${index === displayItems.length - 1 ? 'sm:border-b-0' : ''} pb-4 sm:pb-2 space-y-3 bg-card sm:bg-transparent`}>
+                    <div key={item.id} className={`border-2 rounded-lg p-4 sm:p-0 sm:border-b sm:rounded-none sm:border-0 ${index === displayItems.length - 1 ? 'sm:border-b-0' : ''} ${index < displayItems.length - 1 ? 'mb-4 sm:mb-0' : ''} pb-4 sm:pb-2 space-y-3 bg-card sm:bg-transparent shadow-sm sm:shadow-none`}>
                       {/* Mobile Layout - Stacked */}
-                      <div className="md:hidden space-y-3">
-                        <div className="text-xs text-muted-foreground mb-1 border-b pb-1">
-                          Opgave #{index + 1} | ID: {item.id.substring(0, 8)}...
+                      <div className="md:hidden space-y-4">
+                        <div className="flex items-center justify-between border-b pb-2">
+                          <div className="text-xs font-semibold text-muted-foreground">
+                            Opgave #{index + 1}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            ID: {item.id.substring(0, 8)}...
+                          </div>
                         </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <Input
-                          value={item.label}
-                          onChange={(e) => updateTaskLabel(item.id, e.target.value)}
-                          className="h-9 text-sm flex-1 min-h-[44px] font-medium"
-                          placeholder="Opgave navn"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeTask(item.id)}
-                          className="text-destructive hover:text-destructive min-h-[44px] min-w-[44px]"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <Input
+                            value={item.label}
+                            onChange={(e) => updateTaskLabel(item.id, e.target.value)}
+                            className="h-10 text-base flex-1 min-h-[44px] font-medium border-2"
+                            placeholder="Opgave navn"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeTask(item.id)}
+                            className="text-destructive hover:text-destructive min-h-[44px] min-w-[44px] border border-destructive/20"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </Button>
+                        </div>
                       <div className="flex flex-col gap-2">
                         <label className="text-xs font-medium text-muted-foreground">Udført</label>
                         <div className="flex gap-4">
