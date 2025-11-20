@@ -353,16 +353,16 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] z-50 p-4 sm:p-6 w-full sm:w-auto flex flex-col">
+      <DialogContent className="max-w-[98vw] sm:max-w-4xl max-h-[90vh] z-50 p-2 sm:p-6 w-full sm:w-auto flex flex-col overflow-x-auto">
         <DialogHeader className="flex-shrink-0 pb-2">
           <DialogTitle className="text-base sm:text-lg">Frivilligfest 2026</DialogTitle>
           <DialogDescription className="sr-only">
             Administrer opgaver og tildel dem til personer
           </DialogDescription>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-4 sm:space-y-6 py-2 sm:py-4 -mx-3 sm:-mx-6 px-3 sm:px-6 min-h-0">
+        <div className="flex-1 overflow-y-auto overflow-x-auto space-y-4 sm:space-y-6 py-2 sm:py-4 -mx-2 sm:-mx-6 px-2 sm:px-6 min-h-0">
           {/* Checklist Section */}
-          <div className="border rounded-lg p-3 sm:p-6 bg-background">
+          <div className="border rounded-lg p-2 sm:p-6 bg-background min-w-[600px] sm:min-w-0">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
               <h3 className="font-semibold text-base sm:text-lg">Tjekliste</h3>
               <div className="flex gap-2 w-full sm:w-auto items-center">
@@ -409,13 +409,13 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                 </Button>
               </div>
             </div>
-            <div className="space-y-3 md:space-y-2">
-              {/* Mobile Header - Grid Layout */}
-              <div className="grid grid-cols-[2fr,1fr,1fr,2fr,auto] gap-2 md:grid-cols-[2fr,1fr,1fr,3fr,auto] md:gap-4 font-semibold text-xs md:text-sm border-b pb-2">
-                <div>Opgave</div>
-                <div>Udført</div>
-                <div>Tildelt til</div>
-                <div>Noter</div>
+            <div className="space-y-3 md:space-y-2 overflow-x-auto">
+              {/* Grid Header - Visible on all screens */}
+              <div className="grid grid-cols-[180px,80px,100px,150px,40px] sm:grid-cols-[2fr,1fr,1fr,2fr,auto] md:grid-cols-[2fr,1fr,1fr,3fr,auto] gap-2 md:gap-4 font-semibold text-xs md:text-sm border-b pb-2 min-w-[600px] sm:min-w-0">
+                <div className="whitespace-nowrap">Opgave</div>
+                <div className="whitespace-nowrap">Udført</div>
+                <div className="whitespace-nowrap">Tildelt til</div>
+                <div className="whitespace-nowrap">Noter</div>
                 <div></div>
               </div>
               {(() => {
@@ -441,9 +441,9 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                   const assignedTo = checklistItem?.assignedTo || "";
 
                   return (
-                    <div key={item.id} className={`border-b pb-2 mb-2 ${index === displayItems.length - 1 ? 'border-b-0 mb-0' : ''}`}>
-                      {/* Mobile & Desktop Grid Layout */}
-                      <div className="grid grid-cols-[2fr,1fr,1fr,2fr,auto] gap-2 md:grid-cols-[2fr,1fr,1fr,3fr,auto] md:gap-4 items-start">
+                    <div key={item.id} className={`border-b pb-2 mb-2 ${index === displayItems.length - 1 ? 'border-b-0 mb-0' : ''} min-w-[600px] sm:min-w-0`}>
+                      {/* Grid Layout - Same on all screens with horizontal scroll on mobile */}
+                      <div className="grid grid-cols-[180px,80px,100px,150px,40px] sm:grid-cols-[2fr,1fr,1fr,2fr,auto] md:grid-cols-[2fr,1fr,1fr,3fr,auto] gap-2 md:gap-4 items-start">
                         <Input
                           value={item.label}
                           onChange={(e) => updateTaskLabel(item.id, e.target.value)}
