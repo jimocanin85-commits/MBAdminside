@@ -349,21 +349,34 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                       </div>
                       <div className="flex flex-col gap-2">
                         <label className="text-xs font-medium text-muted-foreground">Tildelt til</label>
-                        <Select
-                          value={assignedTo || undefined}
-                          onValueChange={(value) => updateTaskAssignment(item.id, value)}
-                        >
-                          <SelectTrigger className="h-9 text-sm min-h-[44px]">
-                            <SelectValue placeholder="Vælg person" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ASSIGNABLE_PERSONS.map((person) => (
-                              <SelectItem key={person} value={person}>
-                                {person}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex gap-2">
+                          <Select
+                            value={assignedTo || undefined}
+                            onValueChange={(value) => updateTaskAssignment(item.id, value)}
+                          >
+                            <SelectTrigger className="h-9 text-sm min-h-[44px] flex-1">
+                              <SelectValue placeholder="Vælg person" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ASSIGNABLE_PERSONS.map((person) => (
+                                <SelectItem key={person} value={person}>
+                                  {person}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {assignedTo && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => updateTaskAssignment(item.id, undefined)}
+                              className="min-h-[44px] px-3"
+                              title="Fjern tildeling"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       <div className="flex flex-col gap-2">
                         <label className="text-xs font-medium text-muted-foreground">Noter</label>
@@ -417,21 +430,34 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                           />
                         )}
                       </div>
-                      <Select
-                        value={assignedTo || undefined}
-                        onValueChange={(value) => updateTaskAssignment(item.id, value)}
-                      >
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue placeholder="Vælg person" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ASSIGNABLE_PERSONS.map((person) => (
-                            <SelectItem key={person} value={person}>
-                              {person}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex gap-2">
+                        <Select
+                          value={assignedTo || undefined}
+                          onValueChange={(value) => updateTaskAssignment(item.id, value)}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="Vælg person" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ASSIGNABLE_PERSONS.map((person) => (
+                              <SelectItem key={person} value={person}>
+                                {person}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {assignedTo && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => updateTaskAssignment(item.id, undefined)}
+                            className="px-2"
+                            title="Fjern tildeling"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                       <Textarea
                         value={noteValue}
                         onChange={(e) => updateTaskNote(item.id, e.target.value)}
