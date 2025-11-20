@@ -237,7 +237,7 @@ const AdminPortal = () => {
           ) : (
             <Card className="shadow-lg border-2">
               <CardContent className="pt-4 sm:pt-6 md:pt-8 space-y-4 sm:space-y-6">
-                {/* Action Buttons - Same on Mobile and Desktop */}
+                {/* Action Buttons - Visible on all screen sizes */}
                 <div className="flex flex-col sm:flex-row gap-3">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
