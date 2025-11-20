@@ -441,35 +441,39 @@ const AdminPortal = () => {
         onSave={handleTrainerUpdate}
       />
 
-      {/* Desktop Settings Button - Hidden on Mobile (use bottom nav instead) */}
-      <Button
-        size="icon"
-        variant="outline"
-        className="hidden md:flex fixed bottom-4 left-4 h-12 w-12 rounded-full shadow-lg z-50 min-h-[48px] min-w-[48px]"
-        onClick={() => setShowAdminDialog(true)}
-        aria-label="Settings"
-      >
-        <Settings className="h-5 w-5" />
-      </Button>
+      {/* Desktop Settings Button - Hidden on Mobile and for restricted users */}
+      {!isRestrictedUser && (
+        <Button
+          size="icon"
+          variant="outline"
+          className="hidden md:flex fixed bottom-4 left-4 h-12 w-12 rounded-full shadow-lg z-50 min-h-[48px] min-w-[48px]"
+          onClick={() => setShowAdminDialog(true)}
+          aria-label="Settings"
+        >
+          <Settings className="h-5 w-5" />
+        </Button>
+      )}
 
-      <Dialog open={showAdminDialog} onOpenChange={setShowAdminDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Admin adgang</DialogTitle>
-            <DialogDescription>Indtast adgangskode for at aktivere admin tilstand</DialogDescription>
-          </DialogHeader>
-          <Input
-            type="password"
-            placeholder="Adgangskode"
-            value={adminPassword}
-            onChange={(e) => setAdminPassword(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
-          />
-          <DialogFooter>
-            <Button onClick={handleAdminLogin}>Log ind</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {!isRestrictedUser && (
+        <Dialog open={showAdminDialog} onOpenChange={setShowAdminDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Admin adgang</DialogTitle>
+              <DialogDescription>Indtast adgangskode for at aktivere admin tilstand</DialogDescription>
+            </DialogHeader>
+            <Input
+              type="password"
+              placeholder="Adgangskode"
+              value={adminPassword}
+              onChange={(e) => setAdminPassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
+            />
+            <DialogFooter>
+              <Button onClick={handleAdminLogin}>Log ind</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <FrivilligfestDialog
         open={showFrivilligfestDialog}
@@ -477,8 +481,8 @@ const AdminPortal = () => {
       />
     </div>
     
-    {/* Always render BottomNavigation to maintain hook order - hidden when not authenticated */}
-    {isAuthenticated && (
+    {/* Always render BottomNavigation to maintain hook order - hidden when not authenticated or restricted user */}
+    {isAuthenticated && !isRestrictedUser && (
       <BottomNavigation
         currentView={currentView}
         onNavigate={handleNavigate}
