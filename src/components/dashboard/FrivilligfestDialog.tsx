@@ -10,6 +10,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const ASSIGNABLE_PERSONS = ["Brian", "Karina", "Jas"];
 
 interface ChecklistItem {
   id: string;
@@ -30,7 +39,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
       note: ""
     }
   ]);
-  const [checklist, setChecklist] = useState<Record<string, { status: boolean; date: Date | null; note: string }>>({});
+  const [checklist, setChecklist] = useState<Record<string, { status: boolean; date: Date | null; note: string; assignedTo: string }>>({});
   const [checklistDateInputs, setChecklistDateInputs] = useState<Record<string, string>>({});
   const [newTaskLabel, setNewTaskLabel] = useState("");
 
@@ -47,14 +56,15 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         }
         
         // Load checklist data
-        const restoredChecklist: Record<string, { status: boolean; date: Date | null; note: string }> = {};
+        const restoredChecklist: Record<string, { status: boolean; date: Date | null; note: string; assignedTo: string }> = {};
         const restoredDateInputs: Record<string, string> = {};
         
         Object.keys(parsed.checklist || {}).forEach(key => {
           restoredChecklist[key] = {
             status: parsed.checklist[key].status,
             date: parsed.checklist[key].date ? new Date(parsed.checklist[key].date) : null,
-            note: parsed.checklist[key].note || ""
+            note: parsed.checklist[key].note || "",
+            assignedTo: parsed.checklist[key].assignedTo || ""
           };
           if (parsed.checklist[key].date) {
             restoredDateInputs[key] = format(new Date(parsed.checklist[key].date), "dd/MM/yyyy");
@@ -116,7 +126,21 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
       ...prev,
       [itemId]: {
         ...prev[itemId],
-        note: note || ""
+        note: note || "",
+        assignedTo: prev[itemId]?.assignedTo || ""
+      }
+    }));
+  };
+
+  const updateTaskAssignment = (itemId: string, assignedTo: string) => {
+    setChecklist((prev) => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        assignedTo: assignedTo || "",
+        status: prev[itemId]?.status ?? false,
+        date: prev[itemId]?.date ?? null,
+        note: prev[itemId]?.note || ""
       }
     }));
   };
@@ -128,7 +152,8 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         [itemId]: {
           status,
           date: status ? (prev[itemId]?.date || new Date()) : null,
-          note: prev[itemId]?.note || ""
+          note: prev[itemId]?.note || "",
+          assignedTo: prev[itemId]?.assignedTo || ""
         }
       };
       
@@ -223,9 +248,10 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
               </div>
             </div>
             <div className="space-y-4">
-              <div className="grid grid-cols-[2fr,1fr,3fr,auto] gap-4 font-semibold text-sm border-b pb-2">
+              <div className="grid grid-cols-[2fr,1fr,1fr,3fr,auto] gap-4 font-semibold text-sm border-b pb-2">
                 <div>Opgave</div>
                 <div>Status / Dato</div>
+                <div>Tildelt til</div>
                 <div>Noter</div>
                 <div></div>
               </div>
@@ -234,9 +260,10 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                 const isChecked = checklistItem?.status === true;
                 const dateInputValue = checklistDateInputs[item.id] || "";
                 const noteValue = checklistItem?.note || "";
+                const assignedTo = checklistItem?.assignedTo || "";
 
                 return (
-                  <div key={item.id} className="grid grid-cols-[2fr,1fr,3fr,auto] gap-4 items-start border-b pb-4">
+                  <div key={item.id} className="grid grid-cols-[2fr,1fr,1fr,3fr,auto] gap-4 items-start border-b pb-4">
                     <Input
                       value={item.label}
                       onChange={(e) => updateTaskLabel(item.id, e.target.value)}
@@ -276,6 +303,22 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                         />
                       )}
                     </div>
+                    <Select
+                      value={assignedTo}
+                      onValueChange={(value) => updateTaskAssignment(item.id, value)}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="Vælg person" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Ingen</SelectItem>
+                        {ASSIGNABLE_PERSONS.map((person) => (
+                          <SelectItem key={person} value={person}>
+                            {person}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Textarea
                       value={noteValue}
                       onChange={(e) => updateTaskNote(item.id, e.target.value)}
