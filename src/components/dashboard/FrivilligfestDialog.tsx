@@ -55,6 +55,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   
   useEffect(() => {
     console.log('[LOAD] useEffect triggered, open:', open, 'hasLoadedRef.current:', hasLoadedRef.current);
+    console.log('[LOAD] Current checklistItems before load:', checklistItems);
     
     if (!open) {
       // Reset the ref when dialog closes so we reload next time
@@ -65,7 +66,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     
     // Only load once when dialog opens, not on every open change
     if (hasLoadedRef.current) {
-      console.log('[LOAD] Already loaded, skipping');
+      console.log('[LOAD] Already loaded, skipping - current items:', checklistItems.length);
       return;
     }
     
@@ -84,10 +85,11 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         // Load checklist items - only if there are items, otherwise keep default
         if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
           console.log('[LOAD] Loading', parsed.items.length, 'items from localStorage:', parsed.items);
+          console.log('[LOAD] Current state has', checklistItems.length, 'items, will replace with', parsed.items.length);
           setChecklistItems(parsed.items);
           console.log('[LOAD] State updated with items');
         } else {
-          console.log('[LOAD] No valid items in localStorage, keeping default state');
+          console.log('[LOAD] No valid items in localStorage, keeping current state with', checklistItems.length, 'items');
         }
         
         // Load checklist data
@@ -116,7 +118,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         hasLoadedRef.current = true;
       }
     } else {
-      console.log('[LOAD] No saved data in localStorage');
+      console.log('[LOAD] No saved data in localStorage, keeping current state with', checklistItems.length, 'items');
       hasLoadedRef.current = true;
     }
   }, [open]);
@@ -357,6 +359,11 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
               </div>
             </div>
             <div className="space-y-4 md:space-y-2">
+              {/* Debug info - visible on mobile */}
+              <div className="md:hidden text-xs text-muted-foreground p-2 bg-muted rounded mb-2">
+                Debug: {displayItems.length} opgaver | State: {checklistItems.length} items
+              </div>
+              
               {/* Desktop Header - Hidden on Mobile */}
               <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,3fr,auto] gap-4 font-semibold text-sm border-b pb-2">
                 <div>Opgave</div>
@@ -391,7 +398,9 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                     <div key={item.id} className={`border rounded-lg p-3 sm:p-0 sm:border-b sm:rounded-none ${index === displayItems.length - 1 ? 'sm:border-b-0' : ''} pb-4 sm:pb-2 space-y-3 bg-card sm:bg-transparent`}>
                       {/* Mobile Layout - Stacked */}
                       <div className="md:hidden space-y-3">
-                        <div className="text-xs text-muted-foreground mb-1">Task ID: {item.id}</div>
+                        <div className="text-xs text-muted-foreground mb-1 border-b pb-1">
+                          Opgave #{index + 1} | ID: {item.id.substring(0, 8)}...
+                        </div>
                       <div className="flex items-center justify-between gap-2">
                         <Input
                           value={item.label}
