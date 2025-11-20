@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, RefreshCw } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,9 @@ import {
 } from "@/components/ui/select";
 
 const ASSIGNABLE_PERSONS = ["Brian", "Karina", "Jas"];
+const STORAGE_VERSION = "1.0.0";
+const STORAGE_KEY = 'frivilligfest2026';
+const STORAGE_VERSION_KEY = 'frivilligfest2026_version';
 
 interface ChecklistItem {
   id: string;
@@ -53,6 +56,16 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   // Load from localStorage when dialog opens - use ref to track if we've loaded
   const hasLoadedRef = useRef(false);
   
+  // Check and migrate localStorage if version changed
+  useEffect(() => {
+    const storedVersion = localStorage.getItem(STORAGE_VERSION_KEY);
+    if (storedVersion !== STORAGE_VERSION) {
+      console.log('[CACHE] Version mismatch, clearing old cache. Old:', storedVersion, 'New:', STORAGE_VERSION);
+      // Optionally migrate data here, or clear if breaking changes
+      localStorage.setItem(STORAGE_VERSION_KEY, STORAGE_VERSION);
+    }
+  }, []);
+  
   useEffect(() => {
     console.log('[LOAD] useEffect triggered, open:', open, 'hasLoadedRef.current:', hasLoadedRef.current);
     console.log('[LOAD] Current checklistItems before load:', checklistItems);
@@ -71,7 +84,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     }
     
     console.log('[LOAD] Loading from localStorage...');
-    const saved = localStorage.getItem('frivilligfest2026');
+    const saved = localStorage.getItem(STORAGE_KEY);
     console.log('[LOAD] Raw localStorage data:', saved);
     
     if (saved) {
@@ -133,23 +146,36 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     // Save to localStorage whenever checklist or items change
     const dataToSave = {
       items: checklistItems,
-      checklist
+      checklist,
+      version: STORAGE_VERSION,
+      timestamp: Date.now()
     };
     console.log('[SAVE] Saving to localStorage, items count:', checklistItems.length);
     console.log('[SAVE] Data:', JSON.stringify(dataToSave, null, 2));
     
     try {
-      localStorage.setItem('frivilligfest2026', JSON.stringify(dataToSave));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+      localStorage.setItem(STORAGE_VERSION_KEY, STORAGE_VERSION);
       console.log('[SAVE] Successfully saved to localStorage');
       
       // Verify it was saved
-      const verify = localStorage.getItem('frivilligfest2026');
+      const verify = localStorage.getItem(STORAGE_KEY);
       if (verify) {
         const parsed = JSON.parse(verify);
         console.log('[SAVE] Verification - saved items count:', parsed.items?.length);
       }
     } catch (e) {
       console.error('[SAVE] Error saving to localStorage:', e);
+      // If quota exceeded, try to clear old data
+      if (e instanceof Error && e.name === 'QuotaExceededError') {
+        console.warn('[SAVE] Storage quota exceeded, clearing old data');
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+        } catch (clearError) {
+          console.error('[SAVE] Failed to clear and retry:', clearError);
+        }
+      }
     }
   }, [checklist, checklistItems]);
 
@@ -339,7 +365,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
           <div className="border rounded-lg p-3 sm:p-6 bg-background">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
               <h3 className="font-semibold text-base sm:text-lg">Tjekliste</h3>
-              <div className="flex gap-2 w-full sm:w-auto">
+              <div className="flex gap-2 w-full sm:w-auto items-center">
                 <Input
                   placeholder="Tilføj ny opgave..."
                   value={newTaskLabel}
@@ -355,6 +381,31 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                 >
                   <Plus className="h-4 w-4" />
                   <span className="hidden sm:inline">Tilføj</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    console.log('[REFRESH] Manual refresh triggered');
+                    hasLoadedRef.current = false;
+                    const saved = localStorage.getItem(STORAGE_KEY);
+                    if (saved) {
+                      try {
+                        const parsed = JSON.parse(saved);
+                        if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
+                          setChecklistItems(parsed.items);
+                          console.log('[REFRESH] Reloaded', parsed.items.length, 'items');
+                        }
+                      } catch (e) {
+                        console.error('[REFRESH] Error reloading:', e);
+                      }
+                    }
+                  }}
+                  className="min-h-[44px] px-2 sm:px-3"
+                  title="Opdater liste"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-1">Opdater</span>
                 </Button>
               </div>
             </div>
