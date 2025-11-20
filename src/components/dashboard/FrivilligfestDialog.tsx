@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,9 +44,20 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   const [checklistDateInputs, setChecklistDateInputs] = useState<Record<string, string>>({});
   const [newTaskLabel, setNewTaskLabel] = useState("");
 
-  // Load from localStorage when dialog opens
+  // Load from localStorage when dialog opens - use ref to track if we've loaded
+  const hasLoadedRef = useRef(false);
+  
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      // Reset the ref when dialog closes so we reload next time
+      hasLoadedRef.current = false;
+      return;
+    }
+    
+    // Only load once when dialog opens, not on every open change
+    if (hasLoadedRef.current) {
+      return;
+    }
     
     const saved = localStorage.getItem('frivilligfest2026');
     if (saved) {
@@ -55,9 +66,11 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         
         // Load checklist items - only if there are items, otherwise keep default
         if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
+          console.log('Loading checklist items from localStorage:', parsed.items);
           setChecklistItems(parsed.items);
+        } else {
+          console.log('No items in localStorage, using default');
         }
-        // If no items or empty array, keep the default DJ item that's already in state
         
         // Load checklist data
         const restoredChecklist: Record<string, { status: boolean; date: Date | null; note: string; assignedTo: string }> = {};
@@ -77,24 +90,32 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         
         setChecklist(restoredChecklist);
         setChecklistDateInputs(restoredDateInputs);
+        hasLoadedRef.current = true;
       } catch (e) {
         console.error('Error loading Frivilligfest data:', e);
         // On error, keep the default item that's already in state
+        hasLoadedRef.current = true;
       }
+    } else {
+      console.log('No saved data in localStorage');
+      hasLoadedRef.current = true;
     }
   }, [open]);
 
   useEffect(() => {
     // Don't save if items array is empty (shouldn't happen, but safety check)
     if (checklistItems.length === 0) {
+      console.log('Skipping save - checklistItems is empty');
       return;
     }
     
     // Save to localStorage whenever checklist or items change
-    localStorage.setItem('frivilligfest2026', JSON.stringify({
+    const dataToSave = {
       items: checklistItems,
       checklist
-    }));
+    };
+    console.log('Saving to localStorage:', dataToSave);
+    localStorage.setItem('frivilligfest2026', JSON.stringify(dataToSave));
   }, [checklist, checklistItems]);
 
   const addNewTask = () => {
@@ -108,7 +129,11 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     };
     
     // Use functional update to ensure we have the latest state
-    setChecklistItems((prevItems) => [...prevItems, newItem]);
+    setChecklistItems((prevItems) => {
+      const updated = [...prevItems, newItem];
+      console.log('Adding new task:', newItem, 'Updated items:', updated);
+      return updated;
+    });
     setNewTaskLabel("");
   };
 
@@ -141,7 +166,8 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     setChecklist((prev) => ({
       ...prev,
       [itemId]: {
-        ...prev[itemId],
+        status: prev[itemId]?.status ?? false,
+        date: prev[itemId]?.date ?? null,
         note: note || "",
         assignedTo: prev[itemId]?.assignedTo || ""
       }
@@ -239,6 +265,14 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     label: "DJ",
     note: ""
   }];
+  
+  // Debug: Log display items
+  useEffect(() => {
+    if (open) {
+      console.log('Display items:', displayItems);
+      console.log('Checklist items state:', checklistItems);
+    }
+  }, [open, displayItems, checklistItems]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
