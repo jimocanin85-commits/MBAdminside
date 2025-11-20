@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { FileText, Loader2, Eye, Trash2 } from "lucide-react";
+import { FileText, Loader2, Eye, Trash2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ExcelViewer } from "./ExcelViewer";
@@ -29,9 +29,10 @@ interface CloudFile {
 
 interface CloudFilesProps {
   onTrainerDeleted?: () => void;
+  onBack?: () => void;
 }
 
-export const CloudFiles = ({ onTrainerDeleted }: CloudFilesProps = {}) => {
+export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) => {
   const [files, setFiles] = useState<CloudFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -212,6 +213,19 @@ export const CloudFiles = ({ onTrainerDeleted }: CloudFilesProps = {}) => {
   return (
     <Card className="shadow-lg">
       <CardContent className="pt-6">
+        {onBack && (
+          <div className="mb-4 hidden md:block">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onBack}
+              className="gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Tilbage
+            </Button>
+          </div>
+        )}
         {files.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -219,7 +233,19 @@ export const CloudFiles = ({ onTrainerDeleted }: CloudFilesProps = {}) => {
           </div>
         ) : (
           <>
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-between items-center mb-4">
+              {onBack && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={onBack}
+                  className="hidden md:flex gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Tilbage
+                </Button>
+              )}
+              <div className="flex-1"></div>
               <Button variant="outline" size="sm" onClick={loadFiles}>
                 Opdater
               </Button>

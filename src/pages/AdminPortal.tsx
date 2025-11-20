@@ -227,6 +227,10 @@ const AdminPortal = () => {
                   }
                 }
               }}
+              onBack={() => {
+                setShowCloudFiles(false);
+                setCurrentView("home");
+              }}
             />
           ) : (
             <Card className="shadow-lg border-2">
