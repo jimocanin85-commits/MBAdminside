@@ -157,9 +157,11 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   };
 
   const updateTaskLabel = (itemId: string, newLabel: string) => {
-    setChecklistItems(checklistItems.map(item => 
-      item.id === itemId ? { ...item, label: newLabel } : item
-    ));
+    setChecklistItems((prevItems) => 
+      prevItems.map(item => 
+        item.id === itemId ? { ...item, label: newLabel } : item
+      )
+    );
   };
 
   const updateTaskNote = (itemId: string, note: string) => {
@@ -316,7 +318,12 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                 <div>Noter</div>
                 <div></div>
               </div>
-              {displayItems.map((item, index) => {
+              {displayItems.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>Ingen opgaver endnu. Tilføj en opgave ovenfor.</p>
+                </div>
+              ) : (
+                displayItems.map((item, index) => {
                 const checklistItem = checklist[item.id];
                 const isChecked = checklistItem?.status === true;
                 const dateInputValue = checklistDateInputs[item.id] || "";
@@ -487,7 +494,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                     </div>
                   </div>
                 );
-              })}
+              }))}
             </div>
           </div>
         </div>
