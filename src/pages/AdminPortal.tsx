@@ -36,9 +36,15 @@ type Trainer = {
 };
 
 const AdminPortal = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('isAuthenticated') === 'true';
+  const [currentUser, setCurrentUser] = useState<string | null>(() => {
+    return localStorage.getItem('currentUser');
   });
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return !!localStorage.getItem('currentUser');
+  });
+  
+  // Check if user is restricted (Karina or Brian)
+  const isRestrictedUser = currentUser === 'Karina' || currentUser === 'Brian';
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isExitFormOpen, setIsExitFormOpen] = useState(false);
   const [isSpreadsheetOpen, setIsSpreadsheetOpen] = useState(false);
@@ -76,8 +82,14 @@ const AdminPortal = () => {
   }, [trainers]);
 
   useEffect(() => {
-    localStorage.setItem('isAuthenticated', isAuthenticated.toString());
-  }, [isAuthenticated]);
+    if (currentUser) {
+      localStorage.setItem('currentUser', currentUser);
+      setIsAuthenticated(true);
+    } else {
+      localStorage.removeItem('currentUser');
+      setIsAuthenticated(false);
+    }
+  }, [currentUser]);
 
   // Update current view based on state - MUST be before early return
   useEffect(() => {
@@ -91,14 +103,14 @@ const AdminPortal = () => {
     }
   }, [isAuthenticated, showCloudFiles, isFormOpen, isExitFormOpen, isSpreadsheetOpen]);
 
-  const handleLogin = () => {
-    setIsAuthenticated(true);
+  const handleLogin = (username: string) => {
+    setCurrentUser(username);
   };
 
   const handleLogout = () => {
-    setIsAuthenticated(false);
+    setCurrentUser(null);
     setIsAdminMode(false);
-    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('currentUser');
   };
 
   const handleTrainerSubmit = (data: Omit<Trainer, 'createdAt'>) => {
@@ -207,10 +219,29 @@ const AdminPortal = () => {
         onOpenExitForm={() => setIsExitFormOpen(true)}
         onShowCloudFiles={() => setShowCloudFiles(true)}
         onOpenAdminDialog={() => setShowAdminDialog(true)}
+        currentUser={currentUser}
       />
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8">
         <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
-          {showCloudFiles ? (
+          {isRestrictedUser ? (
+            // Restricted users (Karina, Brian) - Only Frivilligfest access
+            <Card className="shadow-lg border-2">
+              <CardContent className="pt-4 sm:pt-6 md:pt-8 space-y-4 sm:space-y-6">
+                <div className="text-center py-8">
+                  <h2 className="text-2xl font-bold mb-4">Velkommen, {currentUser}!</h2>
+                  <p className="text-muted-foreground mb-6">Du har adgang til Frivilligfest 2026 tjeklisten</p>
+                  <Button 
+                    size="lg" 
+                    className="gap-2 text-base px-8 py-6 min-h-[60px]"
+                    onClick={() => setShowFrivilligfestDialog(true)}
+                  >
+                    <UserPlus className="h-5 w-5" />
+                    Åbn Frivilligfest 2026
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : showCloudFiles ? (
             <CloudFiles 
               key={refreshCloudFiles} 
               onTrainerDeleted={() => {
@@ -287,7 +318,7 @@ const AdminPortal = () => {
                   </Button>
                 </div>
 
-              {trainers.length > 0 ? (
+              {!isRestrictedUser && trainers.length > 0 ? (
                 <div className="pt-6 border-t">
                   <div className="space-y-4">
                     {isAdminMode ? (
@@ -374,7 +405,7 @@ const AdminPortal = () => {
                     )}
                   </div>
                 </div>
-              ) : (
+              ) : !isRestrictedUser ? (
                 <div className="pt-6 border-t">
                   <div className="text-center py-8 sm:py-12">
                     <UserPlus className="h-12 w-12 sm:h-16 sm:w-16 mx-auto text-muted-foreground mb-4" />
@@ -384,7 +415,7 @@ const AdminPortal = () => {
                     </p>
                   </div>
                 </div>
-              )}
+              ) : null}
             </CardContent>
           </Card>
           )}

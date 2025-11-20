@@ -7,8 +7,14 @@ import { toast } from "sonner";
 import mbLogo from "@/assets/mb-logo.png";
 
 interface LoginFormProps {
-  onLogin: () => void;
+  onLogin: (username: string) => void;
 }
+
+const USERS = {
+  admin: "Monne1935",
+  Karina: "Monne1935",
+  Brian: "Monne1935"
+};
 
 const LoginForm = ({ onLogin }: LoginFormProps) => {
   const [username, setUsername] = useState("");
@@ -23,9 +29,9 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
       const trimmedUsername = username.trim();
       const trimmedPassword = password.trim();
       
-      if (trimmedUsername === "admin" && trimmedPassword === "Monne1935") {
+      if (USERS[trimmedUsername as keyof typeof USERS] === trimmedPassword) {
         toast.success("Login successful!");
-        onLogin();
+        onLogin(trimmedUsername);
       } else {
         toast.error("Forkert brugernavn eller adgangskode");
       }

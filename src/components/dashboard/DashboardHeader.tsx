@@ -8,6 +8,7 @@ interface DashboardHeaderProps {
   onOpenExitForm: () => void;
   onShowCloudFiles: () => void;
   onOpenAdminDialog: () => void;
+  currentUser?: string | null;
 }
 
 const DashboardHeader = ({ 
@@ -15,7 +16,8 @@ const DashboardHeader = ({
   onOpenForm, 
   onOpenExitForm, 
   onShowCloudFiles, 
-  onOpenAdminDialog 
+  onOpenAdminDialog,
+  currentUser
 }: DashboardHeaderProps) => {
   return (
     <header className="sticky top-0 z-40 border-b-2 bg-card shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/95">
@@ -28,6 +30,11 @@ const DashboardHeader = ({
           />
           <div className="min-w-0">
             <h1 className="text-base sm:text-lg md:text-2xl font-bold truncate">Måløv Boldklub</h1>
+            {currentUser && (
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                Logget ind som: {currentUser}
+              </p>
+            )}
           </div>
         </div>
         <Button 
