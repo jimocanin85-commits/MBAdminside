@@ -327,7 +327,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] h-[90vh] sm:h-auto z-50 p-3 sm:p-6 w-full sm:w-auto flex flex-col">
+      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] z-50 p-4 sm:p-6 w-full sm:w-auto flex flex-col">
         <DialogHeader className="flex-shrink-0 pb-2">
           <DialogTitle className="text-base sm:text-lg">Frivilligfest 2026</DialogTitle>
           <DialogDescription className="sr-only">
@@ -336,7 +336,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         </DialogHeader>
         <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-4 sm:space-y-6 py-2 sm:py-4 -mx-3 sm:-mx-6 px-3 sm:px-6 min-h-0">
           {/* Checklist Section */}
-          <div className="border rounded-lg p-3 sm:p-6 bg-muted/30">
+          <div className="border rounded-lg p-3 sm:p-6 bg-background">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
               <h3 className="font-semibold text-base sm:text-lg">Tjekliste</h3>
               <div className="flex gap-2 w-full sm:w-auto">
@@ -358,13 +358,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                 </Button>
               </div>
             </div>
-            <div className="space-y-4 md:space-y-2 min-h-[200px]">
-              {/* Debug info - visible on mobile */}
-              {displayItems.length > 0 && (
-                <div className="md:hidden text-xs text-muted-foreground p-2 bg-blue-50 dark:bg-blue-950 rounded mb-2 border border-blue-200 dark:border-blue-800">
-                  <strong>{displayItems.length}</strong> opgave{displayItems.length !== 1 ? 'r' : ''} vises nedenfor
-                </div>
-              )}
+            <div className="space-y-3 md:space-y-2">
               
               {/* Desktop Header - Hidden on Mobile */}
               <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,3fr,auto] gap-4 font-semibold text-sm border-b pb-2">
@@ -397,99 +391,80 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                   const assignedTo = checklistItem?.assignedTo || "";
 
                   return (
-                    <div key={item.id} className={`border-2 rounded-lg p-4 sm:p-0 sm:border-b sm:rounded-none sm:border-0 ${index === displayItems.length - 1 ? 'sm:border-b-0' : ''} ${index < displayItems.length - 1 ? 'mb-4 sm:mb-0' : ''} pb-4 sm:pb-2 space-y-3 bg-card sm:bg-transparent shadow-sm sm:shadow-none`}>
-                      {/* Mobile Layout - Stacked */}
-                      <div className="md:hidden space-y-4">
-                        <div className="flex items-center justify-between border-b pb-2">
-                          <div className="text-xs font-semibold text-muted-foreground">
-                            Opgave #{index + 1}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            ID: {item.id.substring(0, 8)}...
-                          </div>
-                        </div>
+                    <div key={item.id} className={`${index < displayItems.length - 1 ? 'border-b pb-3 mb-3' : ''} sm:border-b sm:pb-2 sm:mb-0 sm:rounded-none`}>
+                      {/* Mobile Layout - Clean and Minimal */}
+                      <div className="md:hidden space-y-3">
                         <div className="flex items-center justify-between gap-2">
                           <Input
                             value={item.label}
                             onChange={(e) => updateTaskLabel(item.id, e.target.value)}
-                            className="h-10 text-base flex-1 min-h-[44px] font-medium border-2"
+                            className="h-9 text-sm flex-1 min-h-[44px] font-medium"
                             placeholder="Opgave navn"
                           />
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => removeTask(item.id)}
-                            className="text-destructive hover:text-destructive min-h-[44px] min-w-[44px] border border-destructive/20"
+                            className="text-muted-foreground hover:text-destructive h-9 w-9 p-0"
                           >
-                            <Trash2 className="h-5 w-5" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      <div className="flex flex-col gap-2">
-                        <label className="text-xs font-medium text-muted-foreground">Udført</label>
-                        <div className="flex gap-4">
-                          <label className="flex items-center gap-2 cursor-pointer min-h-[44px]">
-                            <input
-                              type="radio"
-                              name={item.id}
-                              checked={checklistItem?.status === true}
-                              onChange={() => updateChecklistStatus(item.id, true)}
-                              className="h-5 w-5"
-                            />
-                            <span className="text-sm">Ja</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer min-h-[44px]">
-                            <input
-                              type="radio"
-                              name={item.id}
-                              checked={checklistItem?.status === false}
-                              onChange={() => updateChecklistStatus(item.id, false)}
-                              className="h-5 w-5"
-                            />
-                            <span className="text-sm">Nej</span>
-                          </label>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <label className="text-xs font-medium text-muted-foreground">Tildelt til</label>
-                        <div className="flex gap-2">
-                          <Select
-                            value={assignedTo || undefined}
-                            onValueChange={(value) => updateTaskAssignment(item.id, value)}
-                          >
-                            <SelectTrigger className="h-9 text-sm min-h-[44px] flex-1">
-                              <SelectValue placeholder="Vælg person" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {ASSIGNABLE_PERSONS.map((person) => (
-                                <SelectItem key={person} value={person}>
-                                  {person}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {assignedTo && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => updateTaskAssignment(item.id, undefined)}
-                              className="min-h-[44px] px-3"
-                              title="Fjern tildeling"
+                        <div className="flex gap-3">
+                          <div className="flex-1">
+                            <label className="text-xs text-muted-foreground mb-1 block">Udført</label>
+                            <div className="flex gap-3">
+                              <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name={item.id}
+                                  checked={checklistItem?.status === true}
+                                  onChange={() => updateChecklistStatus(item.id, true)}
+                                  className="h-4 w-4"
+                                />
+                                <span className="text-sm">Ja</span>
+                              </label>
+                              <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name={item.id}
+                                  checked={checklistItem?.status === false}
+                                  onChange={() => updateChecklistStatus(item.id, false)}
+                                  className="h-4 w-4"
+                                />
+                                <span className="text-sm">Nej</span>
+                              </label>
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-xs text-muted-foreground mb-1 block">Tildelt til</label>
+                            <Select
+                              value={assignedTo || undefined}
+                              onValueChange={(value) => updateTaskAssignment(item.id, value)}
                             >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
+                              <SelectTrigger className="h-9 text-sm min-h-[36px]">
+                                <SelectValue placeholder="-" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {ASSIGNABLE_PERSONS.map((person) => (
+                                  <SelectItem key={person} value={person}>
+                                    {person}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground mb-1 block">Noter</label>
+                          <Textarea
+                            value={noteValue}
+                            onChange={(e) => updateTaskNote(item.id, e.target.value)}
+                            placeholder="Tilføj kommentar..."
+                            className="min-h-[60px] text-sm resize-none"
+                          />
                         </div>
                       </div>
-                      <div className="flex flex-col gap-2">
-                        <label className="text-xs font-medium text-muted-foreground">Noter</label>
-                        <Textarea
-                          value={noteValue}
-                          onChange={(e) => updateTaskNote(item.id, e.target.value)}
-                          placeholder="Tilføj kommentar..."
-                          className="min-h-[80px] text-sm resize-none"
-                        />
-                      </div>
-                    </div>
 
                     {/* Desktop Layout - Grid */}
                     <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,3fr,auto] gap-4 items-start">
