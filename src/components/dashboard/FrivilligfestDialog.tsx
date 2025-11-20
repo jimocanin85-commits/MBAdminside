@@ -410,9 +410,8 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
               </div>
             </div>
             <div className="space-y-3 md:space-y-2">
-              
-              {/* Desktop Header - Hidden on Mobile */}
-              <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,3fr,auto] gap-4 font-semibold text-sm border-b pb-2">
+              {/* Mobile Header - Grid Layout */}
+              <div className="grid grid-cols-[2fr,1fr,1fr,2fr,auto] gap-2 md:grid-cols-[2fr,1fr,1fr,3fr,auto] md:gap-4 font-semibold text-xs md:text-sm border-b pb-2">
                 <div>Opgave</div>
                 <div>Udført</div>
                 <div>Tildelt til</div>
@@ -442,156 +441,71 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                   const assignedTo = checklistItem?.assignedTo || "";
 
                   return (
-                    <div key={item.id} className={`${index < displayItems.length - 1 ? 'border-b pb-3 mb-3' : ''} sm:border-b sm:pb-2 sm:mb-0 sm:rounded-none`}>
-                      {/* Mobile Layout - Clean and Minimal */}
-                      <div className="md:hidden space-y-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <Input
-                            value={item.label}
-                            onChange={(e) => updateTaskLabel(item.id, e.target.value)}
-                            className="h-9 text-sm flex-1 min-h-[44px] font-medium"
-                            placeholder="Opgave navn"
-                          />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeTask(item.id)}
-                            className="text-muted-foreground hover:text-destructive h-9 w-9 p-0"
+                    <div key={item.id} className={`border-b pb-2 mb-2 ${index === displayItems.length - 1 ? 'border-b-0 mb-0' : ''}`}>
+                      {/* Mobile & Desktop Grid Layout */}
+                      <div className="grid grid-cols-[2fr,1fr,1fr,2fr,auto] gap-2 md:grid-cols-[2fr,1fr,1fr,3fr,auto] md:gap-4 items-start">
+                        <Input
+                          value={item.label}
+                          onChange={(e) => updateTaskLabel(item.id, e.target.value)}
+                          className="h-8 md:h-8 text-xs md:text-sm"
+                          placeholder="Opgave navn"
+                        />
+                        <div className="flex flex-col gap-1 md:gap-2">
+                          <div className="flex gap-2 md:gap-4">
+                            <label className="flex items-center gap-1 cursor-pointer">
+                              <input
+                                type="radio"
+                                name={item.id}
+                                checked={checklistItem?.status === true}
+                                onChange={() => updateChecklistStatus(item.id, true)}
+                                className="h-3.5 w-3.5 md:h-4 md:w-4"
+                              />
+                              <span className="text-xs md:text-sm">Ja</span>
+                            </label>
+                            <label className="flex items-center gap-1 cursor-pointer">
+                              <input
+                                type="radio"
+                                name={item.id}
+                                checked={checklistItem?.status === false}
+                                onChange={() => updateChecklistStatus(item.id, false)}
+                                className="h-3.5 w-3.5 md:h-4 md:w-4"
+                              />
+                              <span className="text-xs md:text-sm">Nej</span>
+                            </label>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 md:gap-2">
+                          <Select
+                            value={assignedTo || undefined}
+                            onValueChange={(value) => updateTaskAssignment(item.id, value)}
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                            <SelectTrigger className="h-8 text-xs md:text-sm">
+                              <SelectValue placeholder="-" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ASSIGNABLE_PERSONS.map((person) => (
+                                <SelectItem key={person} value={person}>
+                                  {person}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
-                        <div className="flex gap-3">
-                          <div className="flex-1">
-                            <label className="text-xs text-muted-foreground mb-1 block">Udført</label>
-                            <div className="flex gap-3">
-                              <label className="flex items-center gap-1.5 cursor-pointer">
-                                <input
-                                  type="radio"
-                                  name={item.id}
-                                  checked={checklistItem?.status === true}
-                                  onChange={() => updateChecklistStatus(item.id, true)}
-                                  className="h-4 w-4"
-                                />
-                                <span className="text-sm">Ja</span>
-                              </label>
-                              <label className="flex items-center gap-1.5 cursor-pointer">
-                                <input
-                                  type="radio"
-                                  name={item.id}
-                                  checked={checklistItem?.status === false}
-                                  onChange={() => updateChecklistStatus(item.id, false)}
-                                  className="h-4 w-4"
-                                />
-                                <span className="text-sm">Nej</span>
-                              </label>
-                            </div>
-                          </div>
-                          <div className="flex-1">
-                            <label className="text-xs text-muted-foreground mb-1 block">Tildelt til</label>
-                            <Select
-                              value={assignedTo || undefined}
-                              onValueChange={(value) => updateTaskAssignment(item.id, value)}
-                            >
-                              <SelectTrigger className="h-9 text-sm min-h-[36px]">
-                                <SelectValue placeholder="-" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {ASSIGNABLE_PERSONS.map((person) => (
-                                  <SelectItem key={person} value={person}>
-                                    {person}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-xs text-muted-foreground mb-1 block">Noter</label>
-                          <Textarea
-                            value={noteValue}
-                            onChange={(e) => updateTaskNote(item.id, e.target.value)}
-                            placeholder="Tilføj kommentar..."
-                            className="min-h-[60px] text-sm resize-none"
-                          />
-                        </div>
-                      </div>
-
-                    {/* Desktop Layout - Grid */}
-                    <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,3fr,auto] gap-4 items-start">
-                      <Input
-                        value={item.label}
-                        onChange={(e) => updateTaskLabel(item.id, e.target.value)}
-                        className="h-8 text-sm"
-                        placeholder="Opgave navn"
-                      />
-                      <div className="flex flex-col gap-2">
-                        <div className="flex gap-4">
-                          <label className="flex items-center gap-1 cursor-pointer">
-                            <input
-                              type="radio"
-                              name={item.id}
-                              checked={checklistItem?.status === true}
-                              onChange={() => updateChecklistStatus(item.id, true)}
-                              className="h-4 w-4"
-                            />
-                            <span className="text-sm">Ja</span>
-                          </label>
-                          <label className="flex items-center gap-1 cursor-pointer">
-                            <input
-                              type="radio"
-                              name={item.id}
-                              checked={checklistItem?.status === false}
-                              onChange={() => updateChecklistStatus(item.id, false)}
-                              className="h-4 w-4"
-                            />
-                            <span className="text-sm">Nej</span>
-                          </label>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Select
-                          value={assignedTo || undefined}
-                          onValueChange={(value) => updateTaskAssignment(item.id, value)}
+                        <Textarea
+                          value={noteValue}
+                          onChange={(e) => updateTaskNote(item.id, e.target.value)}
+                          placeholder="Noter..."
+                          className="min-h-[50px] md:min-h-[60px] text-xs md:text-sm resize-none"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeTask(item.id)}
+                          className="text-destructive hover:text-destructive h-8 w-8 p-0 md:h-auto md:w-auto md:px-2"
                         >
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder="Vælg person" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ASSIGNABLE_PERSONS.map((person) => (
-                              <SelectItem key={person} value={person}>
-                                {person}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {assignedTo && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => updateTaskAssignment(item.id, undefined)}
-                            className="px-2"
-                            title="Fjern tildeling"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                          <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                        </Button>
                       </div>
-                      <Textarea
-                        value={noteValue}
-                        onChange={(e) => updateTaskNote(item.id, e.target.value)}
-                        placeholder="Tilføj kommentar..."
-                        className="min-h-[60px] text-sm resize-none"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeTask(item.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
                   </div>
                   );
                 });
