@@ -27,7 +27,11 @@ interface CloudFile {
   downloadUrl: string;
 }
 
-export const CloudFiles = () => {
+interface CloudFilesProps {
+  onTrainerDeleted?: () => void;
+}
+
+export const CloudFiles = ({ onTrainerDeleted }: CloudFilesProps = {}) => {
   const [files, setFiles] = useState<CloudFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -153,6 +157,11 @@ export const CloudFiles = () => {
           const fileName = fileToDelete.fileName.replace('.xlsx', '');
           const filtered = trainers.filter((t: any) => t.navn !== fileName);
           localStorage.setItem('trainers', JSON.stringify(filtered));
+          
+          // Notify parent component to refresh trainers state
+          if (onTrainerDeleted) {
+            onTrainerDeleted();
+          }
         } catch (e) {
           console.error('Error updating localStorage:', e);
         }
@@ -167,9 +176,6 @@ export const CloudFiles = () => {
       
       // Then refresh the list
       await loadFiles();
-      
-      // Trigger a page reload to refresh the trainer list
-      window.location.reload();
     } catch (error) {
       console.error('Error deleting file:', error);
       toast.error("Kunne ikke slette fil", {

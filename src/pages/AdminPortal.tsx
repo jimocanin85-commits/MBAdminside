@@ -209,7 +209,25 @@ const AdminPortal = () => {
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8">
         <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
           {showCloudFiles ? (
-            <CloudFiles key={refreshCloudFiles} />
+            <CloudFiles 
+              key={refreshCloudFiles} 
+              onTrainerDeleted={() => {
+                // Reload trainers from localStorage after deletion
+                const saved = localStorage.getItem('trainers');
+                if (saved) {
+                  try {
+                    const parsed = JSON.parse(saved);
+                    setTrainers(parsed.map((trainer: any) => ({
+                      ...trainer,
+                      foedselsdato: new Date(trainer.foedselsdato),
+                      createdAt: new Date(trainer.createdAt)
+                    })));
+                  } catch (e) {
+                    console.error('Error reloading trainers:', e);
+                  }
+                }
+              }}
+            />
           ) : (
             <Card className="shadow-lg border-2">
               <CardContent className="pt-4 sm:pt-6 md:pt-8 space-y-4 sm:space-y-6">

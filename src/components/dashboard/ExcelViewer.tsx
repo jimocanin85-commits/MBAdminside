@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -19,18 +19,37 @@ interface ExcelViewerProps {
 export const ExcelViewer = ({ open, onOpenChange, fileName, fileData, onSaved }: ExcelViewerProps) => {
   const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
   const [currentSheetIndex, setCurrentSheetIndex] = useState(0);
-  const [sheetData, setSheetData] = useState<any[][]>(() => {
-    if (!fileData) return [];
-    const binaryString = atob(fileData);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
+  const [sheetData, setSheetData] = useState<any[][]>([]);
+
+  // Initialize workbook and sheet data when fileData changes
+  useEffect(() => {
+    if (!fileData || !open) {
+      setWorkbook(null);
+      setSheetData([]);
+      return;
     }
-    const wb = XLSX.read(bytes, { type: 'array' });
-    setWorkbook(wb);
-    const worksheet = wb.Sheets[wb.SheetNames[0]];
-    return XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as any[][];
-  });
+
+    try {
+      const binaryString = atob(fileData);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const wb = XLSX.read(bytes, { type: 'array' });
+      setWorkbook(wb);
+      
+      // Load first sheet data
+      const worksheet = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as any[][];
+      setSheetData(data);
+      setCurrentSheetIndex(0);
+    } catch (error) {
+      console.error('Error parsing Excel file:', error);
+      toast.error('Kunne ikke indlæse Excel fil');
+      setWorkbook(null);
+      setSheetData([]);
+    }
+  }, [fileData, open]);
 
   const switchSheet = (index: number) => {
     if (!workbook) return;
