@@ -281,7 +281,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
               {/* Desktop Header - Hidden on Mobile */}
               <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,3fr,auto] gap-4 font-semibold text-sm border-b pb-2">
                 <div>Opgave</div>
-                <div>Status / Dato</div>
+                <div>Udført</div>
                 <div>Tildelt til</div>
                 <div>Noter</div>
                 <div></div>
@@ -314,7 +314,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                         </Button>
                       </div>
                       <div className="flex flex-col gap-2">
-                        <label className="text-xs font-medium text-muted-foreground">Status</label>
+                        <label className="text-xs font-medium text-muted-foreground">Udført</label>
                         <div className="flex gap-4">
                           <label className="flex items-center gap-2 cursor-pointer min-h-[44px]">
                             <input
@@ -337,15 +337,6 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                             <span className="text-sm">Nej</span>
                           </label>
                         </div>
-                        {isChecked && (
-                          <Input
-                            placeholder="DD/MM/ÅÅÅÅ"
-                            value={dateInputValue}
-                            onChange={(e) => updateChecklistDateInput(item.id, e.target.value)}
-                            onBlur={() => validateAndSaveDate(item.id)}
-                            className="h-9 text-sm min-h-[44px]"
-                          />
-                        )}
                       </div>
                       <div className="flex flex-col gap-2">
                         <label className="text-xs font-medium text-muted-foreground">Tildelt til</label>
@@ -420,15 +411,6 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                             <span className="text-sm">Nej</span>
                           </label>
                         </div>
-                        {isChecked && (
-                          <Input
-                            placeholder="DD/MM/ÅÅÅÅ"
-                            value={dateInputValue}
-                            onChange={(e) => updateChecklistDateInput(item.id, e.target.value)}
-                            onBlur={() => validateAndSaveDate(item.id)}
-                            className="h-8 text-xs"
-                          />
-                        )}
                       </div>
                       <div className="flex gap-2">
                         <Select
