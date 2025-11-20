@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Plus, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -8,13 +11,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const FRIVILLIGFEST_CHECKLIST_ITEMS = [
-  {
-    id: "dj",
-    label: "DJ",
-    note: ""
-  }
-];
+interface ChecklistItem {
+  id: string;
+  label: string;
+  note: string;
+}
 
 interface FrivilligfestDialogProps {
   open: boolean;
@@ -22,8 +23,16 @@ interface FrivilligfestDialogProps {
 }
 
 const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) => {
-  const [checklist, setChecklist] = useState<Record<string, { status: boolean; date: Date | null }>>({});
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([
+    {
+      id: "dj",
+      label: "DJ",
+      note: ""
+    }
+  ]);
+  const [checklist, setChecklist] = useState<Record<string, { status: boolean; date: Date | null; note: string }>>({});
   const [checklistDateInputs, setChecklistDateInputs] = useState<Record<string, string>>({});
+  const [newTaskLabel, setNewTaskLabel] = useState("");
 
   useEffect(() => {
     // Load from localStorage on mount
@@ -31,13 +40,21 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        const restoredChecklist: Record<string, { status: boolean; date: Date | null }> = {};
+        
+        // Load checklist items
+        if (parsed.items && Array.isArray(parsed.items)) {
+          setChecklistItems(parsed.items);
+        }
+        
+        // Load checklist data
+        const restoredChecklist: Record<string, { status: boolean; date: Date | null; note: string }> = {};
         const restoredDateInputs: Record<string, string> = {};
         
         Object.keys(parsed.checklist || {}).forEach(key => {
           restoredChecklist[key] = {
             status: parsed.checklist[key].status,
-            date: parsed.checklist[key].date ? new Date(parsed.checklist[key].date) : null
+            date: parsed.checklist[key].date ? new Date(parsed.checklist[key].date) : null,
+            note: parsed.checklist[key].note || ""
           };
           if (parsed.checklist[key].date) {
             restoredDateInputs[key] = format(new Date(parsed.checklist[key].date), "dd/MM/yyyy");
@@ -53,11 +70,56 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   }, []);
 
   useEffect(() => {
-    // Save to localStorage whenever checklist changes
+    // Save to localStorage whenever checklist or items change
     localStorage.setItem('frivilligfest2026', JSON.stringify({
+      items: checklistItems,
       checklist
     }));
-  }, [checklist]);
+  }, [checklist, checklistItems]);
+
+  const addNewTask = () => {
+    if (!newTaskLabel.trim()) return;
+    
+    const newId = `task_${Date.now()}`;
+    const newItem: ChecklistItem = {
+      id: newId,
+      label: newTaskLabel.trim(),
+      note: ""
+    };
+    
+    setChecklistItems([...checklistItems, newItem]);
+    setNewTaskLabel("");
+  };
+
+  const removeTask = (itemId: string) => {
+    setChecklistItems(checklistItems.filter(item => item.id !== itemId));
+    setChecklist((prev) => {
+      const newChecklist = { ...prev };
+      delete newChecklist[itemId];
+      return newChecklist;
+    });
+    setChecklistDateInputs((prev) => {
+      const newDateInputs = { ...prev };
+      delete newDateInputs[itemId];
+      return newDateInputs;
+    });
+  };
+
+  const updateTaskLabel = (itemId: string, newLabel: string) => {
+    setChecklistItems(checklistItems.map(item => 
+      item.id === itemId ? { ...item, label: newLabel } : item
+    ));
+  };
+
+  const updateTaskNote = (itemId: string, note: string) => {
+    setChecklist((prev) => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        note: note || ""
+      }
+    }));
+  };
 
   const updateChecklistStatus = (itemId: string, status: boolean) => {
     setChecklist((prev) => {
@@ -65,7 +127,8 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         ...prev,
         [itemId]: {
           status,
-          date: status ? (prev[itemId]?.date || new Date()) : null
+          date: status ? (prev[itemId]?.date || new Date()) : null,
+          note: prev[itemId]?.note || ""
         }
       };
       
@@ -138,21 +201,48 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         <div className="space-y-6 py-4">
           {/* Checklist Section */}
           <div className="border rounded-lg p-6 bg-muted/30">
-            <h3 className="font-semibold mb-4 text-lg">Tjekliste</h3>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold text-lg">Tjekliste</h3>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Tilføj ny opgave..."
+                  value={newTaskLabel}
+                  onChange={(e) => setNewTaskLabel(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addNewTask()}
+                  className="w-48 h-9"
+                />
+                <Button 
+                  onClick={addNewTask} 
+                  size="sm"
+                  className="gap-2"
+                  disabled={!newTaskLabel.trim()}
+                >
+                  <Plus className="h-4 w-4" />
+                  Tilføj
+                </Button>
+              </div>
+            </div>
             <div className="space-y-4">
-              <div className="grid grid-cols-[2fr,1fr,3fr] gap-4 font-semibold text-sm border-b pb-2">
+              <div className="grid grid-cols-[2fr,1fr,3fr,auto] gap-4 font-semibold text-sm border-b pb-2">
                 <div>Opgave</div>
                 <div>Status / Dato</div>
                 <div>Noter</div>
+                <div></div>
               </div>
-              {FRIVILLIGFEST_CHECKLIST_ITEMS.map((item) => {
+              {checklistItems.map((item) => {
                 const checklistItem = checklist[item.id];
                 const isChecked = checklistItem?.status === true;
                 const dateInputValue = checklistDateInputs[item.id] || "";
+                const noteValue = checklistItem?.note || "";
 
                 return (
-                  <div key={item.id} className="grid grid-cols-[2fr,1fr,3fr] gap-4 items-start border-b pb-4">
-                    <div className="text-sm">{item.label}</div>
+                  <div key={item.id} className="grid grid-cols-[2fr,1fr,3fr,auto] gap-4 items-start border-b pb-4">
+                    <Input
+                      value={item.label}
+                      onChange={(e) => updateTaskLabel(item.id, e.target.value)}
+                      className="h-8 text-sm"
+                      placeholder="Opgave navn"
+                    />
                     <div className="flex flex-col gap-2">
                       <div className="flex gap-4">
                         <label className="flex items-center gap-1 cursor-pointer">
@@ -186,10 +276,28 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                         />
                       )}
                     </div>
-                    <div className="text-sm text-muted-foreground">{item.note}</div>
+                    <Textarea
+                      value={noteValue}
+                      onChange={(e) => updateTaskNote(item.id, e.target.value)}
+                      placeholder="Tilføj kommentar..."
+                      className="min-h-[60px] text-sm resize-none"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeTask(item.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 );
               })}
+              {checklistItems.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>Ingen opgaver endnu. Tilføj en opgave for at komme i gang.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
