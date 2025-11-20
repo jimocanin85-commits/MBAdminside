@@ -383,19 +383,6 @@ const AdminPortal = () => {
             </CardContent>
           </Card>
           )}
-          
-          {showCloudFiles && (
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setShowCloudFiles(false);
-                setCurrentView("home");
-              }}
-              className="w-full min-h-[44px] md:hidden"
-            >
-              Tilbage
-            </Button>
-          )}
         </div>
       </main>
 
