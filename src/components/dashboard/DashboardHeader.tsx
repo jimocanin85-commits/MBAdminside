@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import mbLogo from "@/assets/mb-logo.png";
-import MobileMenu from "./MobileMenu";
 
 interface DashboardHeaderProps {
   onLogout: () => void;
@@ -22,12 +21,6 @@ const DashboardHeader = ({
     <header className="sticky top-0 z-40 border-b-2 bg-card shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/95">
       <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
-          <MobileMenu
-            onOpenForm={onOpenForm}
-            onOpenExitForm={onOpenExitForm}
-            onShowCloudFiles={onShowCloudFiles}
-            onOpenAdminDialog={onOpenAdminDialog}
-          />
           <img 
             src={mbLogo} 
             alt="Måløv Boldklub Logo" 
