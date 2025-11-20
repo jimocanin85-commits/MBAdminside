@@ -7,6 +7,7 @@ import { Plus, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -151,7 +152,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     }));
   };
 
-  const updateTaskAssignment = (itemId: string, assignedTo: string) => {
+  const updateTaskAssignment = (itemId: string, assignedTo: string | undefined) => {
     setChecklist((prev) => ({
       ...prev,
       [itemId]: {
@@ -248,6 +249,9 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
       <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto z-50 p-3 sm:p-6 w-full sm:w-auto">
         <DialogHeader>
           <DialogTitle className="text-base sm:text-lg">Frivilligfest 2026 - Tjekliste</DialogTitle>
+          <DialogDescription className="sr-only">
+            Administrer opgaver og tildel dem til personer
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 sm:space-y-6 py-2 sm:py-4">
           {/* Checklist Section */}
@@ -346,14 +350,13 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                       <div className="flex flex-col gap-2">
                         <label className="text-xs font-medium text-muted-foreground">Tildelt til</label>
                         <Select
-                          value={assignedTo}
+                          value={assignedTo || undefined}
                           onValueChange={(value) => updateTaskAssignment(item.id, value)}
                         >
                           <SelectTrigger className="h-9 text-sm min-h-[44px]">
                             <SelectValue placeholder="Vælg person" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Ingen</SelectItem>
                             {ASSIGNABLE_PERSONS.map((person) => (
                               <SelectItem key={person} value={person}>
                                 {person}
@@ -415,14 +418,13 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                         )}
                       </div>
                       <Select
-                        value={assignedTo}
+                        value={assignedTo || undefined}
                         onValueChange={(value) => updateTaskAssignment(item.id, value)}
                       >
                         <SelectTrigger className="h-8 text-sm">
                           <SelectValue placeholder="Vælg person" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Ingen</SelectItem>
                           {ASSIGNABLE_PERSONS.map((person) => (
                             <SelectItem key={person} value={person}>
                               {person}
