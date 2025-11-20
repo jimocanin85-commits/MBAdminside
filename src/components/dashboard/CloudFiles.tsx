@@ -213,24 +213,26 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
   return (
     <Card className="shadow-lg">
       <CardContent className="pt-6">
-        {onBack && (
-          <div className="mb-4 hidden md:block">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={onBack}
-              className="gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Tilbage
-            </Button>
-          </div>
-        )}
         {files.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Ingen filer uploadet endnu</p>
-          </div>
+          <>
+            {onBack && (
+              <div className="mb-4 hidden md:block">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={onBack}
+                  className="gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Tilbage
+                </Button>
+              </div>
+            )}
+            <div className="text-center py-12 text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Ingen filer uploadet endnu</p>
+            </div>
+          </>
         ) : (
           <>
             <div className="flex justify-between items-center mb-4">
