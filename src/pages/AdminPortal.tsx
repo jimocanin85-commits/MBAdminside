@@ -6,6 +6,7 @@ import TrainerForm from "@/components/trainer/TrainerForm";
 import TrainerSpreadsheet from "@/components/trainer/TrainerSpreadsheet";
 import ExitForm from "@/components/trainer/ExitForm";
 import { CloudFiles } from "@/components/dashboard/CloudFiles";
+import FrivilligfestDialog from "@/components/dashboard/FrivilligfestDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown } from "lucide-react";
@@ -50,6 +51,7 @@ const AdminPortal = () => {
   const [adminPassword, setAdminPassword] = useState("");
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [currentView, setCurrentView] = useState<"home" | "cloud" | "form" | "settings">("home");
+  const [showFrivilligfestDialog, setShowFrivilligfestDialog] = useState(false);
   const [trainers, setTrainers] = useState<Trainer[]>(() => {
     const saved = localStorage.getItem('trainers');
     if (saved) {
@@ -275,7 +277,7 @@ const AdminPortal = () => {
                   <Button 
                     size="lg" 
                     className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
-                    onClick={() => {}}
+                    onClick={() => setShowFrivilligfestDialog(true)}
                   >
                     <UserPlus className="h-5 w-5" />
                     Frivilligfest 2026
@@ -434,6 +436,11 @@ const AdminPortal = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <FrivilligfestDialog
+        open={showFrivilligfestDialog}
+        onOpenChange={setShowFrivilligfestDialog}
+      />
     </div>
     
     {/* Always render BottomNavigation to maintain hook order - hidden when not authenticated */}
