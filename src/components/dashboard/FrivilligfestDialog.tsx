@@ -60,6 +60,13 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         // Load checklist items - only if there are items, otherwise keep default
         if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
           setChecklistItems(parsed.items);
+        } else {
+          // Ensure we always have at least the default DJ item
+          setChecklistItems([{
+            id: "dj",
+            label: "DJ",
+            note: ""
+          }]);
         }
         
         // Load checklist data
@@ -82,6 +89,12 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         setChecklistDateInputs(restoredDateInputs);
       } catch (e) {
         console.error('Error loading Frivilligfest data:', e);
+        // On error, ensure we have at least the default item
+        setChecklistItems([{
+          id: "dj",
+          label: "DJ",
+          note: ""
+        }]);
       }
     }
   }, []);
