@@ -246,14 +246,14 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto z-50 p-3 sm:p-6 w-full sm:w-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] z-50 p-3 sm:p-6 w-full sm:w-auto flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-base sm:text-lg">Frivilligfest 2026</DialogTitle>
           <DialogDescription className="sr-only">
             Administrer opgaver og tildel dem til personer
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 sm:space-y-6 py-2 sm:py-4">
+        <div className="flex-1 overflow-y-auto space-y-4 sm:space-y-6 py-2 sm:py-4 -mx-3 sm:-mx-6 px-3 sm:px-6">
           {/* Checklist Section */}
           <div className="border rounded-lg p-3 sm:p-6 bg-muted/30">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
@@ -277,7 +277,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                 </Button>
               </div>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-4 md:space-y-2">
               {/* Desktop Header - Hidden on Mobile */}
               <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,3fr,auto] gap-4 font-semibold text-sm border-b pb-2">
                 <div>Opgave</div>
@@ -286,7 +286,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                 <div>Noter</div>
                 <div></div>
               </div>
-              {displayItems.map((item) => {
+              {displayItems.map((item, index) => {
                 const checklistItem = checklist[item.id];
                 const isChecked = checklistItem?.status === true;
                 const dateInputValue = checklistDateInputs[item.id] || "";
@@ -294,14 +294,14 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                 const assignedTo = checklistItem?.assignedTo || "";
 
                 return (
-                  <div key={item.id} className="border-b pb-4 space-y-3">
+                  <div key={item.id} className={`border rounded-lg p-3 sm:p-0 sm:border-b sm:rounded-none ${index === displayItems.length - 1 ? 'sm:border-b-0' : ''} pb-4 sm:pb-2 space-y-3 bg-card sm:bg-transparent`}>
                     {/* Mobile Layout - Stacked */}
                     <div className="md:hidden space-y-3">
                       <div className="flex items-center justify-between gap-2">
                         <Input
                           value={item.label}
                           onChange={(e) => updateTaskLabel(item.id, e.target.value)}
-                          className="h-9 text-sm flex-1 min-h-[44px]"
+                          className="h-9 text-sm flex-1 min-h-[44px] font-medium"
                           placeholder="Opgave navn"
                         />
                         <Button
