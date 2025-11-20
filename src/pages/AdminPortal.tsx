@@ -270,7 +270,7 @@ const AdminPortal = () => {
               <CardContent className="pt-4 sm:pt-6 md:pt-8 space-y-4 sm:space-y-6">
                 {/* Action Buttons - Visible on all screen sizes */}
                 <div className="flex flex-col sm:flex-row gap-3">
-                  {/* Frivillig dropdown - Show for admin and Brian */}
+                  {/* Frivillig dropdown - Show for admin and Brian (Brian has full access to all menu items) */}
                   {!isRestrictedUser && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
