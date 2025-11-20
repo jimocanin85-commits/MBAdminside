@@ -100,6 +100,16 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   }, []);
 
   useEffect(() => {
+    // Ensure we always have at least one item
+    if (checklistItems.length === 0) {
+      setChecklistItems([{
+        id: "dj",
+        label: "DJ",
+        note: ""
+      }]);
+      return;
+    }
+    
     // Save to localStorage whenever checklist or items change
     localStorage.setItem('frivilligfest2026', JSON.stringify({
       items: checklistItems,
