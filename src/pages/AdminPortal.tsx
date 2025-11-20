@@ -283,7 +283,7 @@ const AdminPortal = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" className="w-56">
-                        {!isBrianUser && (
+                        {!isBrianUser ? (
                           <>
                             <DropdownMenuItem onClick={() => setIsFormOpen(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
                               <UserPlus className="h-4 w-4" />
@@ -298,6 +298,10 @@ const AdminPortal = () => {
                               Cloud Filer
                             </DropdownMenuItem>
                           </>
+                        ) : (
+                          <DropdownMenuItem disabled className="gap-2 py-3 min-h-[44px] text-muted-foreground">
+                            <span className="text-sm">Ingen tilgængelige indstillinger</span>
+                          </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
