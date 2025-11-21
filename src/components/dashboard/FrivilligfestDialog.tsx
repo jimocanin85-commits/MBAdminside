@@ -21,8 +21,6 @@ import {
 } from "@/components/ui/select";
 
 const ASSIGNABLE_PERSONS = ["Brian", "Karina", "Jas"];
-const STORAGE_BUCKET = 'frivilligfest';
-const STORAGE_FILE = 'checklist.json';
 
 interface ChecklistItem {
   id: string;
@@ -59,103 +57,96 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   // Force refresh counter to trigger re-render
   const [refreshKey, setRefreshKey] = useState(0);
   
-  // Load from Supabase Storage (cross-device sync)
+  // Load from database via Edge Function (cross-device sync)
   const loadFromStorage = useCallback(async (showFeedback = false) => {
-    console.log('[LOAD] ===== Loading from Supabase Storage =====');
+    console.log('[LOAD] ===== Loading from database =====');
     if (showFeedback) {
       setIsRefreshing(true);
       setRefreshMessage("Indlæser fra database...");
     }
     
     try {
-      // Download from Supabase Storage
-      const { data, error } = await supabase.storage
-        .from(STORAGE_BUCKET)
-        .download(STORAGE_FILE);
+      // Try Edge Function first
+      const { data: funcData, error: funcError } = await supabase.functions.invoke('frivilligfest-checklist', {
+        method: 'GET'
+      });
       
-      if (error) {
-        // If file doesn't exist, try localStorage as fallback
-        console.log('[LOAD] Supabase file not found, trying localStorage:', error.message);
-        const saved = localStorage.getItem('frivilligfest2026');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
-            setChecklistItems([...parsed.items]);
-            const restoredChecklist: Record<string, { status: boolean; date: Date | null; note: string; assignedTo: string }> = {};
-            Object.keys(parsed.checklist || {}).forEach(key => {
-              restoredChecklist[key] = {
-                status: parsed.checklist[key].status,
-                date: parsed.checklist[key].date ? new Date(parsed.checklist[key].date) : null,
-                note: parsed.checklist[key].note || "",
-                assignedTo: parsed.checklist[key].assignedTo || ""
-              };
-            });
-            setChecklist(restoredChecklist);
-            setRefreshKey(prev => prev + 1);
-            if (showFeedback) {
-              setRefreshMessage(`${parsed.items.length} opgaver indlæst fra cache`);
-              setIsRefreshing(false);
-              setTimeout(() => setRefreshMessage(""), 3000);
+      if (!funcError && funcData?.success && funcData?.data) {
+        const parsed = funcData.data;
+        console.log('[LOAD] Loaded from database:', parsed);
+        console.log('[LOAD] Items:', parsed.items);
+        console.log('[LOAD] Items count:', parsed.items?.length);
+        
+        if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
+          const itemCount = parsed.items.length;
+          const itemLabels = parsed.items.map((i: ChecklistItem) => i.label).join(", ");
+          console.log('[LOAD] Setting', itemCount, 'items:', itemLabels);
+          
+          setChecklistItems([...parsed.items]);
+          
+          // Load checklist data
+          const restoredChecklist: Record<string, { status: boolean; date: Date | null; note: string; assignedTo: string }> = {};
+          const restoredDateInputs: Record<string, string> = {};
+          
+          Object.keys(parsed.checklist || {}).forEach(key => {
+            restoredChecklist[key] = {
+              status: parsed.checklist[key].status,
+              date: parsed.checklist[key].date ? new Date(parsed.checklist[key].date) : null,
+              note: parsed.checklist[key].note || "",
+              assignedTo: parsed.checklist[key].assignedTo || ""
+            };
+            if (parsed.checklist[key].date) {
+              restoredDateInputs[key] = format(new Date(parsed.checklist[key].date), "dd/MM/yyyy");
             }
-          }
-        } else {
+          });
+          
+          setChecklist(restoredChecklist);
+          setChecklistDateInputs(restoredDateInputs);
+          setRefreshKey(prev => prev + 1);
+          setLastRefreshTime(new Date());
+          
           if (showFeedback) {
-            setRefreshMessage("Ingen data fundet");
+            setRefreshMessage(`${itemCount} opgave${itemCount !== 1 ? 'r' : ''} indlæst: ${itemLabels}`);
+            setIsRefreshing(false);
+            setTimeout(() => setRefreshMessage(""), 5000);
+          }
+          
+          console.log('[LOAD] ===== Load complete =====');
+          return;
+        }
+      }
+      
+      // Fallback to localStorage
+      console.log('[LOAD] Database not available, using localStorage:', funcError?.message);
+      const saved = localStorage.getItem('frivilligfest2026');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
+          setChecklistItems([...parsed.items]);
+          const restoredChecklist: Record<string, { status: boolean; date: Date | null; note: string; assignedTo: string }> = {};
+          Object.keys(parsed.checklist || {}).forEach(key => {
+            restoredChecklist[key] = {
+              status: parsed.checklist[key].status,
+              date: parsed.checklist[key].date ? new Date(parsed.checklist[key].date) : null,
+              note: parsed.checklist[key].note || "",
+              assignedTo: parsed.checklist[key].assignedTo || ""
+            };
+          });
+          setChecklist(restoredChecklist);
+          setRefreshKey(prev => prev + 1);
+          if (showFeedback) {
+            setRefreshMessage(`${parsed.items.length} opgaver indlæst fra cache`);
             setIsRefreshing(false);
             setTimeout(() => setRefreshMessage(""), 3000);
           }
+          return;
         }
-        return;
       }
       
-      // Parse the downloaded file
-      const text = await data.text();
-      const parsed = JSON.parse(text);
-      console.log('[LOAD] Loaded from Supabase:', parsed);
-      console.log('[LOAD] Items:', parsed.items);
-      console.log('[LOAD] Items count:', parsed.items?.length);
-      
-      if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
-        const itemCount = parsed.items.length;
-        const itemLabels = parsed.items.map((i: ChecklistItem) => i.label).join(", ");
-        console.log('[LOAD] Setting', itemCount, 'items:', itemLabels);
-        
-        setChecklistItems([...parsed.items]);
-        
-        // Load checklist data
-        const restoredChecklist: Record<string, { status: boolean; date: Date | null; note: string; assignedTo: string }> = {};
-        const restoredDateInputs: Record<string, string> = {};
-        
-        Object.keys(parsed.checklist || {}).forEach(key => {
-          restoredChecklist[key] = {
-            status: parsed.checklist[key].status,
-            date: parsed.checklist[key].date ? new Date(parsed.checklist[key].date) : null,
-            note: parsed.checklist[key].note || "",
-            assignedTo: parsed.checklist[key].assignedTo || ""
-          };
-          if (parsed.checklist[key].date) {
-            restoredDateInputs[key] = format(new Date(parsed.checklist[key].date), "dd/MM/yyyy");
-          }
-        });
-        
-        setChecklist(restoredChecklist);
-        setChecklistDateInputs(restoredDateInputs);
-        setRefreshKey(prev => prev + 1);
-        setLastRefreshTime(new Date());
-        
-        if (showFeedback) {
-          setRefreshMessage(`${itemCount} opgave${itemCount !== 1 ? 'r' : ''} indlæst: ${itemLabels}`);
-          setIsRefreshing(false);
-          setTimeout(() => setRefreshMessage(""), 5000);
-        }
-        
-        console.log('[LOAD] ===== Load complete =====');
-      } else {
-        if (showFeedback) {
-          setRefreshMessage("Ingen opgaver fundet");
-          setIsRefreshing(false);
-          setTimeout(() => setRefreshMessage(""), 3000);
-        }
+      if (showFeedback) {
+        setRefreshMessage("Ingen data fundet");
+        setIsRefreshing(false);
+        setTimeout(() => setRefreshMessage(""), 3000);
       }
     } catch (e) {
       console.error('[LOAD] Error:', e);
@@ -167,63 +158,10 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     }
   }, []);
   
-  // Initialize - try to load from Supabase first, then localStorage fallback
+  // Initialize - load from database or localStorage
   useEffect(() => {
-    const initializeData = async () => {
-      // Try Supabase first
-      try {
-        const { data, error } = await supabase.storage
-          .from(STORAGE_BUCKET)
-          .download(STORAGE_FILE);
-        
-        if (!error && data) {
-          const text = await data.text();
-          const parsed = JSON.parse(text);
-          if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
-            setChecklistItems(parsed.items);
-            const restoredChecklist: Record<string, { status: boolean; date: Date | null; note: string; assignedTo: string }> = {};
-            Object.keys(parsed.checklist || {}).forEach(key => {
-              restoredChecklist[key] = {
-                status: parsed.checklist[key].status,
-                date: parsed.checklist[key].date ? new Date(parsed.checklist[key].date) : null,
-                note: parsed.checklist[key].note || "",
-                assignedTo: parsed.checklist[key].assignedTo || ""
-              };
-            });
-            setChecklist(restoredChecklist);
-            return;
-          }
-        }
-      } catch (e) {
-        console.log('[INIT] Supabase load failed, trying localStorage:', e);
-      }
-      
-      // Fallback to localStorage
-      const saved = localStorage.getItem('frivilligfest2026');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
-            setChecklistItems(parsed.items);
-            const restoredChecklist: Record<string, { status: boolean; date: Date | null; note: string; assignedTo: string }> = {};
-            Object.keys(parsed.checklist || {}).forEach(key => {
-              restoredChecklist[key] = {
-                status: parsed.checklist[key].status,
-                date: parsed.checklist[key].date ? new Date(parsed.checklist[key].date) : null,
-                note: parsed.checklist[key].note || "",
-                assignedTo: parsed.checklist[key].assignedTo || ""
-              };
-            });
-            setChecklist(restoredChecklist);
-          }
-        } catch (e) {
-          console.error('[INIT] localStorage parse error:', e);
-        }
-      }
-    };
-    
-    initializeData();
-  }, []);
+    loadFromStorage(false);
+  }, [loadFromStorage]);
   
   // Load from localStorage when dialog opens
   useEffect(() => {
@@ -233,19 +171,18 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     }
   }, [open, loadFromStorage]);
   
-  // Poll Supabase Storage for changes when dialog is open (cross-device sync)
+  // Poll database for changes when dialog is open (cross-device sync)
   useEffect(() => {
     if (!open) return;
     
     const interval = setInterval(async () => {
       try {
-        const { data, error } = await supabase.storage
-          .from(STORAGE_BUCKET)
-          .download(STORAGE_FILE);
+        const { data: funcData, error } = await supabase.functions.invoke('frivilligfest-checklist', {
+          method: 'GET'
+        });
         
-        if (!error && data) {
-          const text = await data.text();
-          const parsed = JSON.parse(text);
+        if (!error && funcData?.success && funcData?.data) {
+          const parsed = funcData.data;
           
           if (parsed.items && Array.isArray(parsed.items)) {
             setChecklistItems((currentItems) => {
@@ -270,7 +207,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     return () => clearInterval(interval);
   }, [open, loadFromStorage]);
 
-  // Save to Supabase Storage (cross-device sync) whenever checklist or items change
+  // Save to database via Edge Function (cross-device sync) whenever checklist or items change
   useEffect(() => {
     if (checklistItems.length === 0) {
       return;
@@ -283,30 +220,24 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         timestamp: Date.now()
       };
       
-      console.log('[SAVE] Saving to Supabase Storage, items count:', checklistItems.length);
+      console.log('[SAVE] Saving to database, items count:', checklistItems.length);
       
       try {
-        // Convert to JSON string and create blob
-        const jsonString = JSON.stringify(dataToSave);
-        const blob = new Blob([jsonString], { type: 'application/json' });
+        // Try Edge Function first
+        const { error: funcError } = await supabase.functions.invoke('frivilligfest-checklist', {
+          method: 'POST',
+          body: dataToSave
+        });
         
-        // Upload to Supabase Storage
-        const { error: uploadError } = await supabase.storage
-          .from(STORAGE_BUCKET)
-          .upload(STORAGE_FILE, blob, {
-            upsert: true,
-            contentType: 'application/json'
-          });
-        
-        if (uploadError) {
-          console.error('[SAVE] Supabase upload error:', uploadError);
+        if (funcError) {
+          console.error('[SAVE] Database save error:', funcError);
           // Fallback to localStorage
-          localStorage.setItem('frivilligfest2026', jsonString);
+          localStorage.setItem('frivilligfest2026', JSON.stringify(dataToSave));
           console.log('[SAVE] Saved to localStorage as fallback');
         } else {
-          console.log('[SAVE] Successfully saved to Supabase Storage');
+          console.log('[SAVE] Successfully saved to database');
           // Also save to localStorage as backup
-          localStorage.setItem('frivilligfest2026', jsonString);
+          localStorage.setItem('frivilligfest2026', JSON.stringify(dataToSave));
         }
       } catch (e) {
         console.error('[SAVE] Error:', e);
