@@ -536,7 +536,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                       await loadFromStorage(true);
                     }}
                     className="min-h-[44px] px-2 sm:px-3"
-                    title="Opdater liste fra localStorage"
+                    title="Opdater liste fra database"
                   >
                     {isRefreshing ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
