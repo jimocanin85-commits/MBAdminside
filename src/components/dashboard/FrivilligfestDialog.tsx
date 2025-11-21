@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, RefreshCw } from "lucide-react";
+import { Plus, Trash2, RefreshCw, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +46,9 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   const [checklist, setChecklist] = useState<Record<string, { status: boolean; date: Date | null; note: string; assignedTo: string }>>({});
   const [checklistDateInputs, setChecklistDateInputs] = useState<Record<string, string>>({});
   const [newTaskLabel, setNewTaskLabel] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
+  const [refreshMessage, setRefreshMessage] = useState<string>("");
 
   // Debug: Log state changes
   useEffect(() => {
@@ -57,27 +60,43 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   const [refreshKey, setRefreshKey] = useState(0);
   
   // Load from localStorage - simple and direct
-  const loadFromStorage = useCallback(() => {
+  const loadFromStorage = useCallback((showFeedback = false) => {
     console.log('[LOAD] ===== loadFromStorage START =====');
+    if (showFeedback) {
+      setIsRefreshing(true);
+      setRefreshMessage("");
+    }
+    
     const saved = localStorage.getItem(STORAGE_KEY);
     console.log('[LOAD] Raw localStorage:', saved ? 'EXISTS' : 'EMPTY');
+    console.log('[LOAD] Full localStorage data:', saved);
     
     if (!saved) {
       console.log('[LOAD] No data in localStorage');
+      if (showFeedback) {
+        setRefreshMessage("Ingen data fundet i localStorage");
+        setIsRefreshing(false);
+        setTimeout(() => setRefreshMessage(""), 3000);
+      }
       return;
     }
     
     try {
       const parsed = JSON.parse(saved);
       console.log('[LOAD] Parsed successfully');
+      console.log('[LOAD] Full parsed object:', JSON.stringify(parsed, null, 2));
       console.log('[LOAD] Items:', parsed.items);
       console.log('[LOAD] Items count:', parsed.items?.length);
+      console.log('[LOAD] Items details:', parsed.items?.map((i: ChecklistItem) => ({ id: i.id, label: i.label })));
       
       if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
-        console.log('[LOAD] Setting', parsed.items.length, 'items');
+        const itemCount = parsed.items.length;
+        const itemLabels = parsed.items.map((i: ChecklistItem) => i.label).join(", ");
+        console.log('[LOAD] Setting', itemCount, 'items:', itemLabels);
+        
         // Force update by creating new array reference
         setChecklistItems([...parsed.items]);
-        console.log('[LOAD] setChecklistItems called');
+        console.log('[LOAD] setChecklistItems called with', itemCount, 'items');
         
         // Load checklist data
         const restoredChecklist: Record<string, { status: boolean; date: Date | null; note: string; assignedTo: string }> = {};
@@ -100,12 +119,30 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         
         // Force re-render
         setRefreshKey(prev => prev + 1);
+        setLastRefreshTime(new Date());
+        
+        if (showFeedback) {
+          setRefreshMessage(`${itemCount} opgave${itemCount !== 1 ? 'r' : ''} indlæst: ${itemLabels}`);
+          setIsRefreshing(false);
+          setTimeout(() => setRefreshMessage(""), 5000);
+        }
+        
         console.log('[LOAD] ===== loadFromStorage COMPLETE =====');
       } else {
         console.log('[LOAD] No valid items array');
+        if (showFeedback) {
+          setRefreshMessage("Ingen gyldige opgaver fundet");
+          setIsRefreshing(false);
+          setTimeout(() => setRefreshMessage(""), 3000);
+        }
       }
     } catch (e) {
       console.error('[LOAD] Parse error:', e);
+      if (showFeedback) {
+        setRefreshMessage("Fejl ved indlæsning af data");
+        setIsRefreshing(false);
+        setTimeout(() => setRefreshMessage(""), 3000);
+      }
     }
   }, []);
   
@@ -122,9 +159,9 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   useEffect(() => {
     if (open) {
       console.log('[LOAD] Dialog opened, loading from localStorage');
-      loadFromStorage();
+      loadFromStorage(false);
     }
-  }, [open]);
+  }, [open, loadFromStorage]);
   
   // Listen for storage changes from other tabs/windows (cross-device sync)
   useEffect(() => {
@@ -426,61 +463,116 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                   <Plus className="h-4 w-4" />
                   <span className="hidden sm:inline">Tilføj</span>
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  type="button"
-                  onClick={() => {
-                    console.log('[REFRESH] ===== BUTTON CLICKED =====');
-                    console.log('[REFRESH] Current items:', checklistItems.length);
-                    
-                    // Read directly from localStorage
-                    const saved = localStorage.getItem(STORAGE_KEY);
-                    console.log('[REFRESH] localStorage exists:', !!saved);
-                    
-                    if (saved) {
-                      try {
-                        const parsed = JSON.parse(saved);
-                        console.log('[REFRESH] Parsed items count:', parsed.items?.length);
-                        
-                        if (parsed.items && Array.isArray(parsed.items)) {
-                          console.log('[REFRESH] Items:', parsed.items.map(i => i.label));
+                <div className="flex flex-col items-end gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    disabled={isRefreshing}
+                    onClick={async () => {
+                      console.log('[REFRESH] ===== BUTTON CLICKED =====');
+                      console.log('[REFRESH] Current items:', checklistItems.length);
+                      console.log('[REFRESH] Current items labels:', checklistItems.map(i => i.label));
+                      
+                      setIsRefreshing(true);
+                      setRefreshMessage("Indlæser...");
+                      
+                      // Small delay for visual feedback
+                      await new Promise(resolve => setTimeout(resolve, 300));
+                      
+                      // Read directly from localStorage
+                      const saved = localStorage.getItem(STORAGE_KEY);
+                      console.log('[REFRESH] localStorage exists:', !!saved);
+                      console.log('[REFRESH] localStorage content:', saved);
+                      
+                      if (saved) {
+                        try {
+                          const parsed = JSON.parse(saved);
+                          console.log('[REFRESH] Parsed successfully');
+                          console.log('[REFRESH] Parsed items:', parsed.items);
+                          console.log('[REFRESH] Parsed items count:', parsed.items?.length);
+                          console.log('[REFRESH] Parsed items labels:', parsed.items?.map((i: ChecklistItem) => i.label));
                           
-                          // FORCE UPDATE - Create completely new array
-                          const newItems = parsed.items.map(item => ({ ...item }));
-                          console.log('[REFRESH] Setting new items array');
-                          setChecklistItems(newItems);
-                          
-                          // Update checklist data
-                          const restoredChecklist: Record<string, { status: boolean; date: Date | null; note: string; assignedTo: string }> = {};
-                          Object.keys(parsed.checklist || {}).forEach(key => {
-                            restoredChecklist[key] = {
-                              status: parsed.checklist[key].status ?? false,
-                              date: parsed.checklist[key].date ? new Date(parsed.checklist[key].date) : null,
-                              note: parsed.checklist[key].note || "",
-                              assignedTo: parsed.checklist[key].assignedTo || ""
-                            };
-                          });
-                          setChecklist(restoredChecklist);
-                          
-                          // Force re-render
-                          setRefreshKey(k => k + 1);
-                          console.log('[REFRESH] ===== UPDATE COMPLETE =====');
+                          if (parsed.items && Array.isArray(parsed.items)) {
+                            // FORCE UPDATE - Create completely new array with new object references
+                            const newItems = parsed.items.map(item => ({
+                              id: item.id,
+                              label: item.label,
+                              note: item.note || ""
+                            }));
+                            console.log('[REFRESH] New items array created:', newItems);
+                            console.log('[REFRESH] Setting checklistItems to:', newItems.length, 'items');
+                            
+                            setChecklistItems(newItems);
+                            
+                            // Update checklist data
+                            const restoredChecklist: Record<string, { status: boolean; date: Date | null; note: string; assignedTo: string }> = {};
+                            Object.keys(parsed.checklist || {}).forEach(key => {
+                              restoredChecklist[key] = {
+                                status: parsed.checklist[key].status ?? false,
+                                date: parsed.checklist[key].date ? new Date(parsed.checklist[key].date) : null,
+                                note: parsed.checklist[key].note || "",
+                                assignedTo: parsed.checklist[key].assignedTo || ""
+                              };
+                            });
+                            setChecklist(restoredChecklist);
+                            
+                            // Force re-render
+                            setRefreshKey(k => k + 1);
+                            setLastRefreshTime(new Date());
+                            
+                            const itemLabels = newItems.map(i => i.label).join(", ");
+                            setRefreshMessage(`${newItems.length} opgave${newItems.length !== 1 ? 'r' : ''} indlæst: ${itemLabels}`);
+                            console.log('[REFRESH] ===== UPDATE COMPLETE =====');
+                          } else {
+                            setRefreshMessage("Ingen opgaver fundet");
+                            console.log('[REFRESH] No valid items array');
+                          }
+                        } catch (err) {
+                          console.error('[REFRESH] Error:', err);
+                          setRefreshMessage("Fejl ved indlæsning");
                         }
-                      } catch (err) {
-                        console.error('[REFRESH] Error:', err);
+                      } else {
+                        setRefreshMessage("Ingen data i localStorage");
+                        console.log('[REFRESH] No data in localStorage');
                       }
-                    }
-                    
-                    // Also call loadFromStorage
-                    loadFromStorage();
-                  }}
-                  className="min-h-[44px] px-2 sm:px-3"
-                  title="Opdater liste fra localStorage"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  <span className="hidden sm:inline ml-1">Opdater</span>
-                </Button>
+                      
+                      setIsRefreshing(false);
+                      setTimeout(() => setRefreshMessage(""), 5000);
+                      
+                      // Also call loadFromStorage for consistency
+                      loadFromStorage(true);
+                    }}
+                    className="min-h-[44px] px-2 sm:px-3"
+                    title="Opdater liste fra localStorage"
+                  >
+                    {isRefreshing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    <span className="hidden sm:inline ml-1">Opdater</span>
+                  </Button>
+                  {refreshMessage && (
+                    <div className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${
+                      refreshMessage.includes("Fejl") || refreshMessage.includes("Ingen")
+                        ? "bg-destructive/10 text-destructive"
+                        : "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+                    }`}>
+                      {refreshMessage.includes("Fejl") || refreshMessage.includes("Ingen") ? (
+                        <AlertCircle className="h-3 w-3" />
+                      ) : (
+                        <CheckCircle2 className="h-3 w-3" />
+                      )}
+                      <span>{refreshMessage}</span>
+                    </div>
+                  )}
+                  {lastRefreshTime && (
+                    <div className="text-xs text-muted-foreground">
+                      Opdateret: {lastRefreshTime.toLocaleTimeString()}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             <div className="space-y-3 md:space-y-2" key={`checklist-${refreshKey}`}>
