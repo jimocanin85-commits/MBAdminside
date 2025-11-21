@@ -10,7 +10,7 @@ import FrivilligfestDialog from "@/components/dashboard/FrivilligfestDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+// Removed Supabase import - no longer needed
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";

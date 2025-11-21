@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { functions } from "@/integrations/api/client";
 import {
   Dialog,
   DialogContent,
@@ -260,7 +260,7 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
       
       // Step 1: Delete all existing versions first
       try {
-        await supabase.functions.invoke('delete-backblaze-file', {
+        await functions.invoke('delete-backblaze-file', {
           body: { fileName }
         });
       } catch (deleteError) {
@@ -310,7 +310,7 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
       const cleanBase64 = wbout.replace(/\s/g, '');
       
       // Upload to Backblaze with proper data URL format
-      const { data, error } = await supabase.functions.invoke('upload-to-backblaze', {
+      const { data, error } = await functions.invoke('upload-to-backblaze', {
         body: {
           fileData: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${cleanBase64}`,
           fileName: fileName

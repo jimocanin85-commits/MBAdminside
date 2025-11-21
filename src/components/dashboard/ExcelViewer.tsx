@@ -6,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { X, Save } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
-import { supabase } from "@/integrations/supabase/client";
+import { functions } from "@/integrations/api/client";
 
 interface ExcelViewerProps {
   open: boolean;
@@ -98,7 +98,7 @@ export const ExcelViewer = ({ open, onOpenChange, fileName, fileData, onSaved }:
       const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
 
       // Upload to Backblaze
-      const { data, error } = await supabase.functions.invoke('upload-to-backblaze', {
+      const { data, error } = await functions.invoke('upload-to-backblaze', {
         body: {
           fileData: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${wbout}`,
           fileName: fileName

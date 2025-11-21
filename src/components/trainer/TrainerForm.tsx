@@ -5,7 +5,7 @@ import * as z from "zod";
 import { format } from "date-fns";
 import { CalendarIcon, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { functions } from "@/integrations/api/client";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -298,7 +298,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
       const cleanBase64 = wbout.replace(/\s/g, '');
       
       // Upload to Backblaze with proper data URL format
-      const { data: uploadData, error: uploadError } = await supabase.functions.invoke('upload-to-backblaze', {
+      const { data: uploadData, error: uploadError } = await functions.invoke('upload-to-backblaze', {
         body: {
           fileName,
           fileData: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${cleanBase64}`

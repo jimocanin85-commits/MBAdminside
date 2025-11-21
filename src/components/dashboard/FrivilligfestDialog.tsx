@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, RefreshCw, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { functions } from "@/integrations/api/client";
 import {
   Dialog,
   DialogContent,
@@ -68,7 +68,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     try {
       // Try Edge Function first (for cross-device sync)
       try {
-        const { data: funcData, error: funcError } = await supabase.functions.invoke('frivilligfest-checklist', {
+        const { data: funcData, error: funcError } = await functions.invoke('frivilligfest-checklist', {
           method: 'GET'
         });
         
@@ -191,7 +191,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     
     const interval = setInterval(async () => {
       try {
-        const { data: funcData, error } = await supabase.functions.invoke('frivilligfest-checklist', {
+        const { data: funcData, error } = await functions.invoke('frivilligfest-checklist', {
           method: 'GET'
         });
         
@@ -245,7 +245,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     // Try to save to Edge Function for cross-device sync (optional)
     const saveToEdgeFunction = async () => {
       try {
-        const { error: funcError } = await supabase.functions.invoke('frivilligfest-checklist', {
+        const { error: funcError } = await functions.invoke('frivilligfest-checklist', {
           method: 'POST',
           body: dataToSave
         });

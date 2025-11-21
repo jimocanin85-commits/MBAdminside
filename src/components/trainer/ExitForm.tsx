@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { functions } from "@/integrations/api/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
@@ -55,7 +55,7 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
 
   const loadFiles = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('list-backblaze-files');
+      const { data, error } = await functions.invoke('list-backblaze-files');
       
       if (error) throw error;
       
@@ -79,7 +79,7 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
 
     try {
       // Download the existing Excel file
-      const { data: downloadData, error: downloadError } = await supabase.functions.invoke(
+      const { data: downloadData, error: downloadError } = await functions.invoke(
         'download-backblaze-file',
         { body: { fileName: selectedFile } }
       );
@@ -183,7 +183,7 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
         const base64data = reader.result as string;
 
         // Upload back to Backblaze
-        const { error: uploadError } = await supabase.functions.invoke('upload-to-backblaze', {
+        const { error: uploadError } = await functions.invoke('upload-to-backblaze', {
           body: {
             fileData: base64data,
             fileName: selectedFile

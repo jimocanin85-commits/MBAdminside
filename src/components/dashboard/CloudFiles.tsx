@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { functions } from "@/integrations/api/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -46,14 +46,16 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
       setLoading(true);
       console.log('CloudFiles: Loading files from Backblaze...');
       
-      const { data, error } = await supabase.functions.invoke('list-backblaze-files');
+      const { data, error } = await functions.invoke('list-backblaze-files');
 
       console.log('CloudFiles: Response:', { data, error });
 
       if (error) {
         console.error('CloudFiles: Error loading files:', error);
         toast.error("Kunne ikke indlæse filer", {
-          description: error.message
+          description: typeof error === 'object' && error !== null && 'message' in error 
+            ? String(error.message) 
+            : String(error)
         });
         return;
       }
@@ -80,9 +82,10 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
     try {
       toast.loading("Henter fil...");
       
-      // Download file through edge function
-      const { data: downloadData, error } = await supabase.functions.invoke('download-backblaze-file', {
-        body: { fileName: file.fileName }
+      // Download file through API function
+      const { data: downloadData, error } = await functions.invoke('download-backblaze-file', {
+        method: 'POST',
+        body: { fileName: file.fileName, fileId: file.fileId }
       });
 
       if (error) {
@@ -136,8 +139,9 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
     try {
       console.log('Attempting to delete file:', fileToDelete.fileName);
       
-      const { data, error } = await supabase.functions.invoke('delete-backblaze-file', {
-        body: { fileName: fileToDelete.fileName }
+      const { data, error } = await functions.invoke('delete-backblaze-file', {
+        method: 'POST',
+        body: { fileName: fileToDelete.fileName, fileId: fileToDelete.fileId }
       });
 
       console.log('Delete response:', { data, error });
