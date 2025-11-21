@@ -445,7 +445,25 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
           {/* Checklist Section */}
           <div className="border rounded-lg p-4 sm:p-6 bg-background">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-              <h3 className="font-semibold text-base sm:text-lg">Tjekliste</h3>
+              <div className="flex flex-col gap-1">
+                <h3 className="font-semibold text-base sm:text-lg">Tjekliste</h3>
+                {/* Debug info - show localStorage status */}
+                <div className="text-xs text-muted-foreground">
+                  {checklistItems.length} opgave{checklistItems.length !== 1 ? 'r' : ''} i state | 
+                  localStorage: {(() => {
+                    const saved = localStorage.getItem(STORAGE_KEY);
+                    if (saved) {
+                      try {
+                        const parsed = JSON.parse(saved);
+                        return parsed.items?.length || 0;
+                      } catch {
+                        return '?';
+                      }
+                    }
+                    return '0';
+                  })()} opgaver
+                </div>
+              </div>
               <div className="flex gap-2 w-full sm:w-auto items-center">
                 <Input
                   placeholder="Tilføj ny opgave..."
