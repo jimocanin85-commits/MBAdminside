@@ -53,36 +53,8 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     console.log('[FrivilligfestDialog] checklistItems length:', checklistItems.length);
   }, [checklistItems]);
 
-  // Load from localStorage when dialog opens - use ref to track if we've loaded
-  const hasLoadedRef = useRef(false);
-  
-  // Check and migrate localStorage if version changed
-  useEffect(() => {
-    const storedVersion = localStorage.getItem(STORAGE_VERSION_KEY);
-    if (storedVersion !== STORAGE_VERSION) {
-      console.log('[CACHE] Version mismatch, clearing old cache. Old:', storedVersion, 'New:', STORAGE_VERSION);
-      // Optionally migrate data here, or clear if breaking changes
-      localStorage.setItem(STORAGE_VERSION_KEY, STORAGE_VERSION);
-    }
-  }, []);
-  
-  useEffect(() => {
-    console.log('[LOAD] useEffect triggered, open:', open, 'hasLoadedRef.current:', hasLoadedRef.current);
-    console.log('[LOAD] Current checklistItems before load:', checklistItems);
-    
-    if (!open) {
-      // Reset the ref when dialog closes so we reload next time
-      console.log('[LOAD] Dialog closed, resetting hasLoadedRef');
-      hasLoadedRef.current = false;
-      return;
-    }
-    
-    // Only load once when dialog opens, not on every open change
-    if (hasLoadedRef.current) {
-      console.log('[LOAD] Already loaded, skipping - current items:', checklistItems.length);
-      return;
-    }
-    
+  // Load from localStorage when dialog opens
+  const loadFromStorage = () => {
     console.log('[LOAD] Loading from localStorage...');
     const saved = localStorage.getItem(STORAGE_KEY);
     console.log('[LOAD] Raw localStorage data:', saved);
@@ -98,11 +70,10 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         // Load checklist items - only if there are items, otherwise keep default
         if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
           console.log('[LOAD] Loading', parsed.items.length, 'items from localStorage:', parsed.items);
-          console.log('[LOAD] Current state has', checklistItems.length, 'items, will replace with', parsed.items.length);
           setChecklistItems(parsed.items);
           console.log('[LOAD] State updated with items');
         } else {
-          console.log('[LOAD] No valid items in localStorage, keeping current state with', checklistItems.length, 'items');
+          console.log('[LOAD] No valid items in localStorage');
         }
         
         // Load checklist data
@@ -123,18 +94,72 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         
         setChecklist(restoredChecklist);
         setChecklistDateInputs(restoredDateInputs);
-        hasLoadedRef.current = true;
-        console.log('[LOAD] Load complete, hasLoadedRef set to true');
+        console.log('[LOAD] Load complete');
       } catch (e) {
         console.error('[LOAD] Error loading Frivilligfest data:', e);
-        // On error, keep the default item that's already in state
-        hasLoadedRef.current = true;
       }
     } else {
-      console.log('[LOAD] No saved data in localStorage, keeping current state with', checklistItems.length, 'items');
-      hasLoadedRef.current = true;
+      console.log('[LOAD] No saved data in localStorage');
+    }
+  };
+  
+  // Check and migrate localStorage if version changed
+  useEffect(() => {
+    const storedVersion = localStorage.getItem(STORAGE_VERSION_KEY);
+    if (storedVersion !== STORAGE_VERSION) {
+      console.log('[CACHE] Version mismatch, clearing old cache. Old:', storedVersion, 'New:', STORAGE_VERSION);
+      localStorage.setItem(STORAGE_VERSION_KEY, STORAGE_VERSION);
+    }
+  }, []);
+  
+  // Load from localStorage when dialog opens
+  useEffect(() => {
+    if (open) {
+      console.log('[LOAD] Dialog opened, loading from localStorage');
+      loadFromStorage();
     }
   }, [open]);
+  
+  // Listen for storage changes from other tabs/windows (cross-device sync)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue && open) {
+        console.log('[SYNC] Storage changed detected, reloading data');
+        loadFromStorage();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [open]);
+  
+  // Also check for localStorage changes periodically when dialog is open (for same-tab updates)
+  useEffect(() => {
+    if (!open) return;
+    
+    const interval = setInterval(() => {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          const currentTimestamp = parsed.timestamp || 0;
+          const stateTimestamp = checklistItems.length > 0 ? Date.now() : 0; // Simple check
+          
+          // If localStorage has more items than current state, reload
+          if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > checklistItems.length) {
+            console.log('[SYNC] Detected new items in localStorage, reloading');
+            loadFromStorage();
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+      }
+    }, 2000); // Check every 2 seconds
+    
+    return () => clearInterval(interval);
+  }, [open, checklistItems.length]);
 
   useEffect(() => {
     // Don't save if items array is empty (shouldn't happen, but safety check)
@@ -387,22 +412,10 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                   size="sm"
                   onClick={() => {
                     console.log('[REFRESH] Manual refresh triggered');
-                    hasLoadedRef.current = false;
-                    const saved = localStorage.getItem(STORAGE_KEY);
-                    if (saved) {
-                      try {
-                        const parsed = JSON.parse(saved);
-                        if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
-                          setChecklistItems(parsed.items);
-                          console.log('[REFRESH] Reloaded', parsed.items.length, 'items');
-                        }
-                      } catch (e) {
-                        console.error('[REFRESH] Error reloading:', e);
-                      }
-                    }
+                    loadFromStorage();
                   }}
                   className="min-h-[44px] px-2 sm:px-3"
-                  title="Opdater liste"
+                  title="Opdater liste fra localStorage"
                 >
                   <RefreshCw className="h-4 w-4" />
                   <span className="hidden sm:inline ml-1">Opdater</span>
