@@ -57,34 +57,77 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   // Force refresh counter to trigger re-render
   const [refreshKey, setRefreshKey] = useState(0);
   
-  // Load from database via Edge Function (cross-device sync)
+  // Load from localStorage (primary) or Edge Function (if available)
   const loadFromStorage = useCallback(async (showFeedback = false) => {
-    console.log('[LOAD] ===== Loading from database =====');
+    console.log('[LOAD] ===== Loading checklist data =====');
     if (showFeedback) {
       setIsRefreshing(true);
-      setRefreshMessage("Indlæser fra database...");
+      setRefreshMessage("Indlæser...");
     }
     
     try {
-      // Try Edge Function first
-      const { data: funcData, error: funcError } = await supabase.functions.invoke('frivilligfest-checklist', {
-        method: 'GET'
-      });
+      // Try Edge Function first (for cross-device sync)
+      try {
+        const { data: funcData, error: funcError } = await supabase.functions.invoke('frivilligfest-checklist', {
+          method: 'GET'
+        });
+        
+        if (!funcError && funcData?.success && funcData?.data) {
+          const parsed = funcData.data;
+          console.log('[LOAD] Loaded from Edge Function:', parsed);
+          
+          if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
+            const itemCount = parsed.items.length;
+            const itemLabels = parsed.items.map((i: ChecklistItem) => i.label).join(", ");
+            console.log('[LOAD] Setting', itemCount, 'items from Edge Function:', itemLabels);
+            
+            setChecklistItems([...parsed.items]);
+            
+            const restoredChecklist: Record<string, { status: boolean; date: Date | null; note: string; assignedTo: string }> = {};
+            const restoredDateInputs: Record<string, string> = {};
+            
+            Object.keys(parsed.checklist || {}).forEach(key => {
+              restoredChecklist[key] = {
+                status: parsed.checklist[key].status,
+                date: parsed.checklist[key].date ? new Date(parsed.checklist[key].date) : null,
+                note: parsed.checklist[key].note || "",
+                assignedTo: parsed.checklist[key].assignedTo || ""
+              };
+              if (parsed.checklist[key].date) {
+                restoredDateInputs[key] = format(new Date(parsed.checklist[key].date), "dd/MM/yyyy");
+              }
+            });
+            
+            setChecklist(restoredChecklist);
+            setChecklistDateInputs(restoredDateInputs);
+            setRefreshKey(prev => prev + 1);
+            setLastRefreshTime(new Date());
+            
+            if (showFeedback) {
+              setRefreshMessage(`${itemCount} opgave${itemCount !== 1 ? 'r' : ''} indlæst: ${itemLabels}`);
+              setIsRefreshing(false);
+              setTimeout(() => setRefreshMessage(""), 5000);
+            }
+            return;
+          }
+        }
+      } catch (funcErr) {
+        console.log('[LOAD] Edge Function not available, using localStorage:', funcErr);
+      }
       
-      if (!funcError && funcData?.success && funcData?.data) {
-        const parsed = funcData.data;
-        console.log('[LOAD] Loaded from database:', parsed);
-        console.log('[LOAD] Items:', parsed.items);
-        console.log('[LOAD] Items count:', parsed.items?.length);
+      // Use localStorage (works on same device)
+      const saved = localStorage.getItem('frivilligfest2026');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        console.log('[LOAD] Loaded from localStorage:', parsed);
         
         if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
           const itemCount = parsed.items.length;
           const itemLabels = parsed.items.map((i: ChecklistItem) => i.label).join(", ");
-          console.log('[LOAD] Setting', itemCount, 'items:', itemLabels);
+          console.log('[LOAD] Setting', itemCount, 'items from localStorage:', itemLabels);
           
           setChecklistItems([...parsed.items]);
           
-          // Load checklist data
           const restoredChecklist: Record<string, { status: boolean; date: Date | null; note: string; assignedTo: string }> = {};
           const restoredDateInputs: Record<string, string> = {};
           
@@ -109,35 +152,6 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
             setRefreshMessage(`${itemCount} opgave${itemCount !== 1 ? 'r' : ''} indlæst: ${itemLabels}`);
             setIsRefreshing(false);
             setTimeout(() => setRefreshMessage(""), 5000);
-          }
-          
-          console.log('[LOAD] ===== Load complete =====');
-          return;
-        }
-      }
-      
-      // Fallback to localStorage
-      console.log('[LOAD] Database not available, using localStorage:', funcError?.message);
-      const saved = localStorage.getItem('frivilligfest2026');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
-          setChecklistItems([...parsed.items]);
-          const restoredChecklist: Record<string, { status: boolean; date: Date | null; note: string; assignedTo: string }> = {};
-          Object.keys(parsed.checklist || {}).forEach(key => {
-            restoredChecklist[key] = {
-              status: parsed.checklist[key].status,
-              date: parsed.checklist[key].date ? new Date(parsed.checklist[key].date) : null,
-              note: parsed.checklist[key].note || "",
-              assignedTo: parsed.checklist[key].assignedTo || ""
-            };
-          });
-          setChecklist(restoredChecklist);
-          setRefreshKey(prev => prev + 1);
-          if (showFeedback) {
-            setRefreshMessage(`${parsed.items.length} opgaver indlæst fra cache`);
-            setIsRefreshing(false);
-            setTimeout(() => setRefreshMessage(""), 3000);
           }
           return;
         }
@@ -171,7 +185,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     }
   }, [open, loadFromStorage]);
   
-  // Poll database for changes when dialog is open (cross-device sync)
+  // Poll for changes when dialog is open (cross-device sync via Edge Function)
   useEffect(() => {
     if (!open) return;
     
@@ -186,12 +200,11 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
           
           if (parsed.items && Array.isArray(parsed.items)) {
             setChecklistItems((currentItems) => {
-              // Check if items are different
               const currentIds = currentItems.map(i => i.id).sort().join('|');
               const newIds = parsed.items.map((i: ChecklistItem) => i.id).sort().join('|');
               
               if (currentIds !== newIds || parsed.items.length !== currentItems.length) {
-                console.log('[SYNC] Changes detected, reloading from database');
+                console.log('[SYNC] Changes detected from Edge Function');
                 loadFromStorage(false);
                 return parsed.items.map((item: ChecklistItem) => ({ ...item }));
               }
@@ -200,57 +213,54 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
           }
         }
       } catch (e) {
-        // Ignore errors
+        // Edge Function not available, skip polling
       }
-    }, 3000); // Check every 3 seconds
+    }, 3000);
     
     return () => clearInterval(interval);
   }, [open, loadFromStorage]);
 
-  // Save to database via Edge Function (cross-device sync) whenever checklist or items change
+  // Save to localStorage and Edge Function (if available) whenever checklist or items change
   useEffect(() => {
     if (checklistItems.length === 0) {
       return;
     }
     
-    const saveToDatabase = async () => {
-      const dataToSave = {
-        items: checklistItems,
-        checklist,
-        timestamp: Date.now()
-      };
-      
-      console.log('[SAVE] Saving to database, items count:', checklistItems.length);
-      
+    const dataToSave = {
+      items: checklistItems,
+      checklist,
+      timestamp: Date.now()
+    };
+    
+    const jsonString = JSON.stringify(dataToSave);
+    
+    // Always save to localStorage first (works immediately)
+    try {
+      localStorage.setItem('frivilligfest2026', jsonString);
+      console.log('[SAVE] Saved to localStorage, items count:', checklistItems.length);
+    } catch (localError) {
+      console.error('[SAVE] localStorage error:', localError);
+    }
+    
+    // Try to save to Edge Function for cross-device sync (optional)
+    const saveToEdgeFunction = async () => {
       try {
-        // Try Edge Function first
         const { error: funcError } = await supabase.functions.invoke('frivilligfest-checklist', {
           method: 'POST',
           body: dataToSave
         });
         
         if (funcError) {
-          console.error('[SAVE] Database save error:', funcError);
-          // Fallback to localStorage
-          localStorage.setItem('frivilligfest2026', JSON.stringify(dataToSave));
-          console.log('[SAVE] Saved to localStorage as fallback');
+          console.log('[SAVE] Edge Function not available (cross-device sync disabled):', funcError.message);
         } else {
-          console.log('[SAVE] Successfully saved to database');
-          // Also save to localStorage as backup
-          localStorage.setItem('frivilligfest2026', JSON.stringify(dataToSave));
+          console.log('[SAVE] Also saved to Edge Function for cross-device sync');
         }
       } catch (e) {
-        console.error('[SAVE] Error:', e);
-        // Fallback to localStorage
-        try {
-          localStorage.setItem('frivilligfest2026', JSON.stringify(dataToSave));
-        } catch (localError) {
-          console.error('[SAVE] localStorage error:', localError);
-        }
+        console.log('[SAVE] Edge Function not available:', e);
       }
     };
     
-    saveToDatabase();
+    saveToEdgeFunction();
   }, [checklist, checklistItems]);
 
   const addNewTask = () => {
