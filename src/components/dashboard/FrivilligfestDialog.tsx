@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,11 +53,12 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     console.log('[FrivilligfestDialog] checklistItems length:', checklistItems.length);
   }, [checklistItems]);
 
-  // Load from localStorage when dialog opens
-  const loadFromStorage = () => {
-    console.log('[LOAD] Loading from localStorage...');
+  // Load from localStorage - wrapped in useCallback to ensure stable reference
+  const loadFromStorage = useCallback(() => {
+    console.log('[LOAD] loadFromStorage called');
     const saved = localStorage.getItem(STORAGE_KEY);
     console.log('[LOAD] Raw localStorage data:', saved);
+    console.log('[LOAD] Current state items count:', checklistItems.length);
     
     if (saved) {
       try {
@@ -70,8 +71,10 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         // Load checklist items - only if there are items, otherwise keep default
         if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
           console.log('[LOAD] Loading', parsed.items.length, 'items from localStorage:', parsed.items);
+          console.log('[LOAD] Current state has', checklistItems.length, 'items');
+          console.log('[LOAD] Will update to', parsed.items.length, 'items');
           setChecklistItems(parsed.items);
-          console.log('[LOAD] State updated with items');
+          console.log('[LOAD] setChecklistItems called with', parsed.items.length, 'items');
         } else {
           console.log('[LOAD] No valid items in localStorage');
         }
@@ -94,14 +97,14 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         
         setChecklist(restoredChecklist);
         setChecklistDateInputs(restoredDateInputs);
-        console.log('[LOAD] Load complete');
+        console.log('[LOAD] Load complete - checklist and dateInputs updated');
       } catch (e) {
         console.error('[LOAD] Error loading Frivilligfest data:', e);
       }
     } else {
       console.log('[LOAD] No saved data in localStorage');
     }
-  };
+  }, [checklistItems.length]);
   
   // Check and migrate localStorage if version changed
   useEffect(() => {
@@ -410,9 +413,30 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    console.log('[REFRESH] Manual refresh triggered');
-                    loadFromStorage();
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('[REFRESH] Manual refresh button clicked');
+                    console.log('[REFRESH] loadFromStorage function:', typeof loadFromStorage);
+                    try {
+                      loadFromStorage();
+                      console.log('[REFRESH] loadFromStorage called successfully');
+                      // Force a re-render by checking localStorage directly
+                      const saved = localStorage.getItem(STORAGE_KEY);
+                      if (saved) {
+                        const parsed = JSON.parse(saved);
+                        if (parsed.items && Array.isArray(parsed.items)) {
+                          console.log('[REFRESH] Found', parsed.items.length, 'items in localStorage');
+                          console.log('[REFRESH] Current state has', checklistItems.length, 'items');
+                          if (parsed.items.length !== checklistItems.length) {
+                            console.log('[REFRESH] Count mismatch, forcing update');
+                            setChecklistItems(parsed.items);
+                          }
+                        }
+                      }
+                    } catch (error) {
+                      console.error('[REFRESH] Error in refresh handler:', error);
+                    }
                   }}
                   className="min-h-[44px] px-2 sm:px-3"
                   title="Opdater liste fra localStorage"
