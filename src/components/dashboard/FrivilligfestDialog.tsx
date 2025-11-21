@@ -150,13 +150,26 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          const currentTimestamp = parsed.timestamp || 0;
-          const stateTimestamp = checklistItems.length > 0 ? Date.now() : 0; // Simple check
           
-          // If localStorage has more items than current state, reload
-          if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > checklistItems.length) {
-            console.log('[SYNC] Detected new items in localStorage, reloading');
-            loadFromStorage();
+          // Always check if localStorage has different items than current state
+          if (parsed.items && Array.isArray(parsed.items)) {
+            // Use functional update to get current state
+            setChecklistItems((currentItems) => {
+              if (parsed.items.length !== currentItems.length) {
+                console.log('[SYNC] Item count changed:', currentItems.length, '->', parsed.items.length);
+                loadFromStorage();
+                return parsed.items.map(item => ({ ...item }));
+              }
+              // Check if items are actually different
+              const currentLabels = currentItems.map(i => i.id + i.label).sort().join('|');
+              const newLabels = parsed.items.map(i => i.id + i.label).sort().join('|');
+              if (currentLabels !== newLabels) {
+                console.log('[SYNC] Items changed, reloading');
+                loadFromStorage();
+                return parsed.items.map(item => ({ ...item }));
+              }
+              return currentItems;
+            });
           }
         } catch (e) {
           // Ignore errors
@@ -165,7 +178,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     }, 2000); // Check every 2 seconds
     
     return () => clearInterval(interval);
-  }, [open, checklistItems.length]);
+  }, [open, loadFromStorage]);
 
   useEffect(() => {
     // Don't save if items array is empty (shouldn't happen, but safety check)
