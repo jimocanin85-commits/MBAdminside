@@ -1,7 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-// Simple in-memory storage (for Vercel, consider using a database or KV store for persistence)
-let checklistData: any = null;
+import { getChecklistData, saveChecklistData } from '../src/integrations/database/client';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,22 +16,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (req.method === 'GET') {
+      // Try database first
+      const dbData = await getChecklistData();
+      
+      if (dbData) {
+        return res.status(200).json({ 
+          success: true, 
+          data: dbData 
+        });
+      }
+
+      // Fallback: return null if no data
       return res.status(200).json({ 
         success: true, 
-        data: checklistData 
+        data: null 
       });
     }
 
     if (req.method === 'POST') {
-      checklistData = req.body;
+      const dataToSave = req.body;
+      
+      await saveChecklistData(dataToSave);
+      
       return res.status(200).json({ 
         success: true, 
-        data: checklistData 
+        data: dataToSave 
       });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
+    console.error('Checklist API error:', error);
     return res.status(400).json({ 
       error: error instanceof Error ? error.message : 'Unknown error' 
     });
