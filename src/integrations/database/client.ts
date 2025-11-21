@@ -76,10 +76,10 @@ export async function saveChecklistData(data: any) {
     // Delete old records (keep only latest)
     await sql`DELETE FROM frivilligfest_checklist`;
 
-    // Insert new record (Neon handles JSON serialization automatically)
+    // Insert new record (Neon automatically serializes JavaScript objects to JSONB)
     await sql`
       INSERT INTO frivilligfest_checklist (data, updated_at)
-      VALUES (${JSON.stringify(data)}::jsonb, CURRENT_TIMESTAMP)
+      VALUES (${data}::jsonb, CURRENT_TIMESTAMP)
     `;
 
     return { success: true };
