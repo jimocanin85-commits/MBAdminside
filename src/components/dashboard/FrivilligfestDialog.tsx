@@ -53,12 +53,11 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     console.log('[FrivilligfestDialog] checklistItems length:', checklistItems.length);
   }, [checklistItems]);
 
-  // Load from localStorage - wrapped in useCallback to ensure stable reference
+  // Load from localStorage - use functional state updates to avoid stale closures
   const loadFromStorage = useCallback(() => {
     console.log('[LOAD] loadFromStorage called');
     const saved = localStorage.getItem(STORAGE_KEY);
     console.log('[LOAD] Raw localStorage data:', saved);
-    console.log('[LOAD] Current state items count:', checklistItems.length);
     
     if (saved) {
       try {
@@ -68,13 +67,21 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         console.log('[LOAD] Items array check:', Array.isArray(parsed.items));
         console.log('[LOAD] Items length:', parsed.items?.length);
         
-        // Load checklist items - only if there are items, otherwise keep default
+        // Load checklist items - always update if localStorage has items
         if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
           console.log('[LOAD] Loading', parsed.items.length, 'items from localStorage:', parsed.items);
-          console.log('[LOAD] Current state has', checklistItems.length, 'items');
-          console.log('[LOAD] Will update to', parsed.items.length, 'items');
-          setChecklistItems(parsed.items);
-          console.log('[LOAD] setChecklistItems called with', parsed.items.length, 'items');
+          // Use functional update to ensure we always get the latest
+          setChecklistItems((prevItems) => {
+            console.log('[LOAD] Previous items count:', prevItems.length);
+            console.log('[LOAD] New items count:', parsed.items.length);
+            // Always update if different
+            if (JSON.stringify(prevItems) !== JSON.stringify(parsed.items)) {
+              console.log('[LOAD] Items differ, updating state');
+              return parsed.items;
+            }
+            console.log('[LOAD] Items are the same, keeping current state');
+            return prevItems;
+          });
         } else {
           console.log('[LOAD] No valid items in localStorage');
         }
@@ -95,8 +102,18 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
           }
         });
         
-        setChecklist(restoredChecklist);
-        setChecklistDateInputs(restoredDateInputs);
+        setChecklist((prevChecklist) => {
+          if (JSON.stringify(prevChecklist) !== JSON.stringify(restoredChecklist)) {
+            return restoredChecklist;
+          }
+          return prevChecklist;
+        });
+        setChecklistDateInputs((prevInputs) => {
+          if (JSON.stringify(prevInputs) !== JSON.stringify(restoredDateInputs)) {
+            return restoredDateInputs;
+          }
+          return prevInputs;
+        });
         console.log('[LOAD] Load complete - checklist and dateInputs updated');
       } catch (e) {
         console.error('[LOAD] Error loading Frivilligfest data:', e);
@@ -104,7 +121,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     } else {
       console.log('[LOAD] No saved data in localStorage');
     }
-  }, [checklistItems.length]);
+  }, []);
   
   // Check and migrate localStorage if version changed
   useEffect(() => {
@@ -417,25 +434,50 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                     e.preventDefault();
                     e.stopPropagation();
                     console.log('[REFRESH] Manual refresh button clicked');
-                    console.log('[REFRESH] loadFromStorage function:', typeof loadFromStorage);
+                    console.log('[REFRESH] loadFromStorage function type:', typeof loadFromStorage);
+                    console.log('[REFRESH] Current checklistItems.length:', checklistItems.length);
+                    
+                    // Direct localStorage read and update
+                    const saved = localStorage.getItem(STORAGE_KEY);
+                    console.log('[REFRESH] localStorage data:', saved);
+                    
+                    if (saved) {
+                      try {
+                        const parsed = JSON.parse(saved);
+                        console.log('[REFRESH] Parsed items:', parsed.items);
+                        console.log('[REFRESH] Parsed items length:', parsed.items?.length);
+                        
+                        if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
+                          console.log('[REFRESH] Updating checklistItems from', checklistItems.length, 'to', parsed.items.length);
+                          setChecklistItems(parsed.items);
+                          
+                          // Also update checklist data
+                          const restoredChecklist: Record<string, { status: boolean; date: Date | null; note: string; assignedTo: string }> = {};
+                          Object.keys(parsed.checklist || {}).forEach(key => {
+                            restoredChecklist[key] = {
+                              status: parsed.checklist[key].status,
+                              date: parsed.checklist[key].date ? new Date(parsed.checklist[key].date) : null,
+                              note: parsed.checklist[key].note || "",
+                              assignedTo: parsed.checklist[key].assignedTo || ""
+                            };
+                          });
+                          setChecklist(restoredChecklist);
+                          console.log('[REFRESH] State updated successfully');
+                        } else {
+                          console.log('[REFRESH] No valid items in localStorage');
+                        }
+                      } catch (error) {
+                        console.error('[REFRESH] Error parsing localStorage:', error);
+                      }
+                    } else {
+                      console.log('[REFRESH] No data in localStorage');
+                    }
+                    
+                    // Also call loadFromStorage for consistency
                     try {
                       loadFromStorage();
-                      console.log('[REFRESH] loadFromStorage called successfully');
-                      // Force a re-render by checking localStorage directly
-                      const saved = localStorage.getItem(STORAGE_KEY);
-                      if (saved) {
-                        const parsed = JSON.parse(saved);
-                        if (parsed.items && Array.isArray(parsed.items)) {
-                          console.log('[REFRESH] Found', parsed.items.length, 'items in localStorage');
-                          console.log('[REFRESH] Current state has', checklistItems.length, 'items');
-                          if (parsed.items.length !== checklistItems.length) {
-                            console.log('[REFRESH] Count mismatch, forcing update');
-                            setChecklistItems(parsed.items);
-                          }
-                        }
-                      }
                     } catch (error) {
-                      console.error('[REFRESH] Error in refresh handler:', error);
+                      console.error('[REFRESH] Error calling loadFromStorage:', error);
                     }
                   }}
                   className="min-h-[44px] px-2 sm:px-3"
