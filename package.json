@@ -9,7 +9,8 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "db:init": "tsx scripts/init-database.ts"
+    "db:init": "tsx scripts/init-database.ts",
+    "test:backblaze": "tsx scripts/test-backblaze.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
