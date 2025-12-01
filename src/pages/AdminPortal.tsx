@@ -9,10 +9,11 @@ import { CloudFiles } from "@/components/dashboard/CloudFiles";
 import FrivilligfestDialog from "@/components/dashboard/FrivilligfestDialog";
 import LogsViewer from "@/components/admin/LogsViewer";
 import ReferaterViewer from "@/components/admin/ReferaterViewer";
+import { CreateUserDialog, User } from "@/components/admin/CreateUserDialog";
 import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown, Camera, Sparkles, ExternalLink, Calendar, RefreshCw, FileText } from "lucide-react";
+import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown, Camera, Sparkles, ExternalLink, Calendar, RefreshCw, FileText, Users } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 // Removed Supabase import - no longer needed
 import { toast } from "sonner";
@@ -48,9 +49,50 @@ const AdminPortal = () => {
     return !!localStorage.getItem('currentUser');
   });
   
-  // Check if user is restricted (Karina - only Frivilligfest, Brian - Frivilligfest + Årshjul + Frivillig)
+  // Get user permissions from localStorage
+  const [userPermissions, setUserPermissions] = useState<string[]>(() => {
+    if (!currentUser) return [];
+    
+    // Admin and Brian have all permissions
+    if (currentUser === 'admin' || currentUser === 'Brian') {
+      return ['frivillig', 'aarshjul', 'referater', 'frivilligfest'];
+    }
+    
+    // Karina is restricted
+    if (currentUser === 'Karina') {
+      return ['frivilligfest'];
+    }
+    
+    // Check custom users
+    try {
+      const customUsersJson = localStorage.getItem('customUsers');
+      if (customUsersJson) {
+        const customUsers: User[] = JSON.parse(customUsersJson);
+        const customUser = customUsers.find(u => u.username === currentUser);
+        if (customUser) {
+          return customUser.permissions || [];
+        }
+      }
+    } catch (error) {
+      console.error('Error reading user permissions:', error);
+    }
+    
+    return [];
+  });
+
+  // Check if user is restricted (Karina - only Frivilligfest)
   const isRestrictedUser = currentUser === 'Karina';
   const isBrianUser = currentUser === 'Brian';
+  
+  // Helper functions to check permissions
+  const hasPermission = (permission: string) => {
+    return userPermissions.includes(permission);
+  };
+  
+  const hasFrivilligAccess = hasPermission('frivillig') || currentUser === 'admin' || currentUser === 'Brian';
+  const hasAarshjulAccess = hasPermission('aarshjul') || currentUser === 'admin' || currentUser === 'Brian';
+  const hasReferaterAccess = hasPermission('referater') || currentUser === 'admin' || currentUser === 'Brian';
+  const hasFrivilligfestAccess = hasPermission('frivilligfest') || currentUser === 'admin' || currentUser === 'Brian' || currentUser === 'Karina';
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isExitFormOpen, setIsExitFormOpen] = useState(false);
   const [isSpreadsheetOpen, setIsSpreadsheetOpen] = useState(false);
@@ -66,6 +108,7 @@ const AdminPortal = () => {
   const [showLogsPasswordDialog, setShowLogsPasswordDialog] = useState(false);
   const [showClearCacheDialog, setShowClearCacheDialog] = useState(false);
   const [showReferaterViewer, setShowReferaterViewer] = useState(false);
+  const [showCreateUserDialog, setShowCreateUserDialog] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [currentView, setCurrentView] = useState<"home" | "cloud" | "form" | "settings">("home");
   const [showFrivilligfestDialog, setShowFrivilligfestDialog] = useState(false);
@@ -139,9 +182,36 @@ const AdminPortal = () => {
     if (currentUser) {
       localStorage.setItem('currentUser', currentUser);
       setIsAuthenticated(true);
+      
+      // Update user permissions based on current user
+      if (currentUser === 'admin' || currentUser === 'Brian') {
+        setUserPermissions(['frivillig', 'aarshjul', 'referater', 'frivilligfest']);
+      } else if (currentUser === 'Karina') {
+        setUserPermissions(['frivilligfest']);
+      } else {
+        // Check custom users
+        try {
+          const customUsersJson = localStorage.getItem('customUsers');
+          if (customUsersJson) {
+            const customUsers: User[] = JSON.parse(customUsersJson);
+            const customUser = customUsers.find(u => u.username === currentUser);
+            if (customUser) {
+              setUserPermissions(customUser.permissions || []);
+            } else {
+              setUserPermissions([]);
+            }
+          } else {
+            setUserPermissions([]);
+          }
+        } catch (error) {
+          console.error('Error reading user permissions:', error);
+          setUserPermissions([]);
+        }
+      }
     } else {
       localStorage.removeItem('currentUser');
       setIsAuthenticated(false);
+      setUserPermissions([]);
     }
   }, [currentUser]);
 
@@ -186,6 +256,7 @@ const AdminPortal = () => {
   const handleLogin = (username: string) => {
     setCurrentUser(username);
     logger.logLogin(username);
+    // Permissions will be updated automatically by useEffect when currentUser changes
   };
 
   const handleLogout = () => {
@@ -444,8 +515,8 @@ const AdminPortal = () => {
               <CardContent className="pt-4 sm:pt-6 md:pt-8 space-y-4 sm:space-y-6">
                 {/* Action Buttons - Visible on all screen sizes */}
                 <div className="flex flex-col sm:flex-row gap-3">
-                  {/* Frivillig dropdown - Show for admin and Brian (Brian has full access to all menu items) */}
-                  {!isRestrictedUser && (
+                  {/* Frivillig dropdown - Show for users with frivillig permission */}
+                  {hasFrivilligAccess && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button 
@@ -473,8 +544,8 @@ const AdminPortal = () => {
                     </DropdownMenu>
                   )}
                   
-                  {/* Årshjul - Show for admin and Brian */}
-                  {!isRestrictedUser && (
+                  {/* Årshjul - Show for users with aarshjul permission */}
+                  {hasAarshjulAccess && (
                     <Button 
                       size="lg" 
                       className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
@@ -485,8 +556,8 @@ const AdminPortal = () => {
                     </Button>
                   )}
                   
-                  {/* Referater fra Bestyrelsesmøder - Show for all authenticated users */}
-                  {!isRestrictedUser && (
+                  {/* Referater fra Bestyrelsesmøder - Show for users with referater permission */}
+                  {hasReferaterAccess && (
                     <Button 
                       size="lg" 
                       className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
@@ -497,7 +568,8 @@ const AdminPortal = () => {
                     </Button>
                   )}
                   
-                  {/* Frivilligfest - Show for all authenticated users */}
+                  {/* Frivilligfest - Show for users with frivilligfest permission */}
+                  {hasFrivilligfestAccess && (
                   <Button 
                     size="lg" 
                     className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
@@ -509,6 +581,7 @@ const AdminPortal = () => {
                     <UserPlus className="h-5 w-5" />
                     Frivilligfest 2026
                   </Button>
+                  )}
                 </div>
 
               {!isRestrictedUser && !isBrianUser && trainers.length > 0 ? (
@@ -648,6 +721,16 @@ const AdminPortal = () => {
           </Button>
           {isAdminMode && (
             <>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-12 w-12 rounded-full shadow-lg min-h-[48px] min-w-[48px]"
+                onClick={() => setShowCreateUserDialog(true)}
+                aria-label="Opret bruger"
+                title="Opret ny bruger"
+              >
+                <Users className="h-5 w-5" />
+              </Button>
               <Button
                 variant="outline"
                 size="icon"
@@ -801,6 +884,15 @@ const AdminPortal = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create User Dialog */}
+      <CreateUserDialog
+        open={showCreateUserDialog}
+        onOpenChange={setShowCreateUserDialog}
+        onUserCreated={(user) => {
+          toast.success(`Bruger "${user.username}" er nu oprettet og kan logge ind`);
+        }}
+      />
     </div>
     
     {/* Always render BottomNavigation to maintain hook order - hidden when not authenticated or restricted user */}

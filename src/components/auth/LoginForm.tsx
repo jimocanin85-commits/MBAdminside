@@ -16,6 +16,16 @@ const USERS = {
   Brian: "Monne1935"
 };
 
+interface CustomUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  password: string;
+  permissions: string[];
+  createdAt: Date;
+}
+
 const LoginForm = ({ onLogin }: LoginFormProps) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -29,12 +39,36 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
       const trimmedUsername = username.trim();
       const trimmedPassword = password.trim();
       
+      // Check hardcoded users first
       if (USERS[trimmedUsername as keyof typeof USERS] === trimmedPassword) {
         toast.success("Login successful!");
         onLogin(trimmedUsername);
-      } else {
-        toast.error("Forkert brugernavn eller adgangskode");
+        setIsLoading(false);
+        return;
       }
+      
+      // Check custom users from localStorage
+      try {
+        const customUsersJson = localStorage.getItem('customUsers');
+        if (customUsersJson) {
+          const customUsers: CustomUser[] = JSON.parse(customUsersJson);
+          const customUser = customUsers.find(
+            u => u.username === trimmedUsername && u.password === trimmedPassword
+          );
+          
+          if (customUser) {
+            toast.success("Login successful!");
+            onLogin(trimmedUsername);
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Error reading custom users:', error);
+      }
+      
+      // No match found
+      toast.error("Forkert brugernavn eller adgangskode");
       setIsLoading(false);
     }, 500);
   };
