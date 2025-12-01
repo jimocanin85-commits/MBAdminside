@@ -35,16 +35,20 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
   const loadUsers = () => {
     try {
       const customUsersJson = localStorage.getItem('customUsers');
+      console.log('UserManagement - Loading users from localStorage:', customUsersJson);
       if (customUsersJson) {
         const customUsers: User[] = JSON.parse(customUsersJson);
+        console.log('UserManagement - Parsed customUsers:', customUsers);
         // Convert createdAt strings back to Date objects
         // Show all users including Karina and Kyhl
         const usersWithDates = customUsers.map(user => ({
           ...user,
           createdAt: new Date(user.createdAt)
         }));
+        console.log('UserManagement - Setting users:', usersWithDates);
         setUsers(usersWithDates);
       } else {
+        console.log('UserManagement - No customUsers found in localStorage');
         setUsers([]);
       }
     } catch (error) {
@@ -55,9 +59,18 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
 
   useEffect(() => {
     if (open) {
+      console.log('UserManagement - Dialog opened, loading users...');
       loadUsers();
     }
   }, [open]);
+
+  // Debug: Log users when they change
+  useEffect(() => {
+    console.log('UserManagement - Users state changed:', users.length, 'users');
+    users.forEach((user, index) => {
+      console.log(`UserManagement - User ${index}:`, user.username, user.firstName, user.lastName);
+    });
+  }, [users]);
 
   const handleUserCreated = (newUser: User) => {
     loadUsers();
@@ -174,7 +187,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
             </div>
 
             {/* Custom Users Section */}
-            <div>
+            <div className="mt-6">
               <h3 className="text-sm font-semibold text-muted-foreground mb-2">
                 Almindelige brugere ({users.length})
               </h3>
