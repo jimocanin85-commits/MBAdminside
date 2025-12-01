@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { FileText, Upload, Loader2, Eye } from "lucide-react";
 import { functions } from "@/integrations/api/client";
 import { toast } from "sonner";
-import { format } from "date-fns";
 import mammoth from "mammoth";
 import * as XLSX from "xlsx";
 
@@ -607,9 +606,6 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
                         <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">{file.fileName}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(file.uploadTimestamp), 'dd/MM/yyyy HH:mm')}
-                          </p>
                         </div>
                       </div>
                       <Button
