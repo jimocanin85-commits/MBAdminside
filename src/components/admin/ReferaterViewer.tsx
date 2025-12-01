@@ -116,13 +116,25 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
           });
 
           if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            let errorData;
+            try {
+              const text = await response.text();
+              console.error('Upload error response text:', text);
+              errorData = JSON.parse(text);
+            } catch (e) {
+              errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
+            }
+            
             console.error('Upload error response:', {
               status: response.status,
               statusText: response.statusText,
-              errorData
+              errorData,
+              errorMessage: errorData.error,
+              errorDetails: errorData.received || errorData.details
             });
-            throw new Error(errorData.error || `Upload fejlede: ${response.status}`);
+            
+            const errorMessage = errorData.error || errorData.message || `Upload fejlede: ${response.status}`;
+            throw new Error(errorMessage);
           }
 
           const data = await response.json();

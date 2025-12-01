@@ -18,30 +18,64 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Vercel automatically parses JSON body, but handle edge cases
-    let body = req.body;
+    // Vercel serverless functions may not auto-parse large JSON bodies
+    // Try to get body from different sources
+    let body: any = req.body;
     
-    // If body is undefined or null, try to read from raw body
-    if (!body && (req as any).body) {
-      body = (req as any).body;
-    }
-    
-    // If body is still a string, parse it
+    // If body is a string (unparsed), parse it
     if (typeof body === 'string') {
       try {
         body = JSON.parse(body);
       } catch (e) {
         console.error('Failed to parse body as JSON:', e);
-        return res.status(400).json({ error: 'Invalid JSON body' });
+        return res.status(400).json({ 
+          error: 'Invalid JSON body',
+          details: e instanceof Error ? e.message : 'Unknown parsing error'
+        });
+      }
+    }
+    
+    // If body is still undefined, try to read from raw request
+    if (!body && (req as any).body) {
+      const rawBody = (req as any).body;
+      if (typeof rawBody === 'string') {
+        try {
+          body = JSON.parse(rawBody);
+        } catch (e) {
+          console.error('Failed to parse raw body as JSON:', e);
+          return res.status(400).json({ 
+            error: 'Invalid JSON body format',
+            details: e instanceof Error ? e.message : 'Unknown parsing error'
+          });
+        }
+      } else {
+        body = rawBody;
       }
     }
 
-    // If body is still not an object, return error
-    if (!body || typeof body !== 'object') {
-      console.error('Body is not an object:', { bodyType: typeof body, body });
-      return res.status(400).json({ error: 'Invalid request body format' });
+    // Validate body is an object
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      console.error('Body is not a valid object:', { 
+        bodyType: typeof body, 
+        isArray: Array.isArray(body),
+        hasBody: !!body,
+        bodyKeys: body ? Object.keys(body) : []
+      });
+      return res.status(400).json({ 
+        error: 'Invalid request body format',
+        received: { 
+          bodyType: typeof body, 
+          isArray: Array.isArray(body),
+          hasBody: !!body 
+        }
+      });
     }
 
+    // Log request details (but truncate fileData for logging)
+    const fileDataPreview = body?.fileData ? 
+      (typeof body.fileData === 'string' ? body.fileData.substring(0, 100) + '...' : 'not-string') : 
+      'missing';
+    
     console.log('Upload request received:', {
       method: req.method,
       hasBody: !!body,
@@ -51,19 +85,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       hasFileData: !!body?.fileData,
       fileDataType: typeof body?.fileData,
       fileDataLength: body?.fileData ? (typeof body.fileData === 'string' ? body.fileData.length : 'not-string') : 0,
+      fileDataPreview,
       folder: body?.folder
     });
 
     const { fileName, fileData, folder } = body;
 
     if (!fileName || !fileData) {
-      console.error('Missing required fields:', { 
+      const errorDetails = { 
         fileName: !!fileName, 
         fileData: !!fileData,
         fileNameValue: fileName,
         fileDataType: typeof fileData,
-        fileDataPreview: typeof fileData === 'string' ? fileData.substring(0, 50) : fileData
-      });
+        fileDataPreview: typeof fileData === 'string' ? fileData.substring(0, 100) : fileData,
+        bodyKeys: Object.keys(body || {}),
+        folder: folder
+      };
+      console.error('Missing required fields:', errorDetails);
       return res.status(400).json({ 
         error: 'fileName and fileData are required',
         received: {
@@ -71,7 +109,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           hasFileData: !!fileData,
           hasFolder: !!folder,
           fileNameValue: fileName,
-          fileDataType: typeof fileData
+          fileDataType: typeof fileData,
+          bodyKeys: Object.keys(body || {})
         }
       });
     }

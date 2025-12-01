@@ -48,10 +48,12 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
   const [refreshMessage, setRefreshMessage] = useState<string>("");
 
-  // Debug: Log state changes
+  // Debug: Log state changes (reduced logging)
   useEffect(() => {
-    console.log('[FrivilligfestDialog] checklistItems changed:', checklistItems);
-    console.log('[FrivilligfestDialog] checklistItems length:', checklistItems.length);
+    // Only log if there are significant changes
+    if (checklistItems.length > 0) {
+      // Reduced logging - only log when dialog is actually being used
+    }
   }, [checklistItems]);
 
   // Force refresh counter to trigger re-render
@@ -59,7 +61,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   
   // Load from localStorage (primary) or Edge Function (if available)
   const loadFromStorage = useCallback(async (showFeedback = false) => {
-    console.log('[LOAD] ===== Loading checklist data =====');
+    // Loading checklist data (reduced logging)
     if (showFeedback) {
       setIsRefreshing(true);
       setRefreshMessage("Indlæser...");
@@ -74,12 +76,12 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         
         if (!funcError && funcData?.success && funcData?.data) {
           const parsed = funcData.data;
-          console.log('[LOAD] Loaded from Edge Function:', parsed);
+          // Loaded from Edge Function (reduced logging)
           
           if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
             const itemCount = parsed.items.length;
             const itemLabels = parsed.items.map((i: ChecklistItem) => i.label).join(", ");
-            console.log('[LOAD] Setting', itemCount, 'items from Edge Function:', itemLabels);
+            // Setting items from Edge Function (reduced logging)
             
             setChecklistItems([...parsed.items]);
             
@@ -112,19 +114,19 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
           }
         }
       } catch (funcErr) {
-        console.log('[LOAD] Edge Function not available, using localStorage:', funcErr);
+        // Edge Function not available, using localStorage (reduced logging)
       }
       
       // Use localStorage (works on same device)
       const saved = localStorage.getItem('frivilligfest2026');
       if (saved) {
         const parsed = JSON.parse(saved);
-        console.log('[LOAD] Loaded from localStorage:', parsed);
+        // Loaded from localStorage (reduced logging)
         
         if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
           const itemCount = parsed.items.length;
           const itemLabels = parsed.items.map((i: ChecklistItem) => i.label).join(", ");
-          console.log('[LOAD] Setting', itemCount, 'items from localStorage:', itemLabels);
+          // Setting items from localStorage (reduced logging)
           
           setChecklistItems([...parsed.items]);
           
@@ -180,7 +182,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
   // Load from localStorage when dialog opens
   useEffect(() => {
     if (open) {
-      console.log('[LOAD] Dialog opened, loading from localStorage');
+      // Dialog opened, loading from localStorage (reduced logging)
       loadFromStorage(false);
     }
   }, [open, loadFromStorage]);
@@ -237,7 +239,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     // Always save to localStorage first (works immediately)
     try {
       localStorage.setItem('frivilligfest2026', jsonString);
-      console.log('[SAVE] Saved to localStorage, items count:', checklistItems.length);
+      // Saved to localStorage (reduced logging)
     } catch (localError) {
       console.error('[SAVE] localStorage error:', localError);
     }
@@ -251,12 +253,12 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
         });
         
         if (funcError) {
-          console.log('[SAVE] Edge Function not available (cross-device sync disabled):', funcError.message);
+          // Edge Function not available (reduced logging)
         } else {
-          console.log('[SAVE] Also saved to Edge Function for cross-device sync');
+          // Saved to Edge Function (reduced logging)
         }
       } catch (e) {
-        console.log('[SAVE] Edge Function not available:', e);
+        // Edge Function not available (reduced logging)
       }
     };
     
@@ -425,14 +427,10 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
     note: ""
   }];
   
-  // Debug: Log display items and rendering
+  // Debug: Log display items and rendering (reduced logging)
   useEffect(() => {
-    console.log('[FrivilligfestDialog] Dialog open:', open);
-    console.log('[FrivilligfestDialog] checklistItems:', checklistItems);
-    console.log('[FrivilligfestDialog] checklistItems.length:', checklistItems.length);
-    console.log('[FrivilligfestDialog] displayItems:', displayItems);
-    console.log('[FrivilligfestDialog] displayItems.length:', displayItems.length);
-    console.log('[FrivilligfestDialog] Will render', displayItems.length, 'items');
+    // Reduced logging - only log when dialog opens/closes
+    // Removed verbose logging to reduce console noise
   }, [open, checklistItems, displayItems]);
 
   return (
@@ -518,11 +516,10 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                 <div></div>
               </div>
               {(() => {
-                console.log('[RENDER] Rendering displayItems, count:', displayItems.length);
-                console.log('[RENDER] displayItems:', displayItems);
+                // Rendering displayItems (reduced logging)
                 
                 if (displayItems.length === 0) {
-                  console.log('[RENDER] Showing empty state');
+                  // Showing empty state (reduced logging)
                   return (
                     <div className="text-center py-8 text-muted-foreground">
                       <p>Ingen opgaver endnu. Tilføj en opgave ovenfor.</p>
@@ -530,9 +527,9 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                   );
                 }
                 
-                console.log('[RENDER] Mapping', displayItems.length, 'items');
+                // Mapping items (reduced logging)
                 return displayItems.map((item, index) => {
-                  console.log(`[RENDER] Rendering item ${index}:`, item);
+                  // Rendering item (reduced logging)
                   const checklistItem = checklist[item.id];
                   const isChecked = checklistItem?.status === true;
                   const dateInputValue = checklistDateInputs[item.id] || "";
