@@ -388,11 +388,8 @@ const AdminPortal = () => {
                       <div className="p-3 rounded-lg bg-muted">
                         <Calendar className="h-6 w-6 text-foreground" />
                       </div>
-                      <div className="flex-1 space-y-1">
+                      <div className="flex-1">
                         <h2 className="text-lg font-semibold">Frivilligfest 2026</h2>
-                        <p className="text-sm text-muted-foreground">
-                          Åbn Google Sheet med Frivilligfest checklisten
-                        </p>
                       </div>
                     </div>
                     
