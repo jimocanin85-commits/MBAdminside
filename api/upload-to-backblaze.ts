@@ -18,10 +18,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    console.log('Upload request received:', {
+      method: req.method,
+      hasBody: !!req.body,
+      bodyKeys: req.body ? Object.keys(req.body) : [],
+      fileName: req.body?.fileName,
+      hasFileData: !!req.body?.fileData,
+      fileDataLength: req.body?.fileData?.length,
+      folder: req.body?.folder
+    });
+
     const { fileName, fileData, folder } = req.body;
 
     if (!fileName || !fileData) {
-      return res.status(400).json({ error: 'fileName and fileData are required' });
+      console.error('Missing required fields:', { fileName: !!fileName, fileData: !!fileData });
+      return res.status(400).json({ 
+        error: 'fileName and fileData are required',
+        received: {
+          hasFileName: !!fileName,
+          hasFileData: !!fileData,
+          hasFolder: !!folder
+        }
+      });
     }
 
     const keyId = process.env.BACKBLAZE_KEY_ID;

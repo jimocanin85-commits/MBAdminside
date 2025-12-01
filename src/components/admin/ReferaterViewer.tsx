@@ -71,46 +71,68 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
       // Read file as base64
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const base64String = reader.result as string;
-        const base64Data = base64String.split(',')[1] || base64String;
+        try {
+          const base64String = reader.result as string;
+          const base64Data = base64String.split(',')[1] || base64String;
 
-        // Upload to Backblaze
-        const { error: uploadError } = await functions.invoke('upload-to-backblaze', {
-          method: 'POST',
-          body: {
-            fileName: file.name,
-            fileData: `data:${file.type};base64,${base64Data}`,
-            folder: `Referater/${selectedYear}`
+          if (!base64Data || base64Data.length === 0) {
+            throw new Error('Kunne ikke læse fil data');
           }
-        });
 
-        toast.dismiss(loadingToast);
+          console.log('Uploading file:', {
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+            folder: `Referater/${selectedYear}`,
+            base64Length: base64Data.length
+          });
 
-        if (uploadError) {
-          throw uploadError;
-        }
+          // Upload to Backblaze
+          const { data, error: uploadError } = await functions.invoke('upload-to-backblaze', {
+            method: 'POST',
+            body: {
+              fileName: file.name,
+              fileData: `data:${file.type || 'application/octet-stream'};base64,${base64Data}`,
+              folder: `Referater/${selectedYear}`
+            }
+          });
 
-        toast.success('Fil uploadet!');
-        // Reload files
-        loadFiles();
-        // Reset file input
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
+          toast.dismiss(loadingToast);
+
+          if (uploadError) {
+            console.error('Upload error:', uploadError);
+            throw new Error(uploadError.message || 'Upload fejlede');
+          }
+
+          toast.success('Fil uploadet!');
+          setIsUploading(false);
+          // Reload files
+          loadFiles();
+          // Reset file input
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        } catch (error) {
+          toast.dismiss(loadingToast);
+          setIsUploading(false);
+          console.error('Error uploading file:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Kunne ikke uploade fil';
+          toast.error(errorMessage);
         }
       };
 
       reader.onerror = () => {
         toast.dismiss(loadingToast);
-        toast.error('Kunne ikke læse fil');
         setIsUploading(false);
+        toast.error('Kunne ikke læse fil');
       };
 
       reader.readAsDataURL(file);
     } catch (error) {
       toast.dismiss(loadingToast);
+      setIsUploading(false);
       console.error('Error uploading file:', error);
       toast.error('Kunne ikke uploade fil');
-      setIsUploading(false);
     }
   };
 
@@ -119,9 +141,8 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
     window.open(file.downloadUrl, '_blank');
   };
 
-  // Generate years from 2020 to current year + 1
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: currentYear - 2019 + 1 }, (_, i) => (2020 + i).toString());
+  // Only show years 2024 and 2025
+  const years = ['2024', '2025'];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
