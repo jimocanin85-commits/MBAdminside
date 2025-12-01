@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Download, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { Download, Search } from "lucide-react";
 import { logger, type LogEntry } from "@/lib/logger";
 import { format } from "date-fns";
 
@@ -87,13 +87,6 @@ const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
   };
 
 
-  const scrollToTop = () => {
-    logsContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const scrollToBottom = () => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -167,28 +160,6 @@ const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
                 <span className="hidden sm:inline">Export</span>
               </Button>
             </div>
-          </div>
-
-          {/* Scroll buttons */}
-          <div className="absolute right-8 top-24 z-10 flex flex-col gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={scrollToTop}
-              className="h-8 w-8 shadow-md"
-              title="Scroll til top"
-            >
-              <ChevronUp className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={scrollToBottom}
-              className="h-8 w-8 shadow-md"
-              title="Scroll til bund"
-            >
-              <ChevronDown className="h-4 w-4" />
-            </Button>
           </div>
 
           {/* Logs Container */}
