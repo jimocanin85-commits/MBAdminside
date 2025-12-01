@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Download, Trash2, Filter, Search } from "lucide-react";
+import { Download, Trash2, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { logger, type LogEntry } from "@/lib/logger";
 import { format } from "date-fns";
 
@@ -17,6 +16,9 @@ const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [filter, setFilter] = useState<'all' | 'error' | 'warn' | 'info' | 'log'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [autoScroll, setAutoScroll] = useState(true);
+  const logsEndRef = useRef<HTMLDivElement>(null);
+  const logsContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -31,6 +33,13 @@ const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
 
     return unsubscribe;
   }, [open]);
+
+  // Auto-scroll to bottom when new logs arrive
+  useEffect(() => {
+    if (autoScroll && logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [logs, autoScroll]);
 
   const filteredLogs = logs.filter((log) => {
     if (filter !== 'all' && log.level !== filter) return false;
@@ -48,6 +57,19 @@ const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
         return 'secondary';
       default:
         return 'outline';
+    }
+  };
+
+  const getLevelBgColor = (level: LogEntry['level']) => {
+    switch (level) {
+      case 'error':
+        return 'bg-destructive/10 border-destructive/20';
+      case 'warn':
+        return 'bg-yellow-500/10 border-yellow-500/20';
+      case 'info':
+        return 'bg-blue-500/10 border-blue-500/20';
+      default:
+        return 'bg-muted/50 border-border';
     }
   };
 
@@ -70,132 +92,206 @@ const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
     }
   };
 
+  const scrollToTop = () => {
+    logsContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const scrollToBottom = () => {
+    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Frontend Logs</DialogTitle>
+      <DialogContent className="max-w-7xl max-h-[95vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
+          <DialogTitle className="text-xl">Frontend Logs</DialogTitle>
           <DialogDescription>
             Viser alle console logs, errors og warnings fra frontend
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 flex-1 min-h-0">
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
           {/* Controls */}
-          <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
+          <div className="px-6 py-4 border-b flex flex-col sm:flex-row gap-3 flex-shrink-0 bg-muted/30">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Søg i logs..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
+                  className="pl-9 h-10"
                 />
               </div>
             </div>
-            <div className="flex gap-2">
-              <div className="flex gap-1">
+            <div className="flex flex-wrap gap-2">
+              <div className="flex gap-1 border rounded-md p-1 bg-background">
                 <Button
-                  variant={filter === 'all' ? 'default' : 'outline'}
+                  variant={filter === 'all' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setFilter('all')}
+                  className="h-8 text-xs"
                 >
                   Alle
                 </Button>
                 <Button
-                  variant={filter === 'error' ? 'default' : 'outline'}
+                  variant={filter === 'error' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setFilter('error')}
-                  className="text-destructive"
+                  className="h-8 text-xs text-destructive"
                 >
                   Errors
                 </Button>
                 <Button
-                  variant={filter === 'warn' ? 'default' : 'outline'}
+                  variant={filter === 'warn' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setFilter('warn')}
+                  className="h-8 text-xs"
                 >
                   Warnings
                 </Button>
                 <Button
-                  variant={filter === 'info' ? 'default' : 'outline'}
+                  variant={filter === 'info' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setFilter('info')}
+                  className="h-8 text-xs"
                 >
                   Info
                 </Button>
               </div>
-              <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
-                <Download className="h-4 w-4" />
-                Export
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setAutoScroll(!autoScroll)}
+                className={`gap-2 h-10 ${autoScroll ? 'bg-primary/10' : ''}`}
+              >
+                {autoScroll ? 'Auto-scroll: ON' : 'Auto-scroll: OFF'}
               </Button>
-              <Button variant="outline" size="sm" onClick={handleClear} className="gap-2 text-destructive">
+              <Button variant="outline" size="sm" onClick={handleExport} className="gap-2 h-10">
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Export</span>
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleClear} className="gap-2 h-10 text-destructive">
                 <Trash2 className="h-4 w-4" />
-                Slet
+                <span className="hidden sm:inline">Slet</span>
               </Button>
             </div>
           </div>
 
-          {/* Logs */}
-          <ScrollArea className="flex-1 border rounded-md p-4">
-            <div className="space-y-2">
+          {/* Scroll buttons */}
+          <div className="absolute right-8 top-24 z-10 flex flex-col gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={scrollToTop}
+              className="h-8 w-8 shadow-md"
+              title="Scroll til top"
+            >
+              <ChevronUp className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={scrollToBottom}
+              className="h-8 w-8 shadow-md"
+              title="Scroll til bund"
+            >
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Logs Container */}
+          <div 
+            ref={logsContainerRef}
+            className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-4 bg-background"
+            style={{ maxHeight: 'calc(95vh - 280px)' }}
+          >
+            <div className="space-y-3">
               {filteredLogs.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8">
-                  Ingen logs fundet
+                <div className="text-center text-muted-foreground py-12">
+                  <p className="text-lg font-medium">Ingen logs fundet</p>
+                  <p className="text-sm mt-2">
+                    {searchTerm ? 'Prøv at ændre søgeordet eller filteret' : 'Logs vil blive vist her når de opstår'}
+                  </p>
                 </div>
               ) : (
                 filteredLogs.map((log) => (
                   <div
                     key={log.id}
-                    className="border rounded-md p-3 hover:bg-muted/50 transition-colors"
+                    className={`border rounded-lg p-4 transition-all hover:shadow-md ${getLevelBgColor(log.level)}`}
                   >
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <Badge variant={getLevelColor(log.level)} className="text-xs">
-                          {log.level.toUpperCase()}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {format(log.timestamp, 'HH:mm:ss.SSS')}
-                        </span>
-                        {log.source && (
-                          <span className="text-xs text-muted-foreground truncate">
-                            {log.source}
+                    <div className="flex items-start gap-3 mb-2">
+                      <Badge 
+                        variant={getLevelColor(log.level)} 
+                        className="text-xs font-semibold shrink-0"
+                      >
+                        {log.level.toUpperCase()}
+                      </Badge>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-mono text-muted-foreground">
+                            {format(log.timestamp, 'HH:mm:ss.SSS')}
                           </span>
-                        )}
+                          {log.source && (
+                            <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                              {log.source.split('/').pop()}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="text-sm font-mono break-words whitespace-pre-wrap">
+                    <div className="text-sm font-mono break-words whitespace-pre-wrap text-foreground leading-relaxed">
                       {log.message}
                     </div>
                     {log.data && (
-                      <details className="mt-2">
-                        <summary className="text-xs text-muted-foreground cursor-pointer">
-                          Vis data ({Array.isArray(log.data) ? log.data.length : 1} elementer)
+                      <details className="mt-3 group">
+                        <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors list-none">
+                          <span className="inline-flex items-center gap-1">
+                            <span>📦</span>
+                            <span>Vis data ({Array.isArray(log.data) ? log.data.length : 1} elementer)</span>
+                          </span>
                         </summary>
-                        <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto max-h-40">
-                          {JSON.stringify(log.data, null, 2)}
-                        </pre>
+                        <div className="mt-2 bg-muted/80 border rounded-md p-3 overflow-auto max-h-60">
+                          <pre className="text-xs font-mono whitespace-pre-wrap break-words">
+                            {JSON.stringify(log.data, null, 2)}
+                          </pre>
+                        </div>
                       </details>
                     )}
                     {log.stack && (
-                      <details className="mt-2">
-                        <summary className="text-xs text-muted-foreground cursor-pointer">
-                          Vis stack trace
+                      <details className="mt-3 group">
+                        <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors list-none">
+                          <span className="inline-flex items-center gap-1">
+                            <span>🔍</span>
+                            <span>Vis stack trace</span>
+                          </span>
                         </summary>
-                        <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto max-h-40">
-                          {log.stack}
-                        </pre>
+                        <div className="mt-2 bg-muted/80 border rounded-md p-3 overflow-auto max-h-60">
+                          <pre className="text-xs font-mono whitespace-pre-wrap break-words text-destructive">
+                            {log.stack}
+                          </pre>
+                        </div>
                       </details>
                     )}
                   </div>
                 ))
               )}
+              <div ref={logsEndRef} />
             </div>
-          </ScrollArea>
+          </div>
 
-          <div className="text-xs text-muted-foreground flex-shrink-0">
-            Viser {filteredLogs.length} af {logs.length} logs
+          {/* Footer */}
+          <div className="px-6 py-3 border-t bg-muted/30 flex items-center justify-between flex-shrink-0">
+            <div className="text-xs text-muted-foreground">
+              Viser <strong className="text-foreground">{filteredLogs.length}</strong> af <strong className="text-foreground">{logs.length}</strong> logs
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {filteredLogs.length > 0 && (
+                <span>
+                  Seneste: {format(filteredLogs[filteredLogs.length - 1].timestamp, 'HH:mm:ss')}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </DialogContent>
