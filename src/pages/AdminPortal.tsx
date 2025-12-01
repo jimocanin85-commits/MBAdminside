@@ -152,10 +152,19 @@ const AdminPortal = () => {
 
   const handleAdminLogin = () => {
     if (adminPassword === "1523") {
-      setIsAdminMode(true);
-      setShowAdminDialog(false);
-      setAdminPassword("");
-      toast.success("Admin mode aktiveret");
+      if (isAdminMode) {
+        // Deactivate admin mode
+        setIsAdminMode(false);
+        setShowAdminDialog(false);
+        setAdminPassword("");
+        toast.success("Admin mode deaktiveret");
+      } else {
+        // Activate admin mode
+        setIsAdminMode(true);
+        setShowAdminDialog(false);
+        setAdminPassword("");
+        toast.success("Admin mode aktiveret");
+      }
     } else {
       toast.error("Forkert adgangskode");
     }
@@ -523,18 +532,25 @@ const AdminPortal = () => {
         <Dialog open={showAdminDialog} onOpenChange={setShowAdminDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Admin adgang</DialogTitle>
-              <DialogDescription>Indtast adgangskode for at aktivere admin tilstand</DialogDescription>
+              <DialogTitle>{isAdminMode ? 'Deaktiver Admin' : 'Admin adgang'}</DialogTitle>
+              <DialogDescription>
+                {isAdminMode 
+                  ? 'Indtast adgangskode (1523) for at deaktivere admin tilstand'
+                  : 'Indtast adgangskode (1523) for at aktivere admin tilstand'
+                }
+              </DialogDescription>
             </DialogHeader>
             <Input
               type="password"
-              placeholder="Adgangskode"
+              placeholder="Adgangskode (1523)"
               value={adminPassword}
               onChange={(e) => setAdminPassword(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
             />
             <DialogFooter>
-              <Button onClick={handleAdminLogin}>Log ind</Button>
+              <Button onClick={handleAdminLogin}>
+                {isAdminMode ? 'Deaktiver' : 'Aktiver'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
