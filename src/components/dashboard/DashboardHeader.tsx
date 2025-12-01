@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { LogOut, FileText } from "lucide-react";
+import { LogOut } from "lucide-react";
 import mbLogo from "@/assets/mb-logo.png";
 
 interface DashboardHeaderProps {
@@ -8,7 +8,6 @@ interface DashboardHeaderProps {
   onOpenExitForm: () => void;
   onShowCloudFiles: () => void;
   onOpenAdminDialog: () => void;
-  onOpenLogs?: () => void;
   currentUser?: string | null;
 }
 
@@ -18,7 +17,6 @@ const DashboardHeader = ({
   onOpenExitForm, 
   onShowCloudFiles, 
   onOpenAdminDialog,
-  onOpenLogs,
   currentUser
 }: DashboardHeaderProps) => {
   return (
@@ -39,27 +37,14 @@ const DashboardHeader = ({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {onOpenLogs && (
-            <Button 
-              variant="outline" 
-              onClick={onOpenLogs} 
-              className="gap-2 min-h-[44px] px-3 sm:px-4"
-              title="Vis Logs (Ctrl+Shift+L)"
-            >
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Logs</span>
-            </Button>
-          )}
-          <Button 
-            variant="outline" 
-            onClick={onLogout} 
-            className="gap-2 min-h-[44px] px-3 sm:px-4"
-          >
-            <LogOut className="h-4 w-4" />
-            <span className="hidden sm:inline">Log ud</span>
-          </Button>
-        </div>
+        <Button 
+          variant="outline" 
+          onClick={onLogout} 
+          className="gap-2 flex-shrink-0 min-h-[44px] px-3 sm:px-4"
+        >
+          <LogOut className="h-4 w-4" />
+          <span className="hidden sm:inline">Log ud</span>
+        </Button>
       </div>
     </header>
   );
