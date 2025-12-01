@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, Download, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { FileText, Upload, Loader2, Eye } from "lucide-react";
 import { functions } from "@/integrations/api/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -21,19 +22,25 @@ interface ReferatFile {
 }
 
 const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
+  const [selectedYear, setSelectedYear] = useState<string>('2025');
   const [files, setFiles] = useState<ReferatFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
       loadFiles();
     }
-  }, [open]);
+  }, [open, selectedYear]);
 
   const loadFiles = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await functions.invoke('list-referater-files');
+      const { data, error } = await functions.invoke('list-referater-files', {
+        method: 'POST',
+        body: { year: selectedYear }
+      });
       
       if (error) {
         throw error;
@@ -41,59 +48,80 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
       
       if (data?.files) {
         setFiles(data.files);
+      } else {
+        setFiles([]);
       }
     } catch (error) {
       console.error('Error loading referater files:', error);
       toast.error('Kunne ikke indlæse referater');
+      setFiles([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDownload = async (file: ReferatFile) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const loadingToast = toast.loading('Uploader fil...');
+
     try {
-      const { data, error } = await functions.invoke('download-backblaze-file', {
-        method: 'POST',
-        body: {
-          fileName: file.fileName,
-          fileId: file.fileId
+      // Read file as base64
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64String = reader.result as string;
+        const base64Data = base64String.split(',')[1] || base64String;
+
+        // Upload to Backblaze
+        const { error: uploadError } = await functions.invoke('upload-to-backblaze', {
+          method: 'POST',
+          body: {
+            fileName: file.name,
+            fileData: `data:${file.type};base64,${base64Data}`,
+            folder: `Referater/${selectedYear}`
+          }
+        });
+
+        toast.dismiss(loadingToast);
+
+        if (uploadError) {
+          throw uploadError;
         }
-      });
 
-      if (error) {
-        throw error;
-      }
+        toast.success('Fil uploadet!');
+        // Reload files
+        loadFiles();
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      };
 
-      // Convert base64 to blob and download
-      const base64 = typeof data === 'string' ? data : data?.data;
-      if (!base64) {
-        throw new Error('Kunne ikke hente fil data');
-      }
+      reader.onerror = () => {
+        toast.dismiss(loadingToast);
+        toast.error('Kunne ikke læse fil');
+        setIsUploading(false);
+      };
 
-      const binaryString = atob(base64);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-
-      const blob = new Blob([bytes], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = file.fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast.success('Fil downloadet');
+      reader.readAsDataURL(file);
     } catch (error) {
-      console.error('Error downloading file:', error);
-      toast.error('Kunne ikke downloade fil');
+      toast.dismiss(loadingToast);
+      console.error('Error uploading file:', error);
+      toast.error('Kunne ikke uploade fil');
+      setIsUploading(false);
     }
   };
+
+  const handleViewFile = (file: ReferatFile) => {
+    // Open file in new tab using download URL
+    window.open(file.downloadUrl, '_blank');
+  };
+
+  // Generate years from 2020 to current year + 1
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: currentYear - 2019 + 1 }, (_, i) => (2020 + i).toString());
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -106,9 +134,56 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto py-4">
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {/* Year Selection */}
+            <div className="flex flex-wrap gap-2">
+              {years.map((year) => (
+                <Button
+                  key={year}
+                  variant={selectedYear === year ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedYear(year)}
+                >
+                  {year}
+                </Button>
+              ))}
+            </div>
+
+            {/* Selected Year Section */}
             <div>
-              <h2 className="text-xl font-semibold mb-4">2025</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">{selectedYear}</h2>
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    id="referat-upload"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                    disabled={isUploading}
+                    accept="*/*"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="gap-2"
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Uploader...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4" />
+                        Upload
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
               
               {isLoading ? (
                 <div className="flex items-center justify-center py-8">
@@ -116,8 +191,9 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
                   <span className="ml-2 text-muted-foreground">Indlæser referater...</span>
                 </div>
               ) : files.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>Ingen referater fundet</p>
+                <div className="text-center py-8 text-muted-foreground border rounded-lg">
+                  <p>Ingen referater fundet for {selectedYear}</p>
+                  <p className="text-sm mt-2">Brug Upload knappen for at tilføje referater</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -138,11 +214,11 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleDownload(file)}
+                        onClick={() => handleViewFile(file)}
                         className="gap-2 shrink-0"
                       >
-                        <Download className="h-4 w-4" />
-                        Download
+                        <Eye className="h-4 w-4" />
+                        Vis
                       </Button>
                     </div>
                   ))}

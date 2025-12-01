@@ -18,7 +18,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { fileName, fileData } = req.body;
+    const { fileName, fileData, folder } = req.body;
 
     if (!fileName || !fileData) {
       return res.status(400).json({ error: 'fileName and fileData are required' });
@@ -91,8 +91,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Convert base64 to buffer
     const fileBuffer = Buffer.from(base64Data, 'base64');
 
-    // Upload file - use full path to ensure we overwrite the correct file
-    const fullPath = `Frivillige/${fileName}`;
+    // Upload file - use full path based on folder parameter
+    // Default to Frivillige/ if no folder specified, otherwise use specified folder
+    const fullPath = folder ? `${folder}/${fileName}` : `Frivillige/${fileName}`;
     
     // Before uploading, check if there's a file with the same name in root and delete all versions
     // This ensures we only have one version of each file in Frivillige/ folder
