@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Download, Trash2, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { Download, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { logger, type LogEntry } from "@/lib/logger";
 import { format } from "date-fns";
 
@@ -86,11 +86,6 @@ const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
     URL.revokeObjectURL(url);
   };
 
-  const handleClear = () => {
-    if (confirm('Er du sikker på at du vil slette alle logs?')) {
-      logger.clearLogs();
-    }
-  };
 
   const scrollToTop = () => {
     logsContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
@@ -170,10 +165,6 @@ const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
               <Button variant="outline" size="sm" onClick={handleExport} className="gap-2 h-10">
                 <Download className="h-4 w-4" />
                 <span className="hidden sm:inline">Export</span>
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleClear} className="gap-2 h-10 text-destructive">
-                <Trash2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Slet</span>
               </Button>
             </div>
           </div>
@@ -291,6 +282,9 @@ const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
                   Seneste: {format(filteredLogs[filteredLogs.length - 1].timestamp, 'HH:mm:ss')}
                 </span>
               )}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Logs gemmes i 7 dage
             </div>
           </div>
         </div>

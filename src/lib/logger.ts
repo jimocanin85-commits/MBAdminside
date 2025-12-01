@@ -1,6 +1,7 @@
 /**
  * Frontend Logging Service
  * Captures console logs, errors, and warnings
+ * Logs are kept for 7 days based on date
  */
 
 export interface LogEntry {
@@ -15,7 +16,8 @@ export interface LogEntry {
 
 class Logger {
   private logs: LogEntry[] = [];
-  private maxLogs = 1000; // Keep last 1000 logs
+  private maxLogs = 10000; // Keep up to 10000 logs (will be filtered by date)
+  private retentionDays = 7; // Keep logs for 7 days
   private listeners: Array<(logs: LogEntry[]) => void> = [];
   private originalConsole: {
     log: typeof console.log;
@@ -119,13 +121,34 @@ class Logger {
 
     this.logs.push(logEntry);
 
-    // Keep only last maxLogs entries
+    // Clean up old logs (older than retentionDays)
+    this.cleanupOldLogs();
+
+    // Keep only last maxLogs entries (if still too many after cleanup)
     if (this.logs.length > this.maxLogs) {
-      this.logs.shift();
+      this.logs = this.logs.slice(-this.maxLogs);
     }
 
     // Notify listeners
     this.notifyListeners();
+  }
+
+  private cleanupOldLogs() {
+    const now = new Date();
+    const cutoffDate = new Date(now);
+    cutoffDate.setDate(cutoffDate.getDate() - this.retentionDays);
+    
+    // Filter out logs older than retentionDays
+    const initialLength = this.logs.length;
+    this.logs = this.logs.filter((log) => {
+      const logDate = new Date(log.timestamp);
+      return logDate >= cutoffDate;
+    });
+    
+    const removedCount = initialLength - this.logs.length;
+    if (removedCount > 0) {
+      console.log(`[Logger] Cleaned up ${removedCount} old logs (older than ${this.retentionDays} days)`);
+    }
   }
 
   private getSource(): string {
@@ -156,7 +179,22 @@ class Logger {
   }
 
   getLogs(): LogEntry[] {
+    // Clean up old logs before returning
+    this.cleanupOldLogs();
     return [...this.logs];
+  }
+
+  getLogsForDate(date: Date): LogEntry[] {
+    this.cleanupOldLogs();
+    const targetDate = new Date(date);
+    targetDate.setHours(0, 0, 0, 0);
+    const nextDay = new Date(targetDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    
+    return this.logs.filter((log) => {
+      const logDate = new Date(log.timestamp);
+      return logDate >= targetDate && logDate < nextDay;
+    });
   }
 
   clearLogs() {
