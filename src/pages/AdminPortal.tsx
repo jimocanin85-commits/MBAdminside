@@ -379,13 +379,10 @@ const AdminPortal = () => {
                     <div className="flex items-center justify-center gap-2">
                       <Sparkles className="h-6 w-6 text-pink-500 animate-pulse" />
                       <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                        Velkommen, {currentUser}!
+                        Velkommen {currentUser}!
                       </h2>
                       <Sparkles className="h-6 w-6 text-purple-500 animate-pulse" />
                     </div>
-                    <p className="text-muted-foreground text-lg sm:text-xl">
-                      Klar til at arbejde med Frivilligfest 2026?
-                    </p>
                   </div>
 
                   {/* Action Button */}
