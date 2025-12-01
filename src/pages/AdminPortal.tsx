@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -61,6 +62,7 @@ const AdminPortal = () => {
   const [showLogsViewer, setShowLogsViewer] = useState(false);
   const [logsPassword, setLogsPassword] = useState("");
   const [showLogsPasswordDialog, setShowLogsPasswordDialog] = useState(false);
+  const [showClearCacheDialog, setShowClearCacheDialog] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [currentView, setCurrentView] = useState<"home" | "cloud" | "form" | "settings">("home");
   const [showFrivilligfestDialog, setShowFrivilligfestDialog] = useState(false);
@@ -643,39 +645,7 @@ const AdminPortal = () => {
                 variant="outline"
                 size="icon"
                 className="h-12 w-12 rounded-full shadow-lg min-h-[48px] min-w-[48px]"
-                onClick={() => {
-                  // Clear all cookies
-                  document.cookie.split(";").forEach((c) => {
-                    document.cookie = c
-                      .replace(/^ +/, "")
-                      .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-                  });
-                  
-                  // Clear localStorage
-                  localStorage.clear();
-                  
-                  // Clear sessionStorage
-                  sessionStorage.clear();
-                  
-                  // Open login page in new window/tab
-                  const loginWindow = window.open('/', '_blank');
-                  
-                  // Try to close current tab/window
-                  // Note: This only works if the window was opened by JavaScript
-                  // For manually opened tabs, browser will prevent closing for security
-                  setTimeout(() => {
-                    try {
-                      window.close();
-                      // If window.close() doesn't work, redirect current tab
-                      if (!window.closed) {
-                        window.location.replace('/');
-                      }
-                    } catch (e) {
-                      // Fallback: redirect current tab to login
-                      window.location.replace('/');
-                    }
-                  }, 100);
-                }}
+                onClick={() => setShowClearCacheDialog(true)}
                 aria-label="Clear Cache"
                 title="Clear Cache - Sletter cookies, cache og historik"
               >
@@ -746,6 +716,58 @@ const AdminPortal = () => {
         open={showLogsViewer}
         onOpenChange={setShowLogsViewer}
       />
+
+      {/* Clear Cache Confirmation Dialog */}
+      <AlertDialog open={showClearCacheDialog} onOpenChange={setShowClearCacheDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dette vil slette alle cookies, localStorage og sessionStorage, lukke alle browser faner og redirecte til login siden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Nej</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                // Clear all cookies
+                document.cookie.split(";").forEach((c) => {
+                  document.cookie = c
+                    .replace(/^ +/, "")
+                    .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+                });
+                
+                // Clear localStorage
+                localStorage.clear();
+                
+                // Clear sessionStorage
+                sessionStorage.clear();
+                
+                // Open login page in new window/tab
+                window.open('/', '_blank');
+                
+                // Try to close current tab/window
+                // Note: This only works if the window was opened by JavaScript
+                // For manually opened tabs, browser will prevent closing for security
+                setTimeout(() => {
+                  try {
+                    window.close();
+                    // If window.close() doesn't work, redirect current tab
+                    if (!window.closed) {
+                      window.location.replace('/');
+                    }
+                  } catch (e) {
+                    // Fallback: redirect current tab to login
+                    window.location.replace('/');
+                  }
+                }, 100);
+              }}
+            >
+              Ja
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
     
     {/* Always render BottomNavigation to maintain hook order - hidden when not authenticated or restricted user */}
