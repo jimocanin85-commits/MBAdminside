@@ -10,7 +10,7 @@ import FrivilligfestDialog from "@/components/dashboard/FrivilligfestDialog";
 import LogsViewer from "@/components/admin/LogsViewer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown, Camera, Sparkles } from "lucide-react";
+import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown, Camera, Sparkles, ExternalLink, Calendar } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 // Removed Supabase import - no longer needed
 import { toast } from "sonner";
@@ -344,11 +344,11 @@ const AdminPortal = () => {
             // Karina - Only Frivilligfest access
             <Card className="shadow-xl border-0 overflow-hidden bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 dark:from-pink-950/20 dark:via-purple-950/20 dark:to-indigo-950/20">
               <CardContent className="pt-8 sm:pt-12 md:pt-16 pb-8 sm:pb-12 md:pb-16">
-                <div className="text-center space-y-6">
+                <div className="text-center space-y-8">
                   {/* Avatar Section */}
                   <div className="flex flex-col items-center space-y-4">
                     <div className="relative group">
-                      <Avatar className="h-32 w-32 sm:h-40 sm:w-40 border-4 border-white shadow-2xl ring-4 ring-pink-200 dark:ring-pink-800">
+                      <Avatar className="h-32 w-32 sm:h-40 sm:w-40 border-4 border-white shadow-2xl ring-4 ring-pink-200 dark:ring-pink-800 transition-transform group-hover:scale-105">
                         <AvatarImage src={karinaAvatar || undefined} alt={currentUser || ''} />
                         <AvatarFallback className="bg-gradient-to-br from-pink-400 to-purple-500 text-white text-3xl sm:text-4xl font-bold">
                           {currentUser?.charAt(0).toUpperCase() || 'K'}
@@ -357,6 +357,7 @@ const AdminPortal = () => {
                       <label 
                         htmlFor="avatar-upload" 
                         className="absolute bottom-0 right-0 bg-pink-500 hover:bg-pink-600 text-white rounded-full p-3 cursor-pointer shadow-lg transition-all hover:scale-110 group-hover:opacity-100 opacity-90"
+                        title="Upload profilbillede"
                       >
                         <Camera className="h-5 w-5" />
                         <input
@@ -370,12 +371,12 @@ const AdminPortal = () => {
                       </label>
                     </div>
                     {isUploadingAvatar && (
-                      <p className="text-sm text-muted-foreground">Uploader billede...</p>
+                      <p className="text-sm text-muted-foreground animate-pulse">Uploader billede...</p>
                     )}
                   </div>
 
                   {/* Welcome Section */}
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div className="flex items-center justify-center gap-2">
                       <Sparkles className="h-6 w-6 text-pink-500 animate-pulse" />
                       <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
@@ -385,18 +386,24 @@ const AdminPortal = () => {
                     </div>
                   </div>
 
-                  {/* Action Button */}
-                  <div className="pt-4">
+                  {/* Main Action Section */}
+                  <div className="pt-6 space-y-4">
                     <Button 
                       size="lg" 
-                      className="gap-3 text-lg px-10 py-7 min-h-[70px] bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600 text-white shadow-xl hover:shadow-2xl transition-all hover:scale-105 rounded-full"
+                      className="gap-3 text-lg px-12 py-8 min-h-[80px] bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600 text-white shadow-xl hover:shadow-2xl transition-all hover:scale-105 rounded-full font-semibold group"
                       onClick={() => {
                         window.open('https://docs.google.com/spreadsheets/d/15QhvIYCNhci2N-oBbEGIpRgeevWe42L0kjhNyfTjkjQ/edit?usp=sharing_eil&ts=67288c42', '_blank');
+                        toast.success('Åbner Frivilligfest 2026 i nyt vindue...');
                       }}
                     >
-                      <UserPlus className="h-6 w-6" />
-                      <span className="font-semibold">Åbn Frivilligfest 2026</span>
+                      <Calendar className="h-6 w-6 group-hover:scale-110 transition-transform" />
+                      <span>Frivilligfest 2026</span>
+                      <ExternalLink className="h-5 w-5 opacity-70 group-hover:opacity-100 transition-opacity" />
                     </Button>
+                    <p className="text-sm text-muted-foreground flex items-center justify-center gap-1">
+                      <ExternalLink className="h-3 w-3" />
+                      Åbner i nyt vindue
+                    </p>
                   </div>
                 </div>
               </CardContent>
