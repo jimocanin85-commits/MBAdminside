@@ -8,10 +8,11 @@ import ExitForm from "@/components/trainer/ExitForm";
 import { CloudFiles } from "@/components/dashboard/CloudFiles";
 import FrivilligfestDialog from "@/components/dashboard/FrivilligfestDialog";
 import LogsViewer from "@/components/admin/LogsViewer";
+import ReferaterViewer from "@/components/admin/ReferaterViewer";
 import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown, Camera, Sparkles, ExternalLink, Calendar, RefreshCw } from "lucide-react";
+import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown, Camera, Sparkles, ExternalLink, Calendar, RefreshCw, FileText } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 // Removed Supabase import - no longer needed
 import { toast } from "sonner";
@@ -64,6 +65,7 @@ const AdminPortal = () => {
   const [logsPassword, setLogsPassword] = useState("");
   const [showLogsPasswordDialog, setShowLogsPasswordDialog] = useState(false);
   const [showClearCacheDialog, setShowClearCacheDialog] = useState(false);
+  const [showReferaterViewer, setShowReferaterViewer] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [currentView, setCurrentView] = useState<"home" | "cloud" | "form" | "settings">("home");
   const [showFrivilligfestDialog, setShowFrivilligfestDialog] = useState(false);
@@ -483,6 +485,18 @@ const AdminPortal = () => {
                     </Button>
                   )}
                   
+                  {/* Referater fra Bestyrelsesmøder - Show for admin and Brian */}
+                  {(isAdminMode || isBrianUser) && (
+                    <Button 
+                      size="lg" 
+                      className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
+                      onClick={() => setShowReferaterViewer(true)}
+                    >
+                      <FileText className="h-5 w-5" />
+                      Referater fra Bestyrelsesmøder
+                    </Button>
+                  )}
+                  
                   {/* Frivilligfest - Show for all authenticated users */}
                   <Button 
                     size="lg" 
@@ -720,6 +734,12 @@ const AdminPortal = () => {
       <LogsViewer
         open={showLogsViewer}
         onOpenChange={setShowLogsViewer}
+      />
+
+      {/* Referater Viewer */}
+      <ReferaterViewer
+        open={showReferaterViewer}
+        onOpenChange={setShowReferaterViewer}
       />
 
       {/* Clear Cache Confirmation Dialog */}
