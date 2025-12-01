@@ -485,8 +485,8 @@ const AdminPortal = () => {
                     </Button>
                   )}
                   
-                  {/* Referater fra Bestyrelsesmøder - Show for admin and Brian */}
-                  {(isAdminMode || isBrianUser) && (
+                  {/* Referater fra Bestyrelsesmøder - Show for all authenticated users */}
+                  {!isRestrictedUser && (
                     <Button 
                       size="lg" 
                       className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
