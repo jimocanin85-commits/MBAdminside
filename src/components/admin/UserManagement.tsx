@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { User, CreateUserDialog } from "./CreateUserDialog";
-import { Trash2, UserX, UserCheck, Plus } from "lucide-react";
+import { EditUserDialog } from "./EditUserDialog";
+import { Trash2, UserX, UserCheck, Plus, Edit } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,22 +32,38 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [userToDeactivate, setUserToDeactivate] = useState<User | null>(null);
   const [userToActivate, setUserToActivate] = useState<User | null>(null);
+  const [userToEdit, setUserToEdit] = useState<User | null>(null);
 
   const loadUsers = () => {
     try {
       const customUsersJson = localStorage.getItem('customUsers');
-      if (customUsersJson) {
-        const customUsers: User[] = JSON.parse(customUsersJson);
-        // Convert createdAt strings back to Date objects
-        // Show all users including Karina and Kyhl
-        const usersWithDates = customUsers.map(user => ({
-          ...user,
-          createdAt: new Date(user.createdAt)
-        }));
-        setUsers(usersWithDates);
-      } else {
-        setUsers([]);
+      let customUsers: User[] = customUsersJson ? JSON.parse(customUsersJson) : [];
+      
+      // Check if Karina exists as custom user, if not create her
+      const karinaExists = customUsers.some(u => u.username === 'Karina');
+      if (!karinaExists) {
+        // Create Karina as a custom user with default permissions
+        const karinaUser: User = {
+          id: `user_karina_${Date.now()}`,
+          firstName: 'Karina',
+          lastName: '',
+          username: 'Karina',
+          password: 'Monne1935', // Default password
+          permissions: ['frivilligfest'], // Default permission
+          createdAt: new Date(),
+          isActive: true
+        };
+        customUsers.push(karinaUser);
+        localStorage.setItem('customUsers', JSON.stringify(customUsers));
       }
+      
+      // Convert createdAt strings back to Date objects
+      // Show all users including Karina and Kyhl
+      const usersWithDates = customUsers.map(user => ({
+        ...user,
+        createdAt: new Date(user.createdAt)
+      }));
+      setUsers(usersWithDates);
     } catch (error) {
       console.error('Error loading users:', error);
       setUsers([]);
@@ -234,6 +251,15 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setUserToEdit(user)}
+                                className="gap-2"
+                              >
+                                <Edit className="h-4 w-4" />
+                                Rediger
+                              </Button>
                               {active ? (
                                 <Button
                                   variant="outline"
@@ -282,6 +308,17 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
         onUserCreated={handleUserCreated}
+      />
+
+      {/* Edit User Dialog */}
+      <EditUserDialog
+        open={!!userToEdit}
+        onOpenChange={(open) => !open && setUserToEdit(null)}
+        user={userToEdit}
+        onUserUpdated={() => {
+          loadUsers();
+          setUserToEdit(null);
+        }}
       />
 
       {/* Delete User Confirmation */}
