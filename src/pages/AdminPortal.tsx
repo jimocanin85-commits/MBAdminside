@@ -255,6 +255,13 @@ const AdminPortal = () => {
         onOpenExitForm={() => setIsExitFormOpen(true)}
         onShowCloudFiles={() => setShowCloudFiles(true)}
         onOpenAdminDialog={() => setShowAdminDialog(true)}
+        onOpenLogs={() => {
+          if (isAdminMode) {
+            setShowLogsViewer(true);
+          } else {
+            setShowLogsPasswordDialog(true);
+          }
+        }}
         currentUser={currentUser}
       />
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8">
