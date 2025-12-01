@@ -96,14 +96,36 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
         }
       );
 
-      if (downloadError) throw downloadError;
+      if (downloadError) {
+        console.error('Download error:', downloadError);
+        throw downloadError;
+      }
 
-      if (!downloadData?.data) {
-        throw new Error('Kunne ikke hente fil data');
+      console.log('Download response:', downloadData);
+
+      // API returns { success: true, data: base64, fileName }
+      // API client extracts response.data, so downloadData is the base64 string directly
+      // But if API client returns the whole object, check for nested data
+      let fileData: string;
+      
+      if (typeof downloadData === 'string') {
+        // If downloadData is already a string (base64), use it directly
+        fileData = downloadData;
+      } else if (downloadData?.data && typeof downloadData.data === 'string') {
+        // If downloadData is an object with data property
+        fileData = downloadData.data;
+      } else {
+        console.error('Unexpected download response format:', downloadData);
+        throw new Error('Kunne ikke hente fil data - uventet response format');
+      }
+
+      if (!fileData || fileData.length === 0) {
+        console.error('Empty file data');
+        throw new Error('Kunne ikke hente fil data - tom data');
       }
 
       // Parse the existing Excel file
-      const binaryString = atob(downloadData.data);
+      const binaryString = atob(fileData);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);

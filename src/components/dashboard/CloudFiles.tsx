@@ -98,7 +98,19 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
         throw new Error(error.message);
       }
 
-      if (!downloadData?.data) {
+      // API client extracts response.data, so downloadData might be the base64 string directly
+      // or an object with data property
+      let fileData: string;
+      
+      if (typeof downloadData === 'string') {
+        fileData = downloadData;
+      } else if (downloadData?.data && typeof downloadData.data === 'string') {
+        fileData = downloadData.data;
+      } else {
+        throw new Error('Failed to download file - unexpected response format');
+      }
+
+      if (!fileData || fileData.length === 0) {
         throw new Error('Failed to download file - no data received');
       }
 
@@ -107,7 +119,7 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
       // Open viewer with file data
       setSelectedFile({
         name: file.fileName,
-        data: downloadData.data
+        data: fileData
       });
       setViewerOpen(true);
       
