@@ -147,7 +147,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto space-y-4">
+          <div className="flex-1 overflow-y-auto space-y-4 min-h-0">
             {/* Create User Button */}
             <div className="flex justify-end">
               <Button onClick={() => setShowCreateDialog(true)} className="gap-2 w-full sm:w-auto">
