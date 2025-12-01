@@ -210,7 +210,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Upload file - use full path based on folder parameter
     // Default to Frivillige/ if no folder specified, otherwise use specified folder
-    const fullPath = folder ? `${folder}/${fileName}` : `Frivillige/${fileName}`;
+    // IMPORTANT: Backblaze B2 requires URL-encoded file names in X-Bz-File-Name header
+    // We need to encode each path segment separately to preserve forward slashes
+    // This ensures spaces and special characters are encoded while folder structure is preserved
+    const encodedFileName = encodeURIComponent(fileName);
+    // Encode folder path segments if folder contains special characters
+    const encodedFolder = folder ? folder.split('/').map(seg => encodeURIComponent(seg)).join('/') : 'Frivillige';
+    const fullPath = folder ? `${encodedFolder}/${encodedFileName}` : `${encodedFolder}/${encodedFileName}`;
+    
+    console.log('File path encoding:', {
+      originalFileName: fileName,
+      encodedFileName,
+      folder,
+      encodedFolder,
+      fullPath
+    });
     
     // Before uploading, check if there's a file with the same name in root and delete all versions
     // This only applies to Frivillige/ folder uploads, not Referater/ folder uploads
