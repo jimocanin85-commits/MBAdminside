@@ -20,6 +20,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     console.log('Listing files from Backblaze B2...');
+    console.log('Environment check:', {
+      hasKeyId: !!process.env.BACKBLAZE_KEY_ID,
+      hasApplicationKey: !!process.env.BACKBLAZE_APPLICATION_KEY,
+      hasBucketName: !!process.env.BACKBLAZE_BUCKET_NAME,
+      keyIdLength: process.env.BACKBLAZE_KEY_ID?.length || 0,
+      applicationKeyLength: process.env.BACKBLAZE_APPLICATION_KEY?.length || 0,
+      bucketName: process.env.BACKBLAZE_BUCKET_NAME || 'NOT SET'
+    });
 
     const keyId = process.env.BACKBLAZE_KEY_ID;
     const applicationKey = process.env.BACKBLAZE_APPLICATION_KEY;
@@ -27,7 +35,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!keyId || !applicationKey || !bucketName) {
       console.error('Backblaze credentials not configured');
-      return res.status(500).json({ error: 'Backblaze credentials not configured' });
+      const missing = [];
+      if (!keyId) missing.push('BACKBLAZE_KEY_ID');
+      if (!applicationKey) missing.push('BACKBLAZE_APPLICATION_KEY');
+      if (!bucketName) missing.push('BACKBLAZE_BUCKET_NAME');
+      
+      return res.status(500).json({ 
+        error: 'Backblaze credentials not configured',
+        missing: missing,
+        message: `Missing environment variables: ${missing.join(', ')}. Please configure them in Vercel dashboard → Settings → Environment Variables`
+      });
     }
 
     // Step 1: Authorize account

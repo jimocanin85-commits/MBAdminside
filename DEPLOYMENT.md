@@ -12,10 +12,13 @@ This guide covers multiple ways to deploy your project so it can be accessed ext
 3. Import your repository: `jimocanin85-commits/MBAdminside`
 4. Vercel will auto-detect Vite settings
 5. Add environment variables (if needed):
-   - `VITE_SUPABASE_PROJECT_ID`
-   - `VITE_SUPABASE_PUBLISHABLE_KEY`
-   - `VITE_SUPABASE_URL`
+   - `BACKBLAZE_KEY_ID` - Backblaze B2 Key ID (required for file storage)
+   - `BACKBLAZE_APPLICATION_KEY` - Backblaze B2 Application Key (required for file storage)
+   - `BACKBLAZE_BUCKET_NAME` - Backblaze B2 Bucket Name (required for file storage)
+   - `DATABASE_URL` - Neon PostgreSQL connection string (optional, for database features)
 6. Click "Deploy"
+
+**Note:** See [BACKBLAZE_SETUP.md](./BACKBLAZE_SETUP.md) for detailed Backblaze setup instructions.
 
 **Result:** Your site will be live at `https://mbadminside.vercel.app` (or your custom domain)
 
@@ -107,9 +110,15 @@ If you want to deploy manually to any hosting service:
 
 Make sure to set these environment variables in your hosting platform:
 
-- `VITE_SUPABASE_PROJECT_ID`
-- `VITE_SUPABASE_PUBLISHABLE_KEY`
-- `VITE_SUPABASE_URL`
+### Required for File Storage (Backblaze B2)
+- `BACKBLAZE_KEY_ID` - Your Backblaze B2 Key ID
+- `BACKBLAZE_APPLICATION_KEY` - Your Backblaze B2 Application Key  
+- `BACKBLAZE_BUCKET_NAME` - Your Backblaze B2 Bucket Name
+
+### Optional (for database features)
+- `DATABASE_URL` - Neon PostgreSQL connection string
+
+**See [BACKBLAZE_SETUP.md](./BACKBLAZE_SETUP.md) for detailed setup instructions.**
 
 ---
 
