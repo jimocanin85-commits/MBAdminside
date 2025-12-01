@@ -61,15 +61,24 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
     if (open) {
       console.log('UserManagement - Dialog opened, loading users...');
       loadUsers();
+      // Force a re-render after a short delay to ensure state is updated
+      setTimeout(() => {
+        console.log('UserManagement - Force reload after delay');
+        loadUsers();
+      }, 100);
     }
   }, [open]);
 
   // Debug: Log users when they change
   useEffect(() => {
     console.log('UserManagement - Users state changed:', users.length, 'users');
-    users.forEach((user, index) => {
-      console.log(`UserManagement - User ${index}:`, user.username, user.firstName, user.lastName);
-    });
+    if (users.length > 0) {
+      console.log('UserManagement - Users list:', users.map(u => ({ username: u.username, name: `${u.firstName} ${u.lastName}` })));
+    } else {
+      console.warn('UserManagement - No users found! Check localStorage for customUsers');
+      const customUsersJson = localStorage.getItem('customUsers');
+      console.log('UserManagement - localStorage customUsers:', customUsersJson);
+    }
   }, [users]);
 
   const handleUserCreated = (newUser: User) => {
@@ -139,15 +148,15 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] flex flex-col p-4 sm:p-6">
-          <DialogHeader>
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl h-[90vh] sm:h-auto max-h-[90vh] flex flex-col p-4 sm:p-6">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Brugerstyring</DialogTitle>
             <DialogDescription>
               Administrer brugere i portalen - opret, rediger, deaktiver eller slet brugere
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto space-y-4 min-h-0">
+          <div className="flex-1 overflow-y-auto space-y-4 min-h-0 py-2">
             {/* Create User Button */}
             <div className="flex justify-end">
               <Button onClick={() => setShowCreateDialog(true)} className="gap-2 w-full sm:w-auto">
@@ -187,21 +196,67 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
             </div>
 
             {/* Custom Users Section */}
-            <div className="mt-6">
-              <h3 className="text-sm font-semibold text-muted-foreground mb-2">
+            <div className="mt-6 pb-4">
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3">
                 Almindelige brugere ({users.length})
               </h3>
-              {users.length === 0 ? (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <p className="text-muted-foreground">Ingen brugere oprettet endnu</p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Klik på "Opret ny bruger" for at tilføje en bruger
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-2">
+              {(() => {
+                // Debug: Check localStorage directly
+                const customUsersJson = localStorage.getItem('customUsers');
+                const localStorageUsers = customUsersJson ? JSON.parse(customUsersJson) : [];
+                const hasLocalStorageUsers = localStorageUsers.length > 0;
+                
+                if (users.length === 0 && hasLocalStorageUsers) {
+                  // Users exist in localStorage but not in state - show warning
+                  return (
+                    <Card className="border-yellow-300 bg-yellow-50">
+                      <CardContent className="p-4">
+                        <p className="text-sm font-medium text-yellow-800 mb-2">
+                          ⚠️ Brugere findes i localStorage ({localStorageUsers.length}) men vises ikke
+                        </p>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            console.log('Manual reload triggered');
+                            loadUsers();
+                          }}
+                          className="w-full sm:w-auto"
+                        >
+                          Genindlæs brugere
+                        </Button>
+                        <div className="mt-2 text-xs text-yellow-700">
+                          <p>Debug info:</p>
+                          <p>State users: {users.length}</p>
+                          <p>localStorage users: {localStorageUsers.length}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+                
+                if (users.length === 0) {
+                  return (
+                    <Card>
+                      <CardContent className="p-8 text-center">
+                        <p className="text-muted-foreground">Ingen brugere oprettet endnu</p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Klik på "Opret ny bruger" for at tilføje en bruger
+                        </p>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+                
+                return null;
+              })()}
+              {users.length > 0 && (
+                <div className="space-y-2 pb-2">
+                  {users.length === 0 && (
+                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+                      Debug: users array is empty but should have {users.length} users
+                    </div>
+                  )}
                   {users.map((user) => {
                     const active = isUserActive(user);
                     return (
