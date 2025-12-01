@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -78,16 +78,32 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
     const loadingToast = toast.loading('Behandler exit...');
 
     try {
+      // Find the file object to get fileId
+      const selectedFileObj = files.find(f => f.fileName === selectedFile);
+      if (!selectedFileObj || !selectedFileObj.fileId) {
+        throw new Error('Kunne ikke finde fil information');
+      }
+
       // Download the existing Excel file
       const { data: downloadData, error: downloadError } = await functions.invoke(
         'download-backblaze-file',
-        { body: { fileName: selectedFile } }
+        { 
+          method: 'POST',
+          body: { 
+            fileName: selectedFile,
+            fileId: selectedFileObj.fileId
+          } 
+        }
       );
 
       if (downloadError) throw downloadError;
 
+      if (!downloadData?.data) {
+        throw new Error('Kunne ikke hente fil data');
+      }
+
       // Parse the existing Excel file
-      const binaryString = atob(downloadData.fileData);
+      const binaryString = atob(downloadData.data);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
@@ -209,6 +225,9 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Exit Tjekliste</DialogTitle>
+          <DialogDescription>
+            Vælg en træner og udfyld exit tjeklisten. Tjeklisten vil blive tilføjet til Excel filen.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-6 pt-6">
           <div className="space-y-2">

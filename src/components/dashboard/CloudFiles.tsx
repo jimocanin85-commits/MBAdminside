@@ -98,8 +98,8 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
         throw new Error(error.message);
       }
 
-      if (!downloadData?.success) {
-        throw new Error('Failed to download file');
+      if (!downloadData?.data) {
+        throw new Error('Failed to download file - no data received');
       }
 
       toast.dismiss();
@@ -107,7 +107,7 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
       // Open viewer with file data
       setSelectedFile({
         name: file.fileName,
-        data: downloadData.fileData
+        data: downloadData.data
       });
       setViewerOpen(true);
       
