@@ -130,13 +130,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? file.fileName.split('/').pop() 
           : file.fileName;
         
+        // Decode display name for user-friendly display (Backblaze stores encoded names)
+        const decodedDisplayName = decodeURIComponent(displayName);
+        
+        // For download URL, use the file name as stored in Backblaze (may be encoded)
+        // Backblaze download URLs work with the stored file name format
+        const downloadUrl = `${authData.downloadUrl}/file/${bucketName}/${file.fileName}`;
+        
         return {
-          fileName: displayName,
-          fullPath: file.fileName,
+          fileName: decodedDisplayName, // Show decoded name to user
+          fullPath: file.fileName, // Keep encoded path for API operations
           fileId: file.fileId,
           size: file.contentLength,
           uploadTimestamp: file.uploadTimestamp,
-          downloadUrl: `${authData.downloadUrl}/file/${bucketName}/${file.fileName}`
+          downloadUrl
         };
       });
 
