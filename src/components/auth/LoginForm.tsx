@@ -12,8 +12,8 @@ interface LoginFormProps {
 
 const USERS = {
   admin: "Monne1935",
-  Karina: "Monne1935",
   Brian: "Monne1935"
+  // Karina is now handled as a custom user
 };
 
 interface CustomUser {

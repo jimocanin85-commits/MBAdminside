@@ -14,8 +14,7 @@ import { UserManagement } from "@/components/admin/UserManagement";
 import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown, Camera, Sparkles, ExternalLink, Calendar, RefreshCw, FileText, Users } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown, Sparkles, ExternalLink, RefreshCw, FileText, Users } from "lucide-react";
 // Removed Supabase import - no longer needed
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -59,30 +58,23 @@ const AdminPortal = () => {
       return ['frivillig', 'aarshjul', 'referater', 'frivilligfest'];
     }
     
-    // Karina is restricted
-    if (currentUser === 'Karina') {
-      return ['frivilligfest'];
-    }
-    
-        // Check custom users
-        try {
-          const customUsersJson = localStorage.getItem('customUsers');
-          if (customUsersJson) {
-            const customUsers: User[] = JSON.parse(customUsersJson);
-            const customUser = customUsers.find(u => u.username === currentUser);
-            if (customUser && customUser.isActive !== false) {
-              return customUser.permissions || [];
-            }
-          }
-        } catch (error) {
-          console.error('Error reading user permissions:', error);
+    // Check custom users (including Karina and Kyhl)
+    try {
+      const customUsersJson = localStorage.getItem('customUsers');
+      if (customUsersJson) {
+        const customUsers: User[] = JSON.parse(customUsersJson);
+        const customUser = customUsers.find(u => u.username === currentUser);
+        if (customUser && customUser.isActive !== false) {
+          return customUser.permissions || [];
         }
+      }
+    } catch (error) {
+      console.error('Error reading user permissions:', error);
+    }
     
     return [];
   });
 
-  // Check if user is restricted (Karina - only Frivilligfest)
-  const isRestrictedUser = currentUser === 'Karina';
   const isBrianUser = currentUser === 'Brian';
   
   // Helper functions to check permissions
@@ -93,7 +85,7 @@ const AdminPortal = () => {
   const hasFrivilligAccess = hasPermission('frivillig') || currentUser === 'admin' || currentUser === 'Brian';
   const hasAarshjulAccess = hasPermission('aarshjul') || currentUser === 'admin' || currentUser === 'Brian';
   const hasReferaterAccess = hasPermission('referater') || currentUser === 'admin' || currentUser === 'Brian';
-  const hasFrivilligfestAccess = hasPermission('frivilligfest') || currentUser === 'admin' || currentUser === 'Brian' || currentUser === 'Karina';
+  const hasFrivilligfestAccess = hasPermission('frivilligfest') || currentUser === 'admin' || currentUser === 'Brian';
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isExitFormOpen, setIsExitFormOpen] = useState(false);
   const [isSpreadsheetOpen, setIsSpreadsheetOpen] = useState(false);
@@ -113,10 +105,6 @@ const AdminPortal = () => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [currentView, setCurrentView] = useState<"home" | "cloud" | "form" | "settings">("home");
   const [showFrivilligfestDialog, setShowFrivilligfestDialog] = useState(false);
-  const [karinaAvatar, setKarinaAvatar] = useState<string | null>(() => {
-    return localStorage.getItem('karinaAvatar');
-  });
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [trainers, setTrainers] = useState<Trainer[]>(() => {
     const saved = localStorage.getItem('trainers');
     if (saved) {
@@ -141,45 +129,6 @@ const AdminPortal = () => {
   }, [trainers]);
 
   useEffect(() => {
-    if (karinaAvatar) {
-      localStorage.setItem('karinaAvatar', karinaAvatar);
-    } else {
-      localStorage.removeItem('karinaAvatar');
-    }
-  }, [karinaAvatar]);
-
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Vælg venligst et billede');
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Billedet er for stort. Maksimum størrelse er 5MB');
-      return;
-    }
-
-    setIsUploadingAvatar(true);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      setKarinaAvatar(base64String);
-      setIsUploadingAvatar(false);
-      toast.success('Avatar opdateret!');
-    };
-    reader.onerror = () => {
-      setIsUploadingAvatar(false);
-      toast.error('Kunne ikke uploade billede');
-    };
-    reader.readAsDataURL(file);
-  };
-
-  useEffect(() => {
     if (currentUser) {
       localStorage.setItem('currentUser', currentUser);
       setIsAuthenticated(true);
@@ -187,10 +136,8 @@ const AdminPortal = () => {
       // Update user permissions based on current user
       if (currentUser === 'admin' || currentUser === 'Brian') {
         setUserPermissions(['frivillig', 'aarshjul', 'referater', 'frivilligfest']);
-      } else if (currentUser === 'Karina') {
-        setUserPermissions(['frivilligfest']);
       } else {
-        // Check custom users
+        // Check custom users (including Karina and Kyhl)
         try {
           const customUsersJson = localStorage.getItem('customUsers');
           if (customUsersJson) {
@@ -421,73 +368,7 @@ const AdminPortal = () => {
       />
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8">
         <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
-          {isRestrictedUser ? (
-            // Karina - Only Frivilligfest access
-            <div className="max-w-2xl mx-auto space-y-8">
-              {/* Welcome Section */}
-              <div className="text-center space-y-4">
-                <div className="flex justify-center">
-                  <div className="relative">
-                    <Avatar className="h-20 w-20 border border-border">
-                      <AvatarImage src={karinaAvatar || undefined} alt={currentUser || ''} />
-                      <AvatarFallback className="bg-muted text-foreground text-xl font-medium">
-                        {currentUser?.charAt(0).toUpperCase() || 'K'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <label 
-                      htmlFor="avatar-upload" 
-                      className="absolute -bottom-1 -right-1 bg-background border border-border rounded-full p-1.5 cursor-pointer hover:bg-muted transition-colors shadow-sm"
-                      title="Skift profilbillede"
-                    >
-                      <Camera className="h-3.5 w-3.5 text-muted-foreground" />
-                      <input
-                        id="avatar-upload"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleAvatarUpload}
-                        className="hidden"
-                        disabled={isUploadingAvatar}
-                      />
-                    </label>
-                  </div>
-                </div>
-                <div>
-                  <h1 className="text-2xl font-semibold text-foreground">
-                    Velkommen {currentUser}
-                  </h1>
-                  {isUploadingAvatar && (
-                    <p className="text-sm text-muted-foreground mt-2">Uploader billede...</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Main Action */}
-              <Card className="border hover:border-primary/50 transition-colors">
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-4">
-                      <div className="p-3 rounded-lg bg-muted">
-                        <Calendar className="h-6 w-6 text-foreground" />
-                      </div>
-                      <div className="flex-1">
-                        <h2 className="text-lg font-semibold">Frivilligfest 2026</h2>
-                      </div>
-                    </div>
-                    
-                    <Button 
-                      className="w-full justify-start gap-2 h-11"
-                      onClick={() => {
-                        window.open('https://docs.google.com/spreadsheets/d/15QhvIYCNhci2N-oBbEGIpRgeevWe42L0kjhNyfTjkjQ/edit?usp=sharing_eil&ts=67288c42', '_blank');
-                      }}
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      Åbn i Google Sheets
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          ) : showCloudFiles ? (
+          {showCloudFiles ? (
             <CloudFiles 
               key={refreshCloudFiles} 
               onTrainerDeleted={() => {
@@ -585,7 +466,7 @@ const AdminPortal = () => {
                   )}
                 </div>
 
-              {!isRestrictedUser && !isBrianUser && trainers.length > 0 ? (
+              {!isBrianUser && trainers.length > 0 ? (
                 <div className="pt-6 border-t">
                   <div className="space-y-4">
                     {isAdminMode ? (
@@ -672,7 +553,7 @@ const AdminPortal = () => {
                     )}
                   </div>
                 </div>
-              ) : !isRestrictedUser && !isBrianUser ? (
+              ) : !isBrianUser ? (
                 <div className="pt-6 border-t">
                   <div className="text-center py-8 sm:py-12">
                     <UserPlus className="h-12 w-12 sm:h-16 sm:w-16 mx-auto text-muted-foreground mb-4" />
@@ -708,8 +589,8 @@ const AdminPortal = () => {
         onSave={handleTrainerUpdate}
       />
 
-      {/* Desktop Settings Button - Hidden on Mobile and for restricted users */}
-      {!isRestrictedUser && (
+      {/* Desktop Settings Button - Hidden on Mobile */}
+      {isAuthenticated && (
         <div className="hidden md:flex fixed bottom-4 left-4 gap-2 z-50">
           <Button
             size="icon"
@@ -759,7 +640,7 @@ const AdminPortal = () => {
         </div>
       )}
 
-      {!isRestrictedUser && (
+      {isAuthenticated && (
         <Dialog open={showAdminDialog} onOpenChange={setShowAdminDialog}>
           <DialogContent>
             <DialogHeader>
@@ -793,7 +674,7 @@ const AdminPortal = () => {
       />
 
       {/* Logs Password Dialog */}
-      {!isRestrictedUser && (
+      {isAuthenticated && (
         <Dialog open={showLogsPasswordDialog} onOpenChange={setShowLogsPasswordDialog}>
           <DialogContent>
             <DialogHeader>
@@ -893,8 +774,8 @@ const AdminPortal = () => {
       />
     </div>
     
-    {/* Always render BottomNavigation to maintain hook order - hidden when not authenticated or restricted user */}
-    {isAuthenticated && !isRestrictedUser && (
+    {/* Always render BottomNavigation to maintain hook order - hidden when not authenticated */}
+    {isAuthenticated && (
       <BottomNavigation
         currentView={currentView}
         onNavigate={handleNavigate}

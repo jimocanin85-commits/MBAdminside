@@ -57,11 +57,11 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated }: CreateUs
 
     // Check if username already exists
     const existingUsers = JSON.parse(localStorage.getItem('customUsers') || '[]');
-    const hardcodedUsers = ['admin', 'Karina', 'Brian'];
+    const reservedUsers = ['admin', 'Karina', 'Brian', 'Kyhl'];
     
     if (existingUsers.some((u: User) => u.username === username.trim()) || 
-        hardcodedUsers.includes(username.trim())) {
-      toast.error("Brugernavn findes allerede");
+        reservedUsers.includes(username.trim())) {
+      toast.error("Brugernavn findes allerede eller er reserveret");
       return;
     }
 

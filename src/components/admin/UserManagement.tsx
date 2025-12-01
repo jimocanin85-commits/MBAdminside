@@ -23,7 +23,7 @@ interface UserManagementProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const HARDCODED_USERS = ['admin', 'Karina', 'Brian'];
+const HARDCODED_USERS = ['admin', 'Brian']; // Karina is now a custom user
 
 export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
   const [users, setUsers] = useState<User[]>([]);
@@ -38,10 +38,13 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
       if (customUsersJson) {
         const customUsers: User[] = JSON.parse(customUsersJson);
         // Convert createdAt strings back to Date objects
-        const usersWithDates = customUsers.map(user => ({
-          ...user,
-          createdAt: new Date(user.createdAt)
-        }));
+        // Filter out Karina and Kyhl - they should not be visible in user management
+        const usersWithDates = customUsers
+          .filter(user => user.username !== 'Karina' && user.username !== 'Kyhl')
+          .map(user => ({
+            ...user,
+            createdAt: new Date(user.createdAt)
+          }));
         setUsers(usersWithDates);
       } else {
         setUsers([]);
