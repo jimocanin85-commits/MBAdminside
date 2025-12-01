@@ -310,7 +310,7 @@ const AdminPortal = () => {
                     }}
                   >
                     <UserPlus className="h-5 w-5" />
-                    Frivilligfest2026
+                    Frivilligfest 2026
                   </Button>
                 </div>
               </CardContent>
