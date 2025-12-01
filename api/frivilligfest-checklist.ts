@@ -17,16 +17,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (req.method === 'GET') {
       // Try database first
-      const dbData = await getChecklistData();
-      
-      if (dbData) {
-        return res.status(200).json({ 
-          success: true, 
-          data: dbData 
-        });
+      try {
+        const dbData = await getChecklistData();
+        
+        if (dbData) {
+          return res.status(200).json({ 
+            success: true, 
+            data: dbData 
+          });
+        }
+      } catch (dbError) {
+        console.error('Database error (non-fatal):', dbError);
+        // Continue to fallback
       }
 
-      // Fallback: return null if no data
+      // Fallback: return null if no data (database not configured or no data)
       return res.status(200).json({ 
         success: true, 
         data: null 
@@ -36,19 +41,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'POST') {
       const dataToSave = req.body;
       
-      await saveChecklistData(dataToSave);
-      
-      return res.status(200).json({ 
-        success: true, 
-        data: dataToSave 
-      });
+      try {
+        await saveChecklistData(dataToSave);
+        
+        return res.status(200).json({ 
+          success: true, 
+          data: dataToSave 
+        });
+      } catch (dbError) {
+        console.error('Database error saving checklist:', dbError);
+        // Return success anyway - data is saved to localStorage on client side
+        return res.status(200).json({ 
+          success: true, 
+          data: dataToSave,
+          warning: 'Database not available, data saved locally only'
+        });
+      }
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
     console.error('Checklist API error:', error);
-    return res.status(400).json({ 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      success: false
     });
   }
 }

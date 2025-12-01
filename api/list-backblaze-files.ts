@@ -27,7 +27,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!keyId || !applicationKey || !bucketName) {
       console.error('Backblaze credentials not configured');
-      return res.status(500).json({ error: 'Backblaze credentials not configured' });
+      // Return empty list instead of error - allows app to work without Backblaze
+      return res.status(200).json({ 
+        success: true,
+        files: [],
+        error: 'Backblaze credentials not configured',
+        message: 'Backblaze credentials not configured. Please configure BACKBLAZE_KEY_ID, BACKBLAZE_APPLICATION_KEY, and BACKBLAZE_BUCKET_NAME environment variables.'
+      });
     }
 
     // Step 1: Authorize account
