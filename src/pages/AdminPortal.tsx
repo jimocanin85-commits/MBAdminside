@@ -96,6 +96,32 @@ const AdminPortal = () => {
     }
   }, [currentUser]);
 
+  // Logout when browser tab/window is closed
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Clear authentication on page unload
+      localStorage.removeItem('currentUser');
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+      setIsAdminMode(false);
+    };
+
+    const handleVisibilityChange = () => {
+      // Also handle when tab becomes hidden (optional - more aggressive)
+      if (document.hidden) {
+        // Don't logout on tab switch, only on close
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   // Update current view based on state - MUST be before early return
   useEffect(() => {
     if (!isAuthenticated) return; // Don't update view if not authenticated
