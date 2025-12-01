@@ -105,7 +105,7 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated }: CreateUs
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Opret ny bruger</DialogTitle>
           <DialogDescription>
@@ -113,7 +113,7 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated }: CreateUs
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">Fornavn</Label>
               <Input
@@ -183,11 +183,11 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated }: CreateUs
             </p>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
               Annuller
             </Button>
-            <Button type="submit">
+            <Button type="submit" className="w-full sm:w-auto">
               Opret bruger
             </Button>
           </DialogFooter>

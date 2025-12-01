@@ -520,7 +520,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[90vh] flex flex-col p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Referater fra Bestyrelsesmøder</DialogTitle>
           <DialogDescription>
@@ -546,7 +546,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
 
             {/* Selected Year Section */}
             <div>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                 <h2 className="text-xl font-semibold">{selectedYear}</h2>
                 <div className="flex items-center gap-2">
                   <input
@@ -564,7 +564,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
                     size="sm"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploading}
-                    className="gap-2"
+                    className="gap-2 w-full sm:w-auto"
                   >
                     {isUploading ? (
                       <>
@@ -600,7 +600,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
                   {files.map((file) => (
                     <div
                       key={file.fileId}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
@@ -613,7 +613,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
                         size="sm"
                         onClick={() => handleViewFile(file)}
                         disabled={viewingFileId === file.fileId}
-                        className="gap-2 shrink-0"
+                        className="gap-2 shrink-0 w-full sm:w-auto"
                       >
                         {viewingFileId === file.fileId ? (
                           <>

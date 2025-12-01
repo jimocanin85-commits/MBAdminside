@@ -341,7 +341,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
   return (
     <>
       <Dialog open={showChecklistDialog} onOpenChange={setShowChecklistDialog}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Tjekliste</DialogTitle>
             <DialogDescription>
@@ -412,7 +412,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
       </Dialog>
 
       <AlertDialog open={showYesDialog} onOpenChange={setShowYesDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-[95vw] sm:max-w-md p-4 sm:p-6">
           <AlertDialogHeader>
             <AlertDialogDescription className="space-y-4 text-left pt-4">
               <div className="space-y-2">
@@ -432,11 +432,11 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
             <Button onClick={() => {
               setShowYesDialog(false);
               setConfirmed(true);
-            }}>
+            }} className="w-full sm:w-auto">
               Fortsæt
             </Button>
           </AlertDialogFooter>
@@ -444,7 +444,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
       </AlertDialog>
 
       <AlertDialog open={showInfoDialog} onOpenChange={setShowInfoDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-[95vw] sm:max-w-md p-4 sm:p-6">
           <AlertDialogHeader>
             <AlertDialogDescription className="space-y-4 text-left pt-4">
               <div className="space-y-2">
@@ -473,8 +473,8 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <Button onClick={() => setShowInfoDialog(false)}>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <Button onClick={() => setShowInfoDialog(false)} className="w-full sm:w-auto">
               Forstået
             </Button>
           </AlertDialogFooter>
@@ -482,7 +482,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
       </AlertDialog>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
 
         {!confirmed ? (
           <div className="space-y-6">

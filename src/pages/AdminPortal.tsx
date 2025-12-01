@@ -632,7 +632,7 @@ const AdminPortal = () => {
 
       {isAuthenticated && (
         <Dialog open={showAdminDialog} onOpenChange={setShowAdminDialog}>
-          <DialogContent>
+          <DialogContent className="max-w-[95vw] sm:max-w-md p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle>{isAdminMode ? 'Deaktiver Admin' : 'Admin adgang'}</DialogTitle>
               <DialogDescription>
@@ -666,7 +666,7 @@ const AdminPortal = () => {
       {/* Logs Password Dialog */}
       {isAuthenticated && (
         <Dialog open={showLogsPasswordDialog} onOpenChange={setShowLogsPasswordDialog}>
-          <DialogContent>
+          <DialogContent className="max-w-[95vw] sm:max-w-md p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle>Logs Adgang</DialogTitle>
               <DialogDescription>Indtast adgangskode for at se frontend logs</DialogDescription>

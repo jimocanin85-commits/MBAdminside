@@ -70,7 +70,7 @@ export const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: Edit
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Rediger rettigheder</DialogTitle>
           <DialogDescription>
@@ -101,11 +101,11 @@ export const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: Edit
             </p>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
               Annuller
             </Button>
-            <Button type="submit">
+            <Button type="submit" className="w-full sm:w-auto">
               Gem ændringer
             </Button>
           </DialogFooter>
