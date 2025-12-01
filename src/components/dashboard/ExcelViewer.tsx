@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { X, Save } from "lucide-react";
@@ -139,8 +139,11 @@ export const ExcelViewer = ({ open, onOpenChange, fileName, fileData, onSaved }:
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] max-h-[90vh] flex flex-col p-3 sm:p-6 [&>button]:hidden">
         <DialogHeader>
+          <DialogTitle className="truncate text-sm sm:text-base">{fileName}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Rediger Excel fil data
+          </DialogDescription>
           <div className="flex items-center justify-between gap-2">
-            <DialogTitle className="truncate text-sm sm:text-base">{fileName}</DialogTitle>
             <div className="flex gap-1 sm:gap-2 flex-shrink-0">
               <Button onClick={handleSave} size="sm" className="gap-1 sm:gap-2 min-h-[44px]">
                 <Save className="h-4 w-4" />

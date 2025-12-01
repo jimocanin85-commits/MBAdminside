@@ -101,6 +101,8 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
         throw new Error(downloadError.message || 'Kunne ikke downloade fil');
       }
 
+      console.log('Download successful, processing file...');
+
       // API returns { success: true, data: base64, fileName }
       // API client extracts response.data, so downloadData IS the base64 string
       // But let's handle both cases to be safe
@@ -127,25 +129,33 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
       }
 
       // Parse the existing Excel file
+      console.log('Decoding base64, length:', fileData.length);
       const binaryString = atob(fileData);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
+      console.log('Reading Excel file, bytes:', bytes.length);
       const workbook = XLSX.read(bytes, { type: 'array' });
       const sheetName = workbook.SheetNames[0];
+      console.log('Sheet name:', sheetName);
       const worksheet = workbook.Sheets[sheetName];
       
       // Get existing data
       const existingData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as any[][];
+      console.log('Existing data rows:', existingData.length);
 
       // Find if Exit Tjekliste already exists
       let exitStartIndex = -1;
       for (let i = 0; i < existingData.length; i++) {
         if (existingData[i][0] === 'Exit Tjekliste') {
           exitStartIndex = i - 2; // Account for the 2 empty rows before it
+          console.log('Found existing Exit Tjekliste at row:', i, 'will replace from row:', exitStartIndex);
           break;
         }
+      }
+      if (exitStartIndex === -1) {
+        console.log('No existing Exit Tjekliste found, will append at end');
       }
 
       // Create exit checklist data
@@ -178,9 +188,18 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
           ...existingData.slice(0, exitStartIndex),
           ...exitData
         ];
+        console.log('Replaced Exit Tjekliste. Old rows:', existingData.length, 'New rows:', combinedData.length);
       } else {
         // Append new Exit Tjekliste
         combinedData = [...existingData, ...exitData];
+        console.log('Appended Exit Tjekliste. Old rows:', existingData.length, 'New rows:', combinedData.length);
+      }
+      
+      // Verify exit data is in combined data
+      const hasExitTitle = combinedData.some(row => row[0] === 'Exit Tjekliste');
+      console.log('Combined data contains Exit Tjekliste:', hasExitTitle);
+      if (!hasExitTitle) {
+        console.error('ERROR: Exit Tjekliste not found in combined data!');
       }
 
       // Create new worksheet with combined data
