@@ -22,7 +22,7 @@ interface UserManagementProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const HARDCODED_USERS = ['admin']; // Only admin is shown as system user
+const HARDCODED_USERS = ['admin', 'Brian']; // Admin and Brian are system users
 
 export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
   const [users, setUsers] = useState<User[]>([]);
@@ -156,7 +156,9 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
                         <div>
                           <p className="font-medium">{username}</p>
                           <p className="text-sm text-muted-foreground">
-                            Alle rettigheder
+                            {username === 'admin' || username === 'Brian' 
+                              ? 'Alle rettigheder' 
+                              : 'Standard bruger'}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
