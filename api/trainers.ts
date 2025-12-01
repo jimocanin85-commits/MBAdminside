@@ -6,7 +6,7 @@ import {
   updateTrainer,
   deleteTrainer,
   type Trainer
-} from '../src/integrations/database/client';
+} from '../src/integrations/database/client.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
