@@ -269,6 +269,16 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
         console.log('Last row of exit data:', exitData[exitData.length - 1]);
         console.log('First row after exit:', afterData[0]);
         
+        // Verify exitData structure before combining
+        console.log('=== EXIT DATA STRUCTURE VERIFICATION ===');
+        console.log('exitData[0] (should be empty):', exitData[0]);
+        console.log('exitData[1] (should be empty):', exitData[1]);
+        console.log('exitData[2] (should be "Exit Tjekliste"):', exitData[2]);
+        console.log('exitData[3] (should be empty):', exitData[3]);
+        console.log('exitData[4] (first checklist item):', exitData[4]);
+        console.log('exitData[5] (second checklist item):', exitData[5]);
+        console.log('exitData[10] (last checklist item):', exitData[10]);
+        
         combinedData = [
           ...beforeData,
           ...exitData,
@@ -277,6 +287,17 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
         
         console.log('Total rows after replacement:', combinedData.length);
         console.log('Expected total:', beforeData.length + exitData.length + afterData.length);
+        
+        // Verify the combined data structure
+        const combinedExitTitleIndex = combinedData.findIndex(row => row && row[0] === 'Exit Tjekliste');
+        if (combinedExitTitleIndex !== -1) {
+          console.log('=== VERIFYING COMBINED DATA STRUCTURE ===');
+          console.log('Exit Tjekliste found at row:', combinedExitTitleIndex);
+          console.log('Row', combinedExitTitleIndex, ':', combinedData[combinedExitTitleIndex]);
+          console.log('Row', combinedExitTitleIndex + 1, ':', combinedData[combinedExitTitleIndex + 1]);
+          console.log('Row', combinedExitTitleIndex + 2, '(first item):', combinedData[combinedExitTitleIndex + 2]);
+          console.log('Row', combinedExitTitleIndex + 3, '(second item):', combinedData[combinedExitTitleIndex + 3]);
+        }
       } else {
         // Append new Exit Tjekliste
         combinedData = [...existingData, ...exitData];
