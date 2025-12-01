@@ -657,9 +657,24 @@ const AdminPortal = () => {
                   // Clear sessionStorage
                   sessionStorage.clear();
                   
-                  // Redirect to login page and replace current page in history
-                  // This effectively removes the current page from browser history
-                  window.location.replace('/');
+                  // Open login page in new window/tab
+                  const loginWindow = window.open('/', '_blank');
+                  
+                  // Try to close current tab/window
+                  // Note: This only works if the window was opened by JavaScript
+                  // For manually opened tabs, browser will prevent closing for security
+                  setTimeout(() => {
+                    try {
+                      window.close();
+                      // If window.close() doesn't work, redirect current tab
+                      if (!window.closed) {
+                        window.location.replace('/');
+                      }
+                    } catch (e) {
+                      // Fallback: redirect current tab to login
+                      window.location.replace('/');
+                    }
+                  }, 100);
                 }}
                 aria-label="Clear Cache"
                 title="Clear Cache - Sletter cookies, cache og historik"
