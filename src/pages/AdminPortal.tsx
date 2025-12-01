@@ -699,7 +699,7 @@ const AdminPortal = () => {
 
       {/* Clear Cache Confirmation Dialog */}
       <AlertDialog open={showClearCacheDialog} onOpenChange={setShowClearCacheDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-[95vw] sm:max-w-md p-4 sm:p-6">
           <AlertDialogHeader>
             <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -708,8 +708,8 @@ const AdminPortal = () => {
               <strong>Bemærk:</strong> Af sikkerhedsmæssige årsager kan vi kun lukke faner som er åbnet af JavaScript. Du skal manuelt lukke andre åbne faner hvis nødvendigt.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Nej</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <AlertDialogCancel className="w-full sm:w-auto">Nej</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 // Clear all cookies
@@ -750,6 +750,7 @@ const AdminPortal = () => {
                   window.location.replace('/');
                 }
               }}
+              className="w-full sm:w-auto"
             >
               Ja
             </AlertDialogAction>
@@ -772,6 +773,10 @@ const AdminPortal = () => {
         onOpenForm={() => setIsFormOpen(true)}
         onShowCloudFiles={() => setShowCloudFiles(true)}
         onOpenAdminDialog={() => setShowAdminDialog(true)}
+        isAdminMode={isAdminMode}
+        onOpenUserManagement={() => setShowUserManagement(true)}
+        onOpenLogsViewer={() => setShowLogsViewer(true)}
+        onOpenClearCache={() => setShowClearCacheDialog(true)}
       />
     )}
     </>

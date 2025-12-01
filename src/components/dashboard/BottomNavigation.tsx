@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Settings } from "lucide-react";
+import { Settings, Users, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BottomNavigationProps {
@@ -8,6 +8,10 @@ interface BottomNavigationProps {
   onOpenForm: () => void;
   onShowCloudFiles: () => void;
   onOpenAdminDialog: () => void;
+  isAdminMode?: boolean;
+  onOpenUserManagement?: () => void;
+  onOpenLogsViewer?: () => void;
+  onOpenClearCache?: () => void;
 }
 
 const BottomNavigation = ({
@@ -16,11 +20,15 @@ const BottomNavigation = ({
   onOpenForm,
   onShowCloudFiles,
   onOpenAdminDialog,
+  isAdminMode = false,
+  onOpenUserManagement,
+  onOpenLogsViewer,
+  onOpenClearCache,
 }: BottomNavigationProps) => {
-  const navItems = [
+  const baseNavItems = [
     {
       id: "settings" as const,
-      label: "Indstillinger",
+      label: "Admin",
       icon: Settings,
       onClick: () => {
         onOpenAdminDialog();
@@ -29,26 +37,61 @@ const BottomNavigation = ({
     },
   ];
 
+  const adminNavItems = isAdminMode && onOpenUserManagement && onOpenLogsViewer && onOpenClearCache ? [
+    {
+      id: "users" as const,
+      label: "Brugere",
+      icon: Users,
+      onClick: () => {
+        onOpenUserManagement();
+      },
+    },
+    {
+      id: "logs" as const,
+      label: "Logs",
+      icon: () => (
+        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      ),
+      onClick: () => {
+        if (onOpenLogsViewer) {
+          onOpenLogsViewer();
+        }
+      },
+    },
+    {
+      id: "cache" as const,
+      label: "Cache",
+      icon: RefreshCw,
+      onClick: () => {
+        onOpenClearCache();
+      },
+    },
+  ] : [];
+
+  const navItems = [...baseNavItems, ...adminNavItems];
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t-2 z-50 md:hidden safe-area-bottom">
-      <div className="flex justify-end h-16">
+      <div className="flex justify-end h-16 overflow-x-auto">
         {navItems.map((item) => {
-          const Icon = item.icon;
+          const Icon = typeof item.icon === 'function' ? item.icon : item.icon;
           const isActive = currentView === item.id;
           return (
             <button
               key={item.id}
               onClick={item.onClick}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 transition-colors min-h-[44px] px-6",
+                "flex flex-col items-center justify-center gap-1 transition-colors min-h-[44px] px-4 sm:px-6 shrink-0",
                 isActive
                   ? "text-primary bg-primary/10"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               )}
               aria-label={item.label}
             >
-              <Icon className="h-5 w-5" />
-              <span className="text-xs font-medium">{item.label}</span>
+              {typeof Icon === 'function' ? <Icon /> : <Icon className="h-5 w-5" />}
+              <span className="text-xs font-medium whitespace-nowrap">{item.label}</span>
             </button>
           );
         })}
