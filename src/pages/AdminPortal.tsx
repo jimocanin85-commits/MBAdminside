@@ -9,7 +9,8 @@ import { CloudFiles } from "@/components/dashboard/CloudFiles";
 import FrivilligfestDialog from "@/components/dashboard/FrivilligfestDialog";
 import LogsViewer from "@/components/admin/LogsViewer";
 import ReferaterViewer from "@/components/admin/ReferaterViewer";
-import { CreateUserDialog, User } from "@/components/admin/CreateUserDialog";
+import { User } from "@/components/admin/CreateUserDialog";
+import { UserManagement } from "@/components/admin/UserManagement";
 import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -63,19 +64,19 @@ const AdminPortal = () => {
       return ['frivilligfest'];
     }
     
-    // Check custom users
-    try {
-      const customUsersJson = localStorage.getItem('customUsers');
-      if (customUsersJson) {
-        const customUsers: User[] = JSON.parse(customUsersJson);
-        const customUser = customUsers.find(u => u.username === currentUser);
-        if (customUser) {
-          return customUser.permissions || [];
+        // Check custom users
+        try {
+          const customUsersJson = localStorage.getItem('customUsers');
+          if (customUsersJson) {
+            const customUsers: User[] = JSON.parse(customUsersJson);
+            const customUser = customUsers.find(u => u.username === currentUser);
+            if (customUser && customUser.isActive !== false) {
+              return customUser.permissions || [];
+            }
+          }
+        } catch (error) {
+          console.error('Error reading user permissions:', error);
         }
-      }
-    } catch (error) {
-      console.error('Error reading user permissions:', error);
-    }
     
     return [];
   });
@@ -108,7 +109,7 @@ const AdminPortal = () => {
   const [showLogsPasswordDialog, setShowLogsPasswordDialog] = useState(false);
   const [showClearCacheDialog, setShowClearCacheDialog] = useState(false);
   const [showReferaterViewer, setShowReferaterViewer] = useState(false);
-  const [showCreateUserDialog, setShowCreateUserDialog] = useState(false);
+  const [showUserManagement, setShowUserManagement] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [currentView, setCurrentView] = useState<"home" | "cloud" | "form" | "settings">("home");
   const [showFrivilligfestDialog, setShowFrivilligfestDialog] = useState(false);
@@ -195,7 +196,7 @@ const AdminPortal = () => {
           if (customUsersJson) {
             const customUsers: User[] = JSON.parse(customUsersJson);
             const customUser = customUsers.find(u => u.username === currentUser);
-            if (customUser) {
+            if (customUser && customUser.isActive !== false) {
               setUserPermissions(customUser.permissions || []);
             } else {
               setUserPermissions([]);
@@ -725,9 +726,9 @@ const AdminPortal = () => {
                 variant="outline"
                 size="icon"
                 className="h-12 w-12 rounded-full shadow-lg min-h-[48px] min-w-[48px]"
-                onClick={() => setShowCreateUserDialog(true)}
-                aria-label="Opret bruger"
-                title="Opret ny bruger"
+                onClick={() => setShowUserManagement(true)}
+                aria-label="Brugerstyring"
+                title="Brugerstyring - Administrer brugere"
               >
                 <Users className="h-5 w-5" />
               </Button>
@@ -885,13 +886,10 @@ const AdminPortal = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Create User Dialog */}
-      <CreateUserDialog
-        open={showCreateUserDialog}
-        onOpenChange={setShowCreateUserDialog}
-        onUserCreated={(user) => {
-          toast.success(`Bruger "${user.username}" er nu oprettet og kan logge ind`);
-        }}
+      {/* User Management Dialog */}
+      <UserManagement
+        open={showUserManagement}
+        onOpenChange={setShowUserManagement}
       />
     </div>
     

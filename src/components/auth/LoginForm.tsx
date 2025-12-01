@@ -24,6 +24,7 @@ interface CustomUser {
   password: string;
   permissions: string[];
   createdAt: Date;
+  isActive?: boolean;
 }
 
 const LoginForm = ({ onLogin }: LoginFormProps) => {
@@ -57,6 +58,13 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
           );
           
           if (customUser) {
+            // Check if user is active (default to true if not set)
+            if (customUser.isActive === false) {
+              toast.error("Denne bruger er deaktiveret");
+              setIsLoading(false);
+              return;
+            }
+            
             toast.success("Login successful!");
             onLogin(trimmedUsername);
             setIsLoading(false);

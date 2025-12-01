@@ -13,6 +13,7 @@ export interface User {
   password: string;
   permissions: string[];
   createdAt: Date;
+  isActive?: boolean; // Optional - defaults to true
 }
 
 interface CreateUserDialogProps {
@@ -72,7 +73,8 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated }: CreateUs
       username: username.trim(),
       password: password.trim(),
       permissions: selectedPermissions,
-      createdAt: new Date()
+      createdAt: new Date(),
+      isActive: true // New users are active by default
     };
 
     // Save to localStorage
