@@ -101,43 +101,30 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
         throw new Error(downloadError.message || 'Kunne ikke downloade fil');
       }
 
-      console.log('Download response type:', typeof downloadData);
-      console.log('Download response:', downloadData);
-      console.log('Download response keys:', downloadData ? Object.keys(downloadData) : 'null/undefined');
-
       // API returns { success: true, data: base64, fileName }
-      // API client extracts response.data if it exists, otherwise returns whole response
-      // So downloadData could be:
-      // 1. The base64 string directly (if API client extracted response.data)
-      // 2. The whole response object { success: true, data: base64, fileName }
-      let fileData: string | null = null;
+      // API client extracts response.data, so downloadData IS the base64 string
+      // But let's handle both cases to be safe
+      let fileData: string;
       
       if (typeof downloadData === 'string') {
-        // Case 1: downloadData is already the base64 string
+        // downloadData is already the base64 string (most likely case)
         fileData = downloadData;
-      } else if (downloadData && typeof downloadData === 'object') {
-        // Case 2: downloadData is an object
-        if (typeof downloadData.data === 'string') {
-          // Has data property with string value
-          fileData = downloadData.data;
-        } else if (downloadData.success && typeof downloadData.data === 'string') {
-          // Has success and data properties
-          fileData = downloadData.data;
+      } else if (downloadData && typeof downloadData === 'object' && downloadData.data && typeof downloadData.data === 'string') {
+        // downloadData is an object with data property
+        fileData = downloadData.data;
+      } else {
+        // Last resort: try to find any string property
+        const stringValue = Object.values(downloadData || {}).find(v => typeof v === 'string' && v.length > 50) as string | undefined;
+        if (stringValue) {
+          fileData = stringValue;
         } else {
-          // Try to find any string property that looks like base64
-          const stringProps = Object.values(downloadData).filter(v => typeof v === 'string' && v.length > 100);
-          if (stringProps.length > 0) {
-            fileData = stringProps[0] as string;
-          }
+          throw new Error(`Kunne ikke hente fil data. Response type: ${typeof downloadData}, Value: ${JSON.stringify(downloadData).substring(0, 200)}`);
         }
       }
 
       if (!fileData || fileData.length === 0) {
-        console.error('Could not extract file data. Full response:', JSON.stringify(downloadData, null, 2));
-        throw new Error('Kunne ikke hente fil data - ingen data fundet i response');
+        throw new Error('Kunne ikke hente fil data - tom data');
       }
-
-      console.log('File data length:', fileData.length);
 
       // Parse the existing Excel file
       const binaryString = atob(fileData);

@@ -70,8 +70,11 @@ class ApiClient {
       }
 
       // Return data in same format as Supabase
+      // If response has a data property, return it directly
+      // Otherwise return the whole response
+      const data = response.data !== undefined ? response.data : response;
       return { 
-        data: (response.data !== undefined ? response.data : response) as T, 
+        data: data as T, 
         error: null 
       };
     } catch (error) {
