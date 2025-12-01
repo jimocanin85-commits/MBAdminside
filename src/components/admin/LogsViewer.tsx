@@ -18,7 +18,6 @@ const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [autoScroll, setAutoScroll] = useState(true);
   const logsEndRef = useRef<HTMLDivElement>(null);
-  const logsContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -164,7 +163,6 @@ const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
 
           {/* Logs Container */}
           <div 
-            ref={logsContainerRef}
             className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-4 bg-background"
             style={{ maxHeight: 'calc(95vh - 280px)' }}
           >
