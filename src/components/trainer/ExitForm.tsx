@@ -402,12 +402,53 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
         };
       }
 
-      // CRITICAL: Verify that the exit checklist items are correctly written to the worksheet
+      // CRITICAL: Force update all exit checklist cells directly in worksheet
+      // This ensures data is written correctly even if aoa_to_sheet doesn't work properly
       const exitTitleIndexInCombined = combinedData.findIndex(row => row && row[0] === 'Exit Tjekliste');
       if (exitTitleIndexInCombined !== -1) {
-        console.log('=== VERIFYING WORKSHEET CELLS ===');
+        console.log('=== FORCE UPDATING WORKSHEET CELLS ===');
         const checklistStartRow = exitTitleIndexInCombined + 2; // Skip title and empty row
         
+        for (let i = 0; i < EXIT_CHECKLIST_ITEMS.length; i++) {
+          const rowIndex = checklistStartRow + i;
+          const cellA = XLSX.utils.encode_cell({ r: rowIndex, c: 0 });
+          const cellB = XLSX.utils.encode_cell({ r: rowIndex, c: 1 });
+          
+          const expectedLabel = EXIT_CHECKLIST_ITEMS[i].label;
+          const expectedStatus = checklist[EXIT_CHECKLIST_ITEMS[i].id]?.status 
+            ? (checklist[EXIT_CHECKLIST_ITEMS[i].id]?.date 
+                ? `Ja - ${format(checklist[EXIT_CHECKLIST_ITEMS[i].id].date!, 'dd/MM/yyyy')}` 
+                : 'Ja')
+            : 'Nej';
+          
+          // ALWAYS force update cells - don't check, just overwrite
+          console.log(`Force updating Row ${rowIndex} (${cellA}/${cellB}):`, {
+            label: expectedLabel,
+            status: expectedStatus
+          });
+          
+          // Force update cell A (label)
+          newWorksheet[cellA] = { 
+            t: 's', 
+            v: expectedLabel 
+          };
+          
+          // Force update cell B (status)
+          newWorksheet[cellB] = { 
+            t: 's', 
+            v: expectedStatus 
+          };
+          
+          // Also update cell C (empty)
+          const cellC = XLSX.utils.encode_cell({ r: rowIndex, c: 2 });
+          newWorksheet[cellC] = { 
+            t: 's', 
+            v: '' 
+          };
+        }
+        
+        // Verify after force update
+        console.log('=== VERIFYING AFTER FORCE UPDATE ===');
         for (let i = 0; i < EXIT_CHECKLIST_ITEMS.length; i++) {
           const rowIndex = checklistStartRow + i;
           const cellA = XLSX.utils.encode_cell({ r: rowIndex, c: 0 });
@@ -431,25 +472,6 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
             labelMatch: actualCellA?.v === expectedLabel,
             statusMatch: actualCellB?.v === expectedStatus
           });
-          
-          // Force update if mismatch
-          if (!actualCellA || actualCellA.v !== expectedLabel) {
-            console.warn(`Mismatch in cell ${cellA}, forcing update`);
-            if (!newWorksheet[cellA]) {
-              newWorksheet[cellA] = { t: 's', v: expectedLabel };
-            } else {
-              newWorksheet[cellA].v = expectedLabel;
-            }
-          }
-          
-          if (!actualCellB || actualCellB.v !== expectedStatus) {
-            console.warn(`Mismatch in cell ${cellB}, forcing update`);
-            if (!newWorksheet[cellB]) {
-              newWorksheet[cellB] = { t: 's', v: expectedStatus };
-            } else {
-              newWorksheet[cellB].v = expectedStatus;
-            }
-          }
         }
       }
 

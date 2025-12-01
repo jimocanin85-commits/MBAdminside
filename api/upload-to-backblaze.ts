@@ -91,12 +91,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Convert base64 to buffer
     const fileBuffer = Buffer.from(base64Data, 'base64');
 
+    // Upload file - use full path to ensure we overwrite the correct file
+    const fullPath = `Frivillige/${fileName}`;
+    
     // Upload file
     const uploadResponse = await fetch(uploadUrlData.uploadUrl, {
       method: 'POST',
       headers: {
         'Authorization': uploadUrlData.authorizationToken,
-        'X-Bz-File-Name': fileName,
+        'X-Bz-File-Name': fullPath,
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'X-Bz-Content-Sha1': 'do_not_verify',
         'Content-Length': fileBuffer.length.toString()
