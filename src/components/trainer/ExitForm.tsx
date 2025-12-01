@@ -236,20 +236,18 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
       });
 
       // Convert back to Excel with cell styles enabled
-      const excelBuffer = XLSX.write(workbook, { 
+      // Use 'base64' type directly - XLSX can output base64
+      const base64 = XLSX.write(workbook, { 
         bookType: 'xlsx', 
-        type: 'array',
+        type: 'base64',
         cellStyles: true 
       });
       
-      console.log('Excel buffer size:', excelBuffer.length, 'bytes');
+      console.log('Excel base64 length:', base64.length, 'characters');
       
-      // Convert array buffer directly to base64 (no need for Blob/FileReader)
-      const base64 = btoa(
-        Array.from(new Uint8Array(excelBuffer))
-          .map(byte => String.fromCharCode(byte))
-          .join('')
-      );
+      if (!base64 || base64.length === 0) {
+        throw new Error('Kunne ikke generere Excel fil');
+      }
 
       console.log('Base64 length:', base64.length);
       console.log('Uploading file:', selectedFile);
