@@ -25,13 +25,25 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
     
-    const response = await fetch(url, {
-      ...options,
+    // Extract method and body from options
+    const { method = 'GET', body, headers, ...restOptions } = options;
+    
+    // Only include body if method is not GET/HEAD
+    const requestOptions: RequestInit = {
+      method,
+      ...restOptions,
       headers: {
         'Content-Type': 'application/json',
-        ...options.headers,
+        ...headers,
       },
-    });
+    };
+    
+    // Only add body if method allows it
+    if (body && method !== 'GET' && method !== 'HEAD') {
+      requestOptions.body = body;
+    }
+    
+    const response = await fetch(url, requestOptions);
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Unknown error' }));
