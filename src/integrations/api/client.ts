@@ -66,10 +66,17 @@ class ApiClient {
     try {
       const { method = 'GET', body } = options;
       
-      const response = await this.request<T>(`/${functionName}`, {
+      // Build request options explicitly
+      const requestOptions: RequestInit = {
         method,
-        body: body ? JSON.stringify(body) : undefined,
-      });
+      };
+      
+      // Only add body if method allows it
+      if (body && method !== 'GET' && method !== 'HEAD') {
+        requestOptions.body = JSON.stringify(body);
+      }
+      
+      const response = await this.request<T>(`/${functionName}`, requestOptions);
 
       // Handle error response
       if (response.error) {
