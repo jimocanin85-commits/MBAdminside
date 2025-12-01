@@ -637,14 +637,14 @@ const AdminPortal = () => {
               <DialogTitle>{isAdminMode ? 'Deaktiver Admin' : 'Admin adgang'}</DialogTitle>
               <DialogDescription>
                 {isAdminMode 
-                  ? 'Indtast adgangskode (1523) for at deaktivere admin tilstand'
-                  : 'Indtast adgangskode (1523) for at aktivere admin tilstand'
+                  ? 'Indtast adgangskode for at deaktivere admin tilstand'
+                  : 'Indtast adgangskode for at aktivere admin tilstand'
                 }
               </DialogDescription>
             </DialogHeader>
             <Input
               type="password"
-              placeholder="Adgangskode (1523)"
+              placeholder="Adgangskode"
               value={adminPassword}
               onChange={(e) => setAdminPassword(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
@@ -669,11 +669,11 @@ const AdminPortal = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Logs Adgang</DialogTitle>
-              <DialogDescription>Indtast adgangskode (1523) for at se frontend logs</DialogDescription>
+              <DialogDescription>Indtast adgangskode for at se frontend logs</DialogDescription>
             </DialogHeader>
             <Input
               type="password"
-              placeholder="Adgangskode (1523)"
+              placeholder="Adgangskode"
               value={logsPassword}
               onChange={(e) => setLogsPassword(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleLogsPassword()}
