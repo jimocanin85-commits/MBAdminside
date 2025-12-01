@@ -723,7 +723,9 @@ const AdminPortal = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
             <AlertDialogDescription>
-              Dette vil slette alle cookies, localStorage og sessionStorage, lukke alle browser faner og redirecte til login siden.
+              Dette vil slette alle cookies, localStorage og sessionStorage. Denne fane vil blive redirected til login siden. 
+              <br />
+              <strong>Bemærk:</strong> Af sikkerhedsmæssige årsager kan vi kun lukke faner som er åbnet af JavaScript. Du skal manuelt lukke andre åbne faner hvis nødvendigt.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -743,24 +745,30 @@ const AdminPortal = () => {
                 // Clear sessionStorage
                 sessionStorage.clear();
                 
-                // Open login page in new window/tab
-                window.open('/', '_blank');
-                
-                // Try to close current tab/window
-                // Note: This only works if the window was opened by JavaScript
-                // For manually opened tabs, browser will prevent closing for security
-                setTimeout(() => {
-                  try {
-                    window.close();
-                    // If window.close() doesn't work, redirect current tab
+                // Try to close all windows/tabs that this page opened
+                // Note: We can only close windows that were opened by JavaScript
+                // Manually opened tabs cannot be closed for security reasons
+                try {
+                  // Try to close current window
+                  window.close();
+                  
+                  // If we have references to other windows opened by this page, close them too
+                  // (This would require storing window references when opening them)
+                  
+                  // If window.close() doesn't work (manually opened tab), redirect instead
+                  setTimeout(() => {
                     if (!window.closed) {
+                      // Open login in new tab first
+                      window.open('/', '_blank');
+                      // Then redirect current tab
                       window.location.replace('/');
                     }
-                  } catch (e) {
-                    // Fallback: redirect current tab to login
-                    window.location.replace('/');
-                  }
-                }, 100);
+                  }, 100);
+                } catch (e) {
+                  // Fallback: open login in new tab and redirect current
+                  window.open('/', '_blank');
+                  window.location.replace('/');
+                }
               }}
             >
               Ja
