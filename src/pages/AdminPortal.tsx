@@ -553,16 +553,6 @@ const AdminPortal = () => {
                     )}
                   </div>
                 </div>
-              ) : !isBrianUser ? (
-                <div className="pt-6 border-t">
-                  <div className="text-center py-8 sm:py-12">
-                    <UserPlus className="h-12 w-12 sm:h-16 sm:w-16 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg sm:text-xl font-semibold mb-2">Ingen frivillige endnu</h3>
-                    <p className="text-sm sm:text-base text-muted-foreground mb-6">
-                      Brug menuen eller knapperne nedenfor for at tilføje din første frivillige
-                    </p>
-                  </div>
-                </div>
               ) : null}
             </CardContent>
           </Card>
