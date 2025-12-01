@@ -26,6 +26,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
   const [files, setFiles] = useState<ReferatFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
   const [viewingFileId, setViewingFileId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -61,16 +62,10 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
     }
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    const loadingToast = toast.loading('Uploader fil...');
-
-    try {
-      // Read file as base64
+  const uploadSingleFile = async (file: File): Promise<void> => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
+      
       reader.onloadend = async () => {
         try {
           const base64String = reader.result as string;
@@ -81,16 +76,6 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
           }
 
           const fileDataUrl = `data:${file.type || 'application/octet-stream'};base64,${base64Data}`;
-          
-          console.log('Uploading file:', {
-            fileName: file.name,
-            fileSize: file.size,
-            fileType: file.type,
-            folder: `Referater/${selectedYear}`,
-            base64Length: base64Data.length,
-            fileDataUrlLength: fileDataUrl.length,
-            fileDataUrlPreview: fileDataUrl.substring(0, 100)
-          });
 
           // Upload to Backblaze
           const requestBody = {
@@ -98,16 +83,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
             fileData: fileDataUrl,
             folder: `Referater/${selectedYear}`
           };
-          
-          console.log('Request body prepared:', {
-            fileName: requestBody.fileName,
-            hasFileData: !!requestBody.fileData,
-            fileDataLength: requestBody.fileData?.length,
-            fileDataStart: requestBody.fileData?.substring(0, 50),
-            folder: requestBody.folder
-          });
 
-          // Use fetch directly to ensure proper JSON serialization
           const response = await fetch('/api/upload-to-backblaze', {
             method: 'POST',
             headers: {
@@ -120,57 +96,89 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
             let errorData;
             try {
               const text = await response.text();
-              console.error('Upload error response text:', text);
               errorData = JSON.parse(text);
             } catch (e) {
               errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
             }
             
-            console.error('Upload error response:', {
-              status: response.status,
-              statusText: response.statusText,
-              errorData,
-              errorMessage: errorData.error,
-              errorDetails: errorData.received || errorData.details
-            });
-            
             const errorMessage = errorData.error || errorData.message || `Upload fejlede: ${response.status}`;
             throw new Error(errorMessage);
           }
 
-          const data = await response.json();
-
-          toast.dismiss(loadingToast);
-
-          toast.success('Fil uploadet!');
-          setIsUploading(false);
-          // Reload files
-          loadFiles();
-          // Reset file input
-          if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-          }
+          resolve();
         } catch (error) {
-          toast.dismiss(loadingToast);
-          setIsUploading(false);
-          console.error('Error uploading file:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Kunne ikke uploade fil';
-          toast.error(errorMessage);
+          reject(error);
         }
       };
 
       reader.onerror = () => {
-        toast.dismiss(loadingToast);
-        setIsUploading(false);
-        toast.error('Kunne ikke læse fil');
+        reject(new Error('Kunne ikke læse fil'));
       };
 
       reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    if (selectedFiles.length === 0) return;
+
+    setIsUploading(true);
+    setUploadProgress({ current: 0, total: selectedFiles.length });
+    
+    const totalFiles = selectedFiles.length;
+    const fileCountText = totalFiles === 1 ? 'fil' : 'filer';
+    const loadingToast = toast.loading(`Uploader ${totalFiles} ${fileCountText}...`);
+
+    let successCount = 0;
+    let errorCount = 0;
+    const errors: string[] = [];
+
+    try {
+      // Upload files sequentially to avoid overwhelming the server
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        setUploadProgress({ current: i + 1, total: totalFiles });
+        
+        try {
+          await uploadSingleFile(file);
+          successCount++;
+        } catch (error) {
+          errorCount++;
+          const errorMessage = error instanceof Error ? error.message : 'Ukendt fejl';
+          errors.push(`${file.name}: ${errorMessage}`);
+          console.error(`Error uploading ${file.name}:`, error);
+        }
+      }
+
+      toast.dismiss(loadingToast);
+
+      // Show success/error messages
+      if (successCount > 0 && errorCount === 0) {
+        toast.success(`${successCount} ${successCount === 1 ? 'fil' : 'filer'} uploadet!`);
+      } else if (successCount > 0 && errorCount > 0) {
+        toast.warning(`${successCount} ${successCount === 1 ? 'fil' : 'filer'} uploadet, ${errorCount} ${errorCount === 1 ? 'fil' : 'filer'} fejlede`);
+        console.error('Upload errors:', errors);
+      } else {
+        toast.error(`Alle ${totalFiles} ${fileCountText} fejlede`);
+        console.error('All uploads failed:', errors);
+      }
+
+      // Reload files if at least one succeeded
+      if (successCount > 0) {
+        loadFiles();
+      }
     } catch (error) {
       toast.dismiss(loadingToast);
+      console.error('Error uploading files:', error);
+      toast.error('Kunne ikke uploade filer');
+    } finally {
       setIsUploading(false);
-      console.error('Error uploading file:', error);
-      toast.error('Kunne ikke uploade fil');
+      setUploadProgress(null);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -288,6 +296,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
                     onChange={handleFileSelect}
                     disabled={isUploading}
                     accept="*/*"
+                    multiple
                   />
                   <Button
                     variant="outline"
@@ -299,12 +308,16 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
                     {isUploading ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Uploader...
+                        {uploadProgress ? (
+                          `Uploader ${uploadProgress.current}/${uploadProgress.total}...`
+                        ) : (
+                          'Uploader...'
+                        )}
                       </>
                     ) : (
                       <>
                         <Upload className="h-4 w-4" />
-                        Upload
+                        Upload filer
                       </>
                     )}
                   </Button>
