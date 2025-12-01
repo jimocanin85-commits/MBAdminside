@@ -94,10 +94,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Upload file - use full path to ensure we overwrite the correct file
     const fullPath = `Frivillige/${fileName}`;
     
-    // Before uploading, check if there's a file with the same name in root and delete it
+    // Before uploading, check if there's a file with the same name in root and delete all versions
     // This ensures we only have one version of each file in Frivillige/ folder
     try {
-      const listFilesResponse = await fetch(`${apiUrl}/b2api/v2/b2_list_file_names`, {
+      const listFilesResponse = await fetch(`${apiUrl}/b2api/v2/b2_list_file_versions`, {
         method: 'POST',
         headers: {
           'Authorization': authorizationToken,
@@ -106,20 +106,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         body: JSON.stringify({
           bucketId: bucket.bucketId,
           startFileName: fileName,
-          maxFileCount: 10
+          maxFileCount: 100
         })
       });
 
       if (listFilesResponse.ok) {
         const listData = await listFilesResponse.json();
-        // Find file in root (not in Frivillige/)
-        const rootFile = listData.files?.find((f: any) => 
+        // Find all files in root (not in Frivillige/) with this name
+        const rootFiles = listData.files?.filter((f: any) => 
           f.fileName === fileName && !f.fileName.startsWith('Frivillige/')
-        );
+        ) || [];
 
-        if (rootFile) {
-          console.log(`Found duplicate file in root: ${fileName}, deleting it...`);
-          // Delete the file in root
+        // Delete all versions in root
+        for (const rootFile of rootFiles) {
+          console.log(`Found duplicate file in root: ${rootFile.fileName} (${rootFile.fileId}), deleting it...`);
           const deleteResponse = await fetch(`${apiUrl}/b2api/v2/b2_delete_file_version`, {
             method: 'POST',
             headers: {
@@ -133,9 +133,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           });
 
           if (deleteResponse.ok) {
-            console.log(`Successfully deleted duplicate file: ${fileName}`);
+            console.log(`Successfully deleted duplicate file: ${rootFile.fileName}`);
           } else {
-            console.warn(`Failed to delete duplicate file: ${fileName}`);
+            const errorText = await deleteResponse.text();
+            console.warn(`Failed to delete duplicate file: ${rootFile.fileName}`, errorText);
           }
         }
       }
