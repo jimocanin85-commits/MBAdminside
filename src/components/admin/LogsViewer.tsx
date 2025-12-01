@@ -135,68 +135,70 @@ const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
         </DialogHeader>
 
         <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-          {/* Controls */}
-          <div className="px-6 py-4 border-b flex flex-col sm:flex-row gap-3 flex-shrink-0 bg-muted/30">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Søg i logs..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 h-10"
-                />
+          {/* Controls - Only show for logs tab */}
+          {activeTab === 'logs' && (
+            <div className="px-6 py-4 border-b flex flex-col sm:flex-row gap-3 flex-shrink-0 bg-muted/30">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Søg i logs..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9 h-10"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <div className="flex gap-1 border rounded-md p-1 bg-background">
+                  <Button
+                    variant={filter === 'all' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setFilter('all')}
+                    className="h-8 text-xs"
+                  >
+                    Alle
+                  </Button>
+                  <Button
+                    variant={filter === 'error' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setFilter('error')}
+                    className="h-8 text-xs text-destructive"
+                  >
+                    Errors
+                  </Button>
+                  <Button
+                    variant={filter === 'warn' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setFilter('warn')}
+                    className="h-8 text-xs"
+                  >
+                    Warnings
+                  </Button>
+                  <Button
+                    variant={filter === 'info' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setFilter('info')}
+                    className="h-8 text-xs"
+                  >
+                    Info
+                  </Button>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setAutoScroll(!autoScroll)}
+                  className={`gap-2 h-10 ${autoScroll ? 'bg-primary/10' : ''}`}
+                >
+                  {autoScroll ? 'Auto-scroll: ON' : 'Auto-scroll: OFF'}
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleExport} className="gap-2 h-10">
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Export</span>
+                </Button>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <div className="flex gap-1 border rounded-md p-1 bg-background">
-                <Button
-                  variant={filter === 'all' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setFilter('all')}
-                  className="h-8 text-xs"
-                >
-                  Alle
-                </Button>
-                <Button
-                  variant={filter === 'error' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setFilter('error')}
-                  className="h-8 text-xs text-destructive"
-                >
-                  Errors
-                </Button>
-                <Button
-                  variant={filter === 'warn' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setFilter('warn')}
-                  className="h-8 text-xs"
-                >
-                  Warnings
-                </Button>
-                <Button
-                  variant={filter === 'info' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setFilter('info')}
-                  className="h-8 text-xs"
-                >
-                  Info
-                </Button>
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setAutoScroll(!autoScroll)}
-                className={`gap-2 h-10 ${autoScroll ? 'bg-primary/10' : ''}`}
-              >
-                {autoScroll ? 'Auto-scroll: ON' : 'Auto-scroll: OFF'}
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleExport} className="gap-2 h-10">
-                <Download className="h-4 w-4" />
-                <span className="hidden sm:inline">Export</span>
-              </Button>
-            </div>
-          </div>
+          )}
 
           {/* Content Container */}
           <div 
