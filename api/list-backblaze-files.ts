@@ -40,7 +40,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!applicationKey) missing.push('BACKBLAZE_APPLICATION_KEY');
       if (!bucketName) missing.push('BACKBLAZE_BUCKET_NAME');
       
-      return res.status(500).json({ 
+      // Return empty list instead of error - allows app to work without Backblaze
+      return res.status(200).json({ 
+        success: true,
+        files: [],
         error: 'Backblaze credentials not configured',
         missing: missing,
         message: `Missing environment variables: ${missing.join(', ')}. Please configure them in Vercel dashboard → Settings → Environment Variables`
