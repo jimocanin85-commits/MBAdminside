@@ -147,10 +147,39 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
 
       // Find if Exit Tjekliste already exists
       let exitStartIndex = -1;
+      let exitEndIndex = -1;
+      
       for (let i = 0; i < existingData.length; i++) {
-        if (existingData[i][0] === 'Exit Tjekliste') {
+        if (existingData[i] && existingData[i][0] === 'Exit Tjekliste') {
           exitStartIndex = i - 2; // Account for the 2 empty rows before it
           console.log('Found existing Exit Tjekliste at row:', i, 'will replace from row:', exitStartIndex);
+          
+          // Find where Exit Tjekliste ends - look for next non-empty row that's not part of exit checklist
+          // Exit checklist items are the 7 EXIT_CHECKLIST_ITEMS
+          for (let j = i + 1; j < existingData.length; j++) {
+            const row = existingData[j];
+            if (!row || row.length === 0) continue;
+            
+            const firstCell = row[0];
+            // Check if this row is still part of exit checklist (one of the 7 items)
+            const isExitItem = EXIT_CHECKLIST_ITEMS.some(item => 
+              firstCell && typeof firstCell === 'string' && firstCell.includes(item.label)
+            );
+            
+            if (!isExitItem && firstCell && firstCell.trim() !== '') {
+              // Found the end - this is a non-exit row
+              exitEndIndex = j;
+              console.log('Found end of Exit Tjekliste at row:', j);
+              break;
+            }
+          }
+          
+          // If we didn't find an end, exit data goes to the end
+          if (exitEndIndex === -1) {
+            exitEndIndex = existingData.length;
+            console.log('Exit Tjekliste extends to end of file');
+          }
+          
           break;
         }
       }
@@ -182,26 +211,17 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
       ];
 
       let combinedData;
-      if (exitStartIndex !== -1) {
-        // Replace existing Exit Tjekliste
-        // Find where the old exit data ends (look for next non-empty row after exit data)
-        let exitEndIndex = exitStartIndex + exitData.length;
-        for (let i = exitStartIndex + exitData.length; i < existingData.length; i++) {
-          // Check if this row is part of exit data (empty or has exit-related content)
-          const row = existingData[i];
-          if (row && row.length > 0 && row[0] && typeof row[0] === 'string' && 
-              !row[0].includes('Exit') && row[0].trim() !== '') {
-            exitEndIndex = i;
-            break;
-          }
-        }
-        
+      if (exitStartIndex !== -1 && exitEndIndex !== -1) {
+        // Replace existing Exit Tjekliste - we know exactly where it starts and ends
         combinedData = [
           ...existingData.slice(0, exitStartIndex),
           ...exitData,
           ...existingData.slice(exitEndIndex)
         ];
         console.log('Replaced Exit Tjekliste. Old rows:', existingData.length, 'New rows:', combinedData.length, 'Replaced from', exitStartIndex, 'to', exitEndIndex);
+        console.log('Data before exit:', existingData.slice(Math.max(0, exitStartIndex - 2), exitStartIndex));
+        console.log('New exit data:', exitData.slice(0, 5));
+        console.log('Data after exit:', existingData.slice(exitEndIndex, exitEndIndex + 3));
       } else {
         // Append new Exit Tjekliste
         combinedData = [...existingData, ...exitData];
@@ -220,7 +240,15 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
       // Log a sample of the exit data to verify it's correct
       const exitDataStart = combinedData.findIndex(row => row && row[0] === 'Exit Tjekliste');
       if (exitDataStart !== -1) {
-        console.log('Exit data sample:', combinedData.slice(exitDataStart, exitDataStart + 5));
+        console.log('Exit data sample:', combinedData.slice(exitDataStart, exitDataStart + 10));
+        // Log the actual checklist items with their values
+        const checklistItemsInData = combinedData.slice(exitDataStart + 4, exitDataStart + 4 + EXIT_CHECKLIST_ITEMS.length);
+        console.log('Checklist items in Excel data:', checklistItemsInData);
+        console.log('Expected checklist items:', EXIT_CHECKLIST_ITEMS.map(item => ({
+          label: item.label,
+          status: checklist[item.id]?.status,
+          date: checklist[item.id]?.date
+        })));
       }
 
       // Instead of creating a new worksheet, update the existing one
