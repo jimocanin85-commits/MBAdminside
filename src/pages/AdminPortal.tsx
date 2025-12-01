@@ -10,7 +10,8 @@ import FrivilligfestDialog from "@/components/dashboard/FrivilligfestDialog";
 import LogsViewer from "@/components/admin/LogsViewer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown } from "lucide-react";
+import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown, Camera, Sparkles } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 // Removed Supabase import - no longer needed
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -63,6 +64,10 @@ const AdminPortal = () => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [currentView, setCurrentView] = useState<"home" | "cloud" | "form" | "settings">("home");
   const [showFrivilligfestDialog, setShowFrivilligfestDialog] = useState(false);
+  const [karinaAvatar, setKarinaAvatar] = useState<string | null>(() => {
+    return localStorage.getItem('karinaAvatar');
+  });
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [trainers, setTrainers] = useState<Trainer[]>(() => {
     const saved = localStorage.getItem('trainers');
     if (saved) {
@@ -85,6 +90,45 @@ const AdminPortal = () => {
     console.log('Saving trainers to localStorage:', trainers);
     localStorage.setItem('trainers', JSON.stringify(trainers));
   }, [trainers]);
+
+  useEffect(() => {
+    if (karinaAvatar) {
+      localStorage.setItem('karinaAvatar', karinaAvatar);
+    } else {
+      localStorage.removeItem('karinaAvatar');
+    }
+  }, [karinaAvatar]);
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Vælg venligst et billede');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Billedet er for stort. Maksimum størrelse er 5MB');
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setKarinaAvatar(base64String);
+      setIsUploadingAvatar(false);
+      toast.success('Avatar opdateret!');
+    };
+    reader.onerror = () => {
+      setIsUploadingAvatar(false);
+      toast.error('Kunne ikke uploade billede');
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     if (currentUser) {
@@ -298,20 +342,65 @@ const AdminPortal = () => {
         <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
           {isRestrictedUser ? (
             // Karina - Only Frivilligfest access
-            <Card className="shadow-lg border-2">
-              <CardContent className="pt-4 sm:pt-6 md:pt-8 space-y-4 sm:space-y-6">
-                <div className="text-center py-8">
-                  <h2 className="text-2xl font-bold mb-6">Velkommen, {currentUser}!</h2>
-                  <Button 
-                    size="lg" 
-                    className="gap-2 text-base px-8 py-6 min-h-[60px]"
-                    onClick={() => {
-                      window.open('https://docs.google.com/spreadsheets/d/15QhvIYCNhci2N-oBbEGIpRgeevWe42L0kjhNyfTjkjQ/edit?usp=sharing_eil&ts=67288c42', '_blank');
-                    }}
-                  >
-                    <UserPlus className="h-5 w-5" />
-                    Frivilligfest 2026
-                  </Button>
+            <Card className="shadow-xl border-0 overflow-hidden bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 dark:from-pink-950/20 dark:via-purple-950/20 dark:to-indigo-950/20">
+              <CardContent className="pt-8 sm:pt-12 md:pt-16 pb-8 sm:pb-12 md:pb-16">
+                <div className="text-center space-y-6">
+                  {/* Avatar Section */}
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="relative group">
+                      <Avatar className="h-32 w-32 sm:h-40 sm:w-40 border-4 border-white shadow-2xl ring-4 ring-pink-200 dark:ring-pink-800">
+                        <AvatarImage src={karinaAvatar || undefined} alt={currentUser || ''} />
+                        <AvatarFallback className="bg-gradient-to-br from-pink-400 to-purple-500 text-white text-3xl sm:text-4xl font-bold">
+                          {currentUser?.charAt(0).toUpperCase() || 'K'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <label 
+                        htmlFor="avatar-upload" 
+                        className="absolute bottom-0 right-0 bg-pink-500 hover:bg-pink-600 text-white rounded-full p-3 cursor-pointer shadow-lg transition-all hover:scale-110 group-hover:opacity-100 opacity-90"
+                      >
+                        <Camera className="h-5 w-5" />
+                        <input
+                          id="avatar-upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAvatarUpload}
+                          className="hidden"
+                          disabled={isUploadingAvatar}
+                        />
+                      </label>
+                    </div>
+                    {isUploadingAvatar && (
+                      <p className="text-sm text-muted-foreground">Uploader billede...</p>
+                    )}
+                  </div>
+
+                  {/* Welcome Section */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-center gap-2">
+                      <Sparkles className="h-6 w-6 text-pink-500 animate-pulse" />
+                      <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                        Velkommen, {currentUser}!
+                      </h2>
+                      <Sparkles className="h-6 w-6 text-purple-500 animate-pulse" />
+                    </div>
+                    <p className="text-muted-foreground text-lg sm:text-xl">
+                      Klar til at arbejde med Frivilligfest 2026?
+                    </p>
+                  </div>
+
+                  {/* Action Button */}
+                  <div className="pt-4">
+                    <Button 
+                      size="lg" 
+                      className="gap-3 text-lg px-10 py-7 min-h-[70px] bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600 text-white shadow-xl hover:shadow-2xl transition-all hover:scale-105 rounded-full"
+                      onClick={() => {
+                        window.open('https://docs.google.com/spreadsheets/d/15QhvIYCNhci2N-oBbEGIpRgeevWe42L0kjhNyfTjkjQ/edit?usp=sharing_eil&ts=67288c42', '_blank');
+                      }}
+                    >
+                      <UserPlus className="h-6 w-6" />
+                      <span className="font-semibold">Åbn Frivilligfest 2026</span>
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
