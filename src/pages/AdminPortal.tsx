@@ -486,7 +486,7 @@ const AdminPortal = () => {
                     }}
                   >
                     <UserPlus className="h-5 w-5" />
-                    {isBrianUser ? "Frivilligfest2026" : "Frivilligfest 2026"}
+                    Frivilligfest 2026
                   </Button>
                 </div>
 
