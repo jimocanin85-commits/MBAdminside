@@ -6,6 +6,8 @@ import { FileText, Upload, Loader2, Eye } from "lucide-react";
 import { functions } from "@/integrations/api/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import mammoth from "mammoth";
+import * as XLSX from "xlsx";
 
 interface ReferaterViewerProps {
   open: boolean;
@@ -241,139 +243,258 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
       const blob = new Blob([bytes], { type: mimeType });
       const blobUrl = URL.createObjectURL(blob);
       
-      // For Office documents, browsers will download them instead of viewing
-      // We need to use a viewer service or open in a way that forces viewing
+      // For Office documents, convert to HTML and display
       const officeExtensions = ['docx', 'doc', 'xlsx', 'xls', 'pptx', 'ppt'];
       
       if (fileExtension && officeExtensions.includes(fileExtension)) {
-        // Office documents cannot be viewed directly in browsers - they will always download
-        // Instead, we'll create a viewer page that attempts to use Microsoft Office Online Viewer
-        // with a fallback to download if viewing fails
-        const viewerPage = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>${downloadedFileName}</title>
-            <meta charset="utf-8">
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body { 
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                display: flex;
-                flex-direction: column;
-                height: 100vh;
-                background: #f5f5f5;
-              }
-              .header {
-                background: white;
-                padding: 15px 20px;
-                border-bottom: 1px solid #e0e0e0;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-              }
-              .header h1 {
-                font-size: 18px;
-                font-weight: 500;
-                color: #333;
-              }
-              .viewer-container {
-                flex: 1;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                padding: 20px;
-              }
-              .viewer-content {
-                background: white;
-                border-radius: 8px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                width: 100%;
-                max-width: 1200px;
-                height: 100%;
-                display: flex;
-                flex-direction: column;
-              }
-              .viewer-iframe {
-                flex: 1;
-                border: none;
-                border-radius: 0 0 8px 8px;
-              }
-              .download-btn {
-                display: inline-block;
-                padding: 12px 24px;
-                background: #007bff;
-                color: white;
-                text-decoration: none;
-                border-radius: 5px;
-                margin-top: 20px;
-                transition: background 0.2s;
-                font-size: 16px;
-              }
-              .download-btn:hover {
-                background: #0056b3;
-              }
-              .message-container {
-                text-align: center;
-                padding: 50px 20px;
-                color: #666;
-              }
-              .message-container h2 {
-                font-size: 24px;
-                margin-bottom: 10px;
-                color: #333;
-              }
-              .message-container p {
-                font-size: 16px;
-                margin-bottom: 20px;
-                line-height: 1.5;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <h1>${downloadedFileName}</h1>
-            </div>
-            <div class="viewer-container">
-              <div class="viewer-content">
-                <div class="message-container">
-                  <h2>Office dokument</h2>
-                  <p>Dette dokument kan ikke vises direkte i browseren.</p>
-                  <p>Klik på knappen nedenfor for at downloade og åbne filen i et kompatibelt program.</p>
-                  <a href="${blobUrl}" download="${downloadedFileName}" class="download-btn">
-                    Download fil
-                  </a>
+        let htmlContent = '';
+        
+        try {
+          if (fileExtension === 'docx' || fileExtension === 'doc') {
+            // Convert DOCX to HTML using mammoth.js
+            const result = await mammoth.convertToHtml({ arrayBuffer: bytes.buffer });
+            htmlContent = result.value;
+            
+            // Handle any warnings
+            if (result.messages.length > 0) {
+              console.warn('Mammoth conversion warnings:', result.messages);
+            }
+          } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+            // Convert Excel to HTML using XLSX
+            const workbook = XLSX.read(bytes.buffer, { type: 'array' });
+            
+            // Convert each sheet to HTML table
+            const sheetNames = workbook.SheetNames;
+            htmlContent = sheetNames.map(sheetName => {
+              const worksheet = workbook.Sheets[sheetName];
+              const html = XLSX.utils.sheet_to_html(worksheet);
+              return `<div class="sheet-container"><h2>${sheetName}</h2>${html}</div>`;
+            }).join('');
+          } else {
+            // PowerPoint files - not supported, show download option
+            throw new Error('PowerPoint filer kan ikke vises direkte. Download filen for at åbne den.');
+          }
+          
+          // Create viewer page with converted HTML
+          const viewerPage = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <title>${downloadedFileName}</title>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { 
+                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                  display: flex;
+                  flex-direction: column;
+                  height: 100vh;
+                  background: #f5f5f5;
+                }
+                .header {
+                  background: white;
+                  padding: 15px 20px;
+                  border-bottom: 1px solid #e0e0e0;
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                }
+                .header h1 {
+                  font-size: 18px;
+                  font-weight: 500;
+                  color: #333;
+                }
+                .download-btn {
+                  padding: 8px 16px;
+                  background: #007bff;
+                  color: white;
+                  text-decoration: none;
+                  border-radius: 5px;
+                  font-size: 14px;
+                  transition: background 0.2s;
+                }
+                .download-btn:hover {
+                  background: #0056b3;
+                }
+                .viewer-container {
+                  flex: 1;
+                  overflow: auto;
+                  padding: 20px;
+                }
+                .viewer-content {
+                  background: white;
+                  border-radius: 8px;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                  max-width: 1200px;
+                  margin: 0 auto;
+                  padding: 40px;
+                  min-height: 100%;
+                }
+                /* Styles for Word documents */
+                .viewer-content h1, .viewer-content h2, .viewer-content h3 {
+                  margin-top: 1.5em;
+                  margin-bottom: 0.5em;
+                  font-weight: 600;
+                }
+                .viewer-content p {
+                  margin-bottom: 1em;
+                  line-height: 1.6;
+                }
+                .viewer-content ul, .viewer-content ol {
+                  margin-left: 2em;
+                  margin-bottom: 1em;
+                }
+                .viewer-content table {
+                  border-collapse: collapse;
+                  width: 100%;
+                  margin: 1em 0;
+                }
+                .viewer-content table td, .viewer-content table th {
+                  border: 1px solid #ddd;
+                  padding: 8px;
+                  text-align: left;
+                }
+                .viewer-content table th {
+                  background-color: #f2f2f2;
+                  font-weight: 600;
+                }
+                /* Styles for Excel sheets */
+                .sheet-container {
+                  margin-bottom: 3em;
+                }
+                .sheet-container h2 {
+                  margin-bottom: 1em;
+                  color: #333;
+                  font-size: 1.5em;
+                  border-bottom: 2px solid #007bff;
+                  padding-bottom: 0.5em;
+                }
+                .sheet-container table {
+                  font-size: 14px;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <h1>${downloadedFileName}</h1>
+                <a href="${blobUrl}" download="${downloadedFileName}" class="download-btn">
+                  Download
+                </a>
+              </div>
+              <div class="viewer-container">
+                <div class="viewer-content">
+                  ${htmlContent}
                 </div>
               </div>
-            </div>
-          </body>
-          </html>
-        `;
-        
-        // Create a blob URL for the viewer page
-        const viewerBlob = new Blob([viewerPage], { type: 'text/html' });
-        const viewerBlobUrl = URL.createObjectURL(viewerBlob);
-        
-        // Open viewer page in new tab
-        const newWindow = window.open(viewerBlobUrl, '_blank');
-        
-        if (!newWindow) {
-          // Popup blocked - create download link instead
-          const downloadLink = document.createElement('a');
-          downloadLink.href = blobUrl;
-          downloadLink.download = downloadedFileName;
-          document.body.appendChild(downloadLink);
-          downloadLink.click();
-          document.body.removeChild(downloadLink);
-          URL.revokeObjectURL(blobUrl);
-          URL.revokeObjectURL(viewerBlobUrl);
-        } else {
-          // Clean up blob URLs after a delay
+            </body>
+            </html>
+          `;
+          
+          // Create a blob URL for the viewer page
+          const viewerBlob = new Blob([viewerPage], { type: 'text/html' });
+          const viewerBlobUrl = URL.createObjectURL(viewerBlob);
+          
+          // Open viewer page in new tab
+          const newWindow = window.open(viewerBlobUrl, '_blank');
+          
+          if (!newWindow) {
+            // Popup blocked - create download link instead
+            const downloadLink = document.createElement('a');
+            downloadLink.href = blobUrl;
+            downloadLink.download = downloadedFileName;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            URL.revokeObjectURL(blobUrl);
+            URL.revokeObjectURL(viewerBlobUrl);
+          } else {
+            // Clean up blob URLs after a delay
+            setTimeout(() => {
+              URL.revokeObjectURL(blobUrl);
+              URL.revokeObjectURL(viewerBlobUrl);
+              setViewingFileId(null);
+            }, 10000);
+          }
+        } catch (error) {
+          console.error('Error converting Office document:', error);
+          toast.error(error instanceof Error ? error.message : 'Kunne ikke konvertere dokument');
+          
+          // Fallback: show download page
+          const viewerPage = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <title>${downloadedFileName}</title>
+              <meta charset="utf-8">
+              <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { 
+                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                  display: flex;
+                  flex-direction: column;
+                  height: 100vh;
+                  background: #f5f5f5;
+                  justify-content: center;
+                  align-items: center;
+                }
+                .message-container {
+                  text-align: center;
+                  padding: 50px 20px;
+                  background: white;
+                  border-radius: 8px;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                  max-width: 500px;
+                }
+                .message-container h2 {
+                  font-size: 24px;
+                  margin-bottom: 10px;
+                  color: #333;
+                }
+                .message-container p {
+                  font-size: 16px;
+                  margin-bottom: 20px;
+                  color: #666;
+                  line-height: 1.5;
+                }
+                .download-btn {
+                  display: inline-block;
+                  padding: 12px 24px;
+                  background: #007bff;
+                  color: white;
+                  text-decoration: none;
+                  border-radius: 5px;
+                  font-size: 16px;
+                  transition: background 0.2s;
+                }
+                .download-btn:hover {
+                  background: #0056b3;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="message-container">
+                <h2>Kunne ikke vise dokumentet</h2>
+                <p>Dette dokument kan ikke vises direkte i browseren.</p>
+                <p>Klik på knappen nedenfor for at downloade filen.</p>
+                <a href="${blobUrl}" download="${downloadedFileName}" class="download-btn">
+                  Download fil
+                </a>
+              </div>
+            </body>
+            </html>
+          `;
+          
+          const viewerBlob = new Blob([viewerPage], { type: 'text/html' });
+          const viewerBlobUrl = URL.createObjectURL(viewerBlob);
+          window.open(viewerBlobUrl, '_blank');
+          
           setTimeout(() => {
             URL.revokeObjectURL(blobUrl);
             URL.revokeObjectURL(viewerBlobUrl);
             setViewingFileId(null);
-          }, 10000); // Longer timeout for Office files
+          }, 5000);
         }
       } else {
         // For PDF, images, and text files, use blob URL directly
