@@ -657,8 +657,9 @@ const AdminPortal = () => {
                   // Clear sessionStorage
                   sessionStorage.clear();
                   
-                  // Clear browser history and redirect to login
-                  window.location.href = '/';
+                  // Redirect to login page and replace current page in history
+                  // This effectively removes the current page from browser history
+                  window.location.replace('/');
                 }}
                 aria-label="Clear Cache"
                 title="Clear Cache - Sletter cookies, cache og historik"
