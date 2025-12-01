@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Settings, Users, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,16 @@ const BottomNavigation = ({
     },
   ];
 
+  // Debug: Log admin mode state
+  useEffect(() => {
+    console.log('BottomNavigation - isAdminMode:', isAdminMode);
+    console.log('BottomNavigation - handlers:', {
+      onOpenUserManagement: !!onOpenUserManagement,
+      onOpenLogsViewer: !!onOpenLogsViewer,
+      onOpenClearCache: !!onOpenClearCache
+    });
+  }, [isAdminMode, onOpenUserManagement, onOpenLogsViewer, onOpenClearCache]);
+
   const adminNavItems = isAdminMode && onOpenUserManagement && onOpenLogsViewer && onOpenClearCache ? [
     {
       id: "users" as const,
@@ -74,6 +85,11 @@ const BottomNavigation = ({
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t-2 z-50 md:hidden safe-area-bottom">
+      {isAdminMode && (
+        <div className="px-4 py-1 bg-primary/10 border-b border-primary/20">
+          <p className="text-xs font-medium text-primary text-center">Admin Mode Aktiveret</p>
+        </div>
+      )}
       <div className="flex justify-end h-16 overflow-x-auto">
         {navItems.map((item) => {
           const Icon = typeof item.icon === 'function' ? item.icon : item.icon;

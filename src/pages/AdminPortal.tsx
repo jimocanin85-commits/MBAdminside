@@ -93,7 +93,9 @@ const AdminPortal = () => {
   const [refreshCloudFiles, setRefreshCloudFiles] = useState(0);
   const [selectedTrainer, setSelectedTrainer] = useState<Trainer | null>(null);
   const [isEditingCloudFile, setIsEditingCloudFile] = useState(false);
-  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [isAdminMode, setIsAdminMode] = useState(() => {
+    return localStorage.getItem('isAdminMode') === 'true';
+  });
   const [showAdminDialog, setShowAdminDialog] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [showLogsViewer, setShowLogsViewer] = useState(false);
@@ -214,6 +216,7 @@ const AdminPortal = () => {
     setCurrentUser(null);
     setIsAdminMode(false);
     localStorage.removeItem('currentUser');
+    localStorage.removeItem('isAdminMode');
   };
 
   const handleTrainerSubmit = (data: Omit<Trainer, 'createdAt'>) => {
@@ -253,6 +256,7 @@ const AdminPortal = () => {
       if (isAdminMode) {
         // Deactivate admin mode
         setIsAdminMode(false);
+        localStorage.setItem('isAdminMode', 'false');
         setShowAdminDialog(false);
         setAdminPassword("");
         setShowLogsViewer(false); // Also close logs viewer if open
@@ -260,6 +264,7 @@ const AdminPortal = () => {
       } else {
         // Activate admin mode
         setIsAdminMode(true);
+        localStorage.setItem('isAdminMode', 'true');
         setShowAdminDialog(false);
         setAdminPassword("");
         toast.success("Admin mode aktiveret");
@@ -649,8 +654,8 @@ const AdminPortal = () => {
               onChange={(e) => setAdminPassword(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
             />
-            <DialogFooter>
-              <Button onClick={handleAdminLogin}>
+            <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+              <Button onClick={handleAdminLogin} className="w-full sm:w-auto">
                 {isAdminMode ? 'Deaktiver' : 'Aktiver'}
               </Button>
             </DialogFooter>
@@ -678,8 +683,8 @@ const AdminPortal = () => {
               onChange={(e) => setLogsPassword(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleLogsPassword()}
             />
-            <DialogFooter>
-              <Button onClick={handleLogsPassword}>Åbn Logs</Button>
+            <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+              <Button onClick={handleLogsPassword} className="w-full sm:w-auto">Åbn Logs</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

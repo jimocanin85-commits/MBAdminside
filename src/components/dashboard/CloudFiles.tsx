@@ -238,7 +238,7 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
         {files.length === 0 ? (
           <>
             {onBack && (
-              <div className="mb-4 hidden md:flex">
+              <div className="mb-4">
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -263,7 +263,7 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
                   variant="outline" 
                   size="sm" 
                   onClick={onBack}
-                  className="gap-2 hidden md:inline-flex"
+                  className="gap-2"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Tilbage
