@@ -10,7 +10,7 @@ import FrivilligfestDialog from "@/components/dashboard/FrivilligfestDialog";
 import LogsViewer from "@/components/admin/LogsViewer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown, Camera, Sparkles, ExternalLink, Calendar } from "lucide-react";
+import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown, Camera, Sparkles, ExternalLink, Calendar, RefreshCw } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 // Removed Supabase import - no longer needed
 import { toast } from "sonner";
@@ -626,18 +626,46 @@ const AdminPortal = () => {
             <Settings className="h-5 w-5" />
           </Button>
           {isAdminMode && (
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-12 w-12 rounded-full shadow-lg min-h-[48px] min-w-[48px]"
-              onClick={() => setShowLogsViewer(true)}
-              aria-label="View Logs"
-              title="View Logs (Ctrl+Shift+L)"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-12 w-12 rounded-full shadow-lg min-h-[48px] min-w-[48px]"
+                onClick={() => setShowLogsViewer(true)}
+                aria-label="View Logs"
+                title="View Logs (Ctrl+Shift+L)"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-12 w-12 rounded-full shadow-lg min-h-[48px] min-w-[48px]"
+                onClick={() => {
+                  // Clear all cookies
+                  document.cookie.split(";").forEach((c) => {
+                    document.cookie = c
+                      .replace(/^ +/, "")
+                      .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+                  });
+                  
+                  // Clear localStorage
+                  localStorage.clear();
+                  
+                  // Clear sessionStorage
+                  sessionStorage.clear();
+                  
+                  // Clear browser history and redirect to login
+                  window.location.href = '/';
+                }}
+                aria-label="Clear Cache"
+                title="Clear Cache - Sletter cookies, cache og historik"
+              >
+                <RefreshCw className="h-5 w-5" />
+              </Button>
+            </>
           )}
         </div>
       )}
