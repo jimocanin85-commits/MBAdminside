@@ -26,6 +26,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
   const [files, setFiles] = useState<ReferatFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [viewingFileId, setViewingFileId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -173,9 +174,76 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
     }
   };
 
-  const handleViewFile = (file: ReferatFile) => {
-    // Open file in new tab using download URL
-    window.open(file.downloadUrl, '_blank');
+  const handleViewFile = async (file: ReferatFile) => {
+    if (viewingFileId === file.fileId) {
+      return; // Already viewing this file
+    }
+
+    setViewingFileId(file.fileId);
+    const loadingToast = toast.loading('Henter fil...');
+
+    try {
+      // Use download-by-id API to get file data
+      const response = await fetch('/api/download-backblaze-file', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileId: file.fileId,
+          fileName: file.fileName
+        })
+      });
+
+      toast.dismiss(loadingToast);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `Download fejlede: ${response.status}`);
+      }
+
+      const { data: base64Data, fileName: downloadedFileName } = await response.json();
+      
+      // Convert base64 to blob
+      const binaryString = atob(base64Data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      // Determine MIME type from file extension
+      const fileExtension = downloadedFileName.split('.').pop()?.toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        'pdf': 'application/pdf',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'txt': 'text/plain',
+        'doc': 'application/msword',
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'xls': 'application/vnd.ms-excel',
+        'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      };
+      const mimeType = mimeTypes[fileExtension || ''] || 'application/octet-stream';
+      
+      const blob = new Blob([bytes], { type: mimeType });
+      const blobUrl = URL.createObjectURL(blob);
+      
+      // Open file in new tab
+      window.open(blobUrl, '_blank');
+      
+      // Clean up blob URL after a delay (browser will handle cleanup when tab closes)
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+        setViewingFileId(null);
+      }, 1000);
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      console.error('Error viewing file:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Kunne ikke åbne fil';
+      toast.error(errorMessage);
+      setViewingFileId(null);
+    }
   };
 
   // Only show years 2024 and 2025
@@ -273,10 +341,20 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
                         variant="outline"
                         size="sm"
                         onClick={() => handleViewFile(file)}
+                        disabled={viewingFileId === file.fileId}
                         className="gap-2 shrink-0"
                       >
-                        <Eye className="h-4 w-4" />
-                        Vis
+                        {viewingFileId === file.fileId ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Henter...
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-4 w-4" />
+                            Vis
+                          </>
+                        )}
                       </Button>
                     </div>
                   ))}
