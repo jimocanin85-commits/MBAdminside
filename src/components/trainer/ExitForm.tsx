@@ -299,11 +299,20 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
         console.log('Exit Tjekliste found at row:', exitDataStart);
         console.log('Exit data sample (first 12 rows):', combinedData.slice(exitDataStart, exitDataStart + 12));
         
-        // Log the actual checklist items with their values
-        const checklistStartRow = exitDataStart + 4; // Skip: empty, empty, title, empty
+        // Find where checklist items actually start
+        // In existing data: 'Exit Tjekliste' is at row i, then empty row, then items start at row i+2
+        // In exitData array: ['', ''], ['', ''], ['Exit Tjekliste', ''], [''], [item1], [item2], ...
+        // So when we insert exitData, items start at exitDataStart + 2 (skip title and empty row)
+        const checklistStartRow = exitDataStart + 2;
         const checklistItemsInData = combinedData.slice(checklistStartRow, checklistStartRow + EXIT_CHECKLIST_ITEMS.length);
         
         console.log('=== CHECKLIST ITEMS IN EXCEL DATA ===');
+        console.log('checklistStartRow:', checklistStartRow);
+        console.log('exitData structure:');
+        for (let i = exitDataStart; i < Math.min(exitDataStart + 15, combinedData.length); i++) {
+          console.log(`  Row ${i}:`, combinedData[i]);
+        }
+        
         checklistItemsInData.forEach((row, idx) => {
           console.log(`Item ${idx + 1}:`, row);
         });
@@ -313,11 +322,17 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
           const status = checklist[item.id]?.status;
           const date = checklist[item.id]?.date;
           const expectedStatus = status && date ? `Ja - ${format(date, 'dd/MM/yyyy')}` : (status ? 'Ja' : 'Nej');
+          const actualRow = checklistItemsInData[idx];
+          const actualLabel = actualRow?.[0];
+          const actualStatus = actualRow?.[1];
+          
           console.log(`Item ${idx + 1} (${item.id}):`, {
-            label: item.label,
+            expectedLabel: item.label,
+            actualLabel,
+            labelMatch: actualLabel === item.label,
             expectedStatus,
-            actualInExcel: checklistItemsInData[idx]?.[1],
-            match: checklistItemsInData[idx]?.[1] === expectedStatus
+            actualStatus,
+            statusMatch: actualStatus === expectedStatus
           });
         });
       } else {
