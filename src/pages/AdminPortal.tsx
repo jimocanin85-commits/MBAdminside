@@ -305,7 +305,9 @@ const AdminPortal = () => {
                   <Button 
                     size="lg" 
                     className="gap-2 text-base px-8 py-6 min-h-[60px]"
-                    onClick={() => setShowFrivilligfestDialog(true)}
+                    onClick={() => {
+                      window.open('https://docs.google.com/spreadsheets/d/15QhvIYCNhci2N-oBbEGIpRgeevWe42L0kjhNyfTjkjQ/edit?usp=sharing_eil&ts=67288c42', '_blank');
+                    }}
                   >
                     <UserPlus className="h-5 w-5" />
                     Frivilligfest2026
@@ -389,7 +391,7 @@ const AdminPortal = () => {
                     className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
                     onClick={() => {
                       console.log('Frivilligfest button clicked');
-                      setShowFrivilligfestDialog(true);
+                      window.open('https://docs.google.com/spreadsheets/d/15QhvIYCNhci2N-oBbEGIpRgeevWe42L0kjhNyfTjkjQ/edit?usp=sharing_eil&ts=67288c42', '_blank');
                     }}
                   >
                     <UserPlus className="h-5 w-5" />
