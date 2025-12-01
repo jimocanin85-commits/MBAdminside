@@ -94,6 +94,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Upload file - use full path to ensure we overwrite the correct file
     const fullPath = `Frivillige/${fileName}`;
     
+    // Before uploading, check if there's a file with the same name in root and delete it
+    // This ensures we only have one version of each file in Frivillige/ folder
+    try {
+      const listFilesResponse = await fetch(`${apiUrl}/b2api/v2/b2_list_file_names`, {
+        method: 'POST',
+        headers: {
+          'Authorization': authorizationToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          bucketId: bucket.bucketId,
+          startFileName: fileName,
+          maxFileCount: 10
+        })
+      });
+
+      if (listFilesResponse.ok) {
+        const listData = await listFilesResponse.json();
+        // Find file in root (not in Frivillige/)
+        const rootFile = listData.files?.find((f: any) => 
+          f.fileName === fileName && !f.fileName.startsWith('Frivillige/')
+        );
+
+        if (rootFile) {
+          console.log(`Found duplicate file in root: ${fileName}, deleting it...`);
+          // Delete the file in root
+          const deleteResponse = await fetch(`${apiUrl}/b2api/v2/b2_delete_file_version`, {
+            method: 'POST',
+            headers: {
+              'Authorization': authorizationToken,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              fileName: rootFile.fileName,
+              fileId: rootFile.fileId
+            })
+          });
+
+          if (deleteResponse.ok) {
+            console.log(`Successfully deleted duplicate file: ${fileName}`);
+          } else {
+            console.warn(`Failed to delete duplicate file: ${fileName}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Error checking for duplicate files:', error);
+      // Continue with upload even if check fails
+    }
+    
     // Upload file
     const uploadResponse = await fetch(uploadUrlData.uploadUrl, {
       method: 'POST',

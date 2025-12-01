@@ -143,9 +143,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Group files by name and get only the latest version of each
+    // Only include files from Frivillige/ folder, ignore files in root
     const fileMap = new Map<string, any>();
     
     filesData.files.forEach((file: any) => {
+      // Only process files in Frivillige/ folder
+      if (!file.fileName.startsWith('Frivillige/')) {
+        return;
+      }
+      
       let displayName = file.fileName;
       if (displayName.includes('/')) {
         displayName = displayName.split('/').pop() || displayName;
@@ -156,8 +162,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return;
       }
       
-      // Only keep the latest version
-      if (!fileMap.has(displayName)) {
+      // Only keep the latest version (by upload timestamp)
+      const existing = fileMap.get(displayName);
+      if (!existing || file.uploadTimestamp > existing.uploadTimestamp) {
         fileMap.set(displayName, file);
       }
     });
