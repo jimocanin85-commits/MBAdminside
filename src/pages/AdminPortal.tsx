@@ -342,24 +342,25 @@ const AdminPortal = () => {
         <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
           {isRestrictedUser ? (
             // Karina - Only Frivilligfest access
-            <Card className="shadow-xl border-0 overflow-hidden bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 dark:from-pink-950/20 dark:via-purple-950/20 dark:to-indigo-950/20">
-              <CardContent className="pt-8 sm:pt-12 md:pt-16 pb-8 sm:pb-12 md:pb-16">
-                <div className="text-center space-y-8">
-                  {/* Avatar Section */}
-                  <div className="flex flex-col items-center space-y-4">
-                    <div className="relative group">
-                      <Avatar className="h-32 w-32 sm:h-40 sm:w-40 border-4 border-white shadow-2xl ring-4 ring-pink-200 dark:ring-pink-800 transition-transform group-hover:scale-105">
+            <div className="space-y-6">
+              {/* Profile Card */}
+              <Card className="shadow-lg border-2">
+                <CardContent className="pt-6 pb-6">
+                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+                    {/* Avatar */}
+                    <div className="relative group flex-shrink-0">
+                      <Avatar className="h-24 w-24 sm:h-28 sm:w-28 border-2 border-muted shadow-md">
                         <AvatarImage src={karinaAvatar || undefined} alt={currentUser || ''} />
-                        <AvatarFallback className="bg-gradient-to-br from-pink-400 to-purple-500 text-white text-3xl sm:text-4xl font-bold">
+                        <AvatarFallback className="bg-gradient-to-br from-pink-400 to-purple-500 text-white text-2xl font-semibold">
                           {currentUser?.charAt(0).toUpperCase() || 'K'}
                         </AvatarFallback>
                       </Avatar>
                       <label 
                         htmlFor="avatar-upload" 
-                        className="absolute bottom-0 right-0 bg-pink-500 hover:bg-pink-600 text-white rounded-full p-3 cursor-pointer shadow-lg transition-all hover:scale-110 group-hover:opacity-100 opacity-90"
-                        title="Upload profilbillede"
+                        className="absolute -bottom-1 -right-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full p-2 cursor-pointer shadow-md transition-all hover:scale-110"
+                        title="Skift profilbillede"
                       >
-                        <Camera className="h-5 w-5" />
+                        <Camera className="h-4 w-4" />
                         <input
                           id="avatar-upload"
                           type="file"
@@ -370,44 +371,49 @@ const AdminPortal = () => {
                         />
                       </label>
                     </div>
-                    {isUploadingAvatar && (
-                      <p className="text-sm text-muted-foreground animate-pulse">Uploader billede...</p>
-                    )}
-                  </div>
-
-                  {/* Welcome Section */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-center gap-2">
-                      <Sparkles className="h-6 w-6 text-pink-500 animate-pulse" />
-                      <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                    
+                    {/* User Info */}
+                    <div className="flex-1 text-center sm:text-left space-y-2">
+                      <h1 className="text-2xl sm:text-3xl font-bold">
                         Velkommen {currentUser}!
-                      </h2>
-                      <Sparkles className="h-6 w-6 text-purple-500 animate-pulse" />
+                      </h1>
+                      {isUploadingAvatar && (
+                        <p className="text-sm text-muted-foreground">Uploader billede...</p>
+                      )}
                     </div>
                   </div>
+                </CardContent>
+              </Card>
 
-                  {/* Main Action Section */}
-                  <div className="pt-6 space-y-4">
+              {/* Main Action Card */}
+              <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow">
+                <CardContent className="pt-8 pb-8">
+                  <div className="text-center space-y-6">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-center gap-2">
+                        <Calendar className="h-8 w-8 text-primary" />
+                        <h2 className="text-2xl sm:text-3xl font-bold">Frivilligfest 2026</h2>
+                      </div>
+                      <p className="text-muted-foreground text-sm sm:text-base max-w-md mx-auto">
+                        Klik på knappen nedenfor for at åbne Google Sheet med Frivilligfest checklisten
+                      </p>
+                    </div>
+                    
                     <Button 
                       size="lg" 
-                      className="gap-3 text-lg px-12 py-8 min-h-[80px] bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600 text-white shadow-xl hover:shadow-2xl transition-all hover:scale-105 rounded-full font-semibold group"
+                      className="gap-2 text-base px-8 py-6 min-h-[60px] w-full sm:w-auto"
                       onClick={() => {
                         window.open('https://docs.google.com/spreadsheets/d/15QhvIYCNhci2N-oBbEGIpRgeevWe42L0kjhNyfTjkjQ/edit?usp=sharing_eil&ts=67288c42', '_blank');
-                        toast.success('Åbner Frivilligfest 2026 i nyt vindue...');
                       }}
                     >
-                      <Calendar className="h-6 w-6 group-hover:scale-110 transition-transform" />
-                      <span>Frivilligfest 2026</span>
-                      <ExternalLink className="h-5 w-5 opacity-70 group-hover:opacity-100 transition-opacity" />
+                      <Calendar className="h-5 w-5" />
+                      <span>Åbn Frivilligfest 2026</span>
+                      <ExternalLink className="h-4 w-4" />
                     </Button>
-                    <p className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-                      <ExternalLink className="h-3 w-3" />
-                      Åbner i nyt vindue
-                    </p>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           ) : showCloudFiles ? (
             <CloudFiles 
               key={refreshCloudFiles} 
