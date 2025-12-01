@@ -96,54 +96,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const fullPath = folder ? `${folder}/${fileName}` : `Frivillige/${fileName}`;
     
     // Before uploading, check if there's a file with the same name in root and delete all versions
-    // This ensures we only have one version of each file in Frivillige/ folder
-    try {
-      const listFilesResponse = await fetch(`${apiUrl}/b2api/v2/b2_list_file_versions`, {
-        method: 'POST',
-        headers: {
-          'Authorization': authorizationToken,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          bucketId: bucket.bucketId,
-          startFileName: fileName,
-          maxFileCount: 100
-        })
-      });
+    // This only applies to Frivillige/ folder uploads, not Referater/ folder uploads
+    if (!folder || folder === 'Frivillige') {
+      try {
+        const listFilesResponse = await fetch(`${apiUrl}/b2api/v2/b2_list_file_versions`, {
+          method: 'POST',
+          headers: {
+            'Authorization': authorizationToken,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            bucketId: bucket.bucketId,
+            startFileName: fileName,
+            maxFileCount: 100
+          })
+        });
 
-      if (listFilesResponse.ok) {
-        const listData = await listFilesResponse.json();
-        // Find all files in root (not in Frivillige/) with this name
-        const rootFiles = listData.files?.filter((f: any) => 
-          f.fileName === fileName && !f.fileName.startsWith('Frivillige/')
-        ) || [];
+        if (listFilesResponse.ok) {
+          const listData = await listFilesResponse.json();
+          // Find all files in root (not in Frivillige/) with this name
+          const rootFiles = listData.files?.filter((f: any) => 
+            f.fileName === fileName && !f.fileName.startsWith('Frivillige/')
+          ) || [];
 
-        // Delete all versions in root
-        for (const rootFile of rootFiles) {
-          console.log(`Found duplicate file in root: ${rootFile.fileName} (${rootFile.fileId}), deleting it...`);
-          const deleteResponse = await fetch(`${apiUrl}/b2api/v2/b2_delete_file_version`, {
-            method: 'POST',
-            headers: {
-              'Authorization': authorizationToken,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              fileName: rootFile.fileName,
-              fileId: rootFile.fileId
-            })
-          });
+          // Delete all versions in root
+          for (const rootFile of rootFiles) {
+            console.log(`Found duplicate file in root: ${rootFile.fileName} (${rootFile.fileId}), deleting it...`);
+            const deleteResponse = await fetch(`${apiUrl}/b2api/v2/b2_delete_file_version`, {
+              method: 'POST',
+              headers: {
+                'Authorization': authorizationToken,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                fileName: rootFile.fileName,
+                fileId: rootFile.fileId
+              })
+            });
 
-          if (deleteResponse.ok) {
-            console.log(`Successfully deleted duplicate file: ${rootFile.fileName}`);
-          } else {
-            const errorText = await deleteResponse.text();
-            console.warn(`Failed to delete duplicate file: ${rootFile.fileName}`, errorText);
+            if (deleteResponse.ok) {
+              console.log(`Successfully deleted duplicate file: ${rootFile.fileName}`);
+            } else {
+              const errorText = await deleteResponse.text();
+              console.warn(`Failed to delete duplicate file: ${rootFile.fileName}`, errorText);
+            }
           }
         }
+      } catch (error) {
+        console.warn('Error checking for duplicate files:', error);
+        // Continue with upload even if check fails
       }
-    } catch (error) {
-      console.warn('Error checking for duplicate files:', error);
-      // Continue with upload even if check fails
     }
     
     // Upload file
