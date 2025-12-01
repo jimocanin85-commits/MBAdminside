@@ -179,8 +179,10 @@ const AdminPortal = () => {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'L') {
         e.preventDefault();
         if (isAdminMode) {
+          // If already in admin mode, open logs directly
           setShowLogsViewer(true);
         } else {
+          // Otherwise, show password dialog
           setShowLogsPasswordDialog(true);
         }
       }
