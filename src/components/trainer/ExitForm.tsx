@@ -186,9 +186,9 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
       // Create new worksheet with combined data
       const newWorksheet = XLSX.utils.aoa_to_sheet(combinedData);
       
-      // Find the row where "Exit Tjekliste" is located
+      // Find the row where "Exit Tjekliste" is located (1-indexed for Excel)
       const exitTitleRow = exitStartIndex !== -1 ? exitStartIndex + 3 : existingData.length + 3;
-      const exitTitleCell = `A${exitTitleRow}`;
+      const exitTitleCell = XLSX.utils.encode_cell({ r: exitTitleRow - 1, c: 0 }); // Convert to 0-indexed
       
       // Make "Exit Tjekliste" bold if the cell exists
       if (newWorksheet[exitTitleCell]) {
@@ -205,8 +205,16 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
         { wpx: 500 }   // Column C - Additional info
       ];
 
-      // Update workbook
+      // Update workbook - preserve all sheets
       workbook.Sheets[sheetName] = newWorksheet;
+      
+      console.log('Updated Excel file:', {
+        sheetName,
+        totalRows: combinedData.length,
+        exitTitleRow,
+        exitTitleCell,
+        hasExitData: combinedData.some(row => row[0] === 'Exit Tjekliste')
+      });
 
       // Convert back to Excel with cell styles enabled
       const excelBuffer = XLSX.write(workbook, { 
@@ -215,12 +223,17 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
         cellStyles: true 
       });
       
+      console.log('Excel buffer size:', excelBuffer.length, 'bytes');
+      
       // Convert array buffer directly to base64 (no need for Blob/FileReader)
       const base64 = btoa(
         Array.from(new Uint8Array(excelBuffer))
           .map(byte => String.fromCharCode(byte))
           .join('')
       );
+
+      console.log('Base64 length:', base64.length);
+      console.log('Uploading file:', selectedFile);
 
       // Upload back to Backblaze
       const { error: uploadError } = await functions.invoke('upload-to-backblaze', {
@@ -231,8 +244,12 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
         }
       });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
 
+      console.log('Upload successful!');
       toast.success('Exit tjekliste opdateret!', { id: loadingToast });
       onSuccess?.();
       onOpenChange(false);
