@@ -57,7 +57,7 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated }: CreateUs
 
     // Check if username already exists
     const existingUsers = JSON.parse(localStorage.getItem('customUsers') || '[]');
-    const reservedUsers = ['admin', 'Karina', 'Brian', 'Kyhl'];
+    const reservedUsers = ['admin', 'Brian']; // Only admin and Brian are reserved
     
     if (existingUsers.some((u: User) => u.username === username.trim()) || 
         reservedUsers.includes(username.trim())) {

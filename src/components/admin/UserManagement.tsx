@@ -38,13 +38,11 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
       if (customUsersJson) {
         const customUsers: User[] = JSON.parse(customUsersJson);
         // Convert createdAt strings back to Date objects
-        // Filter out Karina and Kyhl - they should not be visible in user management
-        const usersWithDates = customUsers
-          .filter(user => user.username !== 'Karina' && user.username !== 'Kyhl')
-          .map(user => ({
-            ...user,
-            createdAt: new Date(user.createdAt)
-          }));
+        // Show all users including Karina and Kyhl
+        const usersWithDates = customUsers.map(user => ({
+          ...user,
+          createdAt: new Date(user.createdAt)
+        }));
         setUsers(usersWithDates);
       } else {
         setUsers([]);
@@ -160,8 +158,6 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
                           <p className="text-sm text-muted-foreground">
                             {username === 'admin' || username === 'Brian' 
                               ? 'Alle rettigheder' 
-                              : username === 'Karina'
-                              ? 'Kun Frivilligfest'
                               : 'Standard bruger'}
                           </p>
                         </div>
