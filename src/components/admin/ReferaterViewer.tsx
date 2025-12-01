@@ -79,30 +79,55 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
             throw new Error('Kunne ikke læse fil data');
           }
 
+          const fileDataUrl = `data:${file.type || 'application/octet-stream'};base64,${base64Data}`;
+          
           console.log('Uploading file:', {
             fileName: file.name,
             fileSize: file.size,
             fileType: file.type,
             folder: `Referater/${selectedYear}`,
-            base64Length: base64Data.length
+            base64Length: base64Data.length,
+            fileDataUrlLength: fileDataUrl.length,
+            fileDataUrlPreview: fileDataUrl.substring(0, 100)
           });
 
           // Upload to Backblaze
-          const { data, error: uploadError } = await functions.invoke('upload-to-backblaze', {
-            method: 'POST',
-            body: {
-              fileName: file.name,
-              fileData: `data:${file.type || 'application/octet-stream'};base64,${base64Data}`,
-              folder: `Referater/${selectedYear}`
-            }
+          const requestBody = {
+            fileName: file.name,
+            fileData: fileDataUrl,
+            folder: `Referater/${selectedYear}`
+          };
+          
+          console.log('Request body prepared:', {
+            fileName: requestBody.fileName,
+            hasFileData: !!requestBody.fileData,
+            fileDataLength: requestBody.fileData?.length,
+            fileDataStart: requestBody.fileData?.substring(0, 50),
+            folder: requestBody.folder
           });
 
-          toast.dismiss(loadingToast);
+          // Use fetch directly to ensure proper JSON serialization
+          const response = await fetch('/api/upload-to-backblaze', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+          });
 
-          if (uploadError) {
-            console.error('Upload error:', uploadError);
-            throw new Error(uploadError.message || 'Upload fejlede');
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            console.error('Upload error response:', {
+              status: response.status,
+              statusText: response.statusText,
+              errorData
+            });
+            throw new Error(errorData.error || `Upload fejlede: ${response.status}`);
           }
+
+          const data = await response.json();
+
+          toast.dismiss(loadingToast);
 
           toast.success('Fil uploadet!');
           setIsUploading(false);

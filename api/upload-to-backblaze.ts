@@ -18,26 +18,60 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    // Vercel automatically parses JSON body, but handle edge cases
+    let body = req.body;
+    
+    // If body is undefined or null, try to read from raw body
+    if (!body && (req as any).body) {
+      body = (req as any).body;
+    }
+    
+    // If body is still a string, parse it
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch (e) {
+        console.error('Failed to parse body as JSON:', e);
+        return res.status(400).json({ error: 'Invalid JSON body' });
+      }
+    }
+
+    // If body is still not an object, return error
+    if (!body || typeof body !== 'object') {
+      console.error('Body is not an object:', { bodyType: typeof body, body });
+      return res.status(400).json({ error: 'Invalid request body format' });
+    }
+
     console.log('Upload request received:', {
       method: req.method,
-      hasBody: !!req.body,
-      bodyKeys: req.body ? Object.keys(req.body) : [],
-      fileName: req.body?.fileName,
-      hasFileData: !!req.body?.fileData,
-      fileDataLength: req.body?.fileData?.length,
-      folder: req.body?.folder
+      hasBody: !!body,
+      bodyType: typeof body,
+      bodyKeys: body ? Object.keys(body) : [],
+      fileName: body?.fileName,
+      hasFileData: !!body?.fileData,
+      fileDataType: typeof body?.fileData,
+      fileDataLength: body?.fileData ? (typeof body.fileData === 'string' ? body.fileData.length : 'not-string') : 0,
+      folder: body?.folder
     });
 
-    const { fileName, fileData, folder } = req.body;
+    const { fileName, fileData, folder } = body;
 
     if (!fileName || !fileData) {
-      console.error('Missing required fields:', { fileName: !!fileName, fileData: !!fileData });
+      console.error('Missing required fields:', { 
+        fileName: !!fileName, 
+        fileData: !!fileData,
+        fileNameValue: fileName,
+        fileDataType: typeof fileData,
+        fileDataPreview: typeof fileData === 'string' ? fileData.substring(0, 50) : fileData
+      });
       return res.status(400).json({ 
         error: 'fileName and fileData are required',
         received: {
           hasFileName: !!fileName,
           hasFileData: !!fileData,
-          hasFolder: !!folder
+          hasFolder: !!folder,
+          fileNameValue: fileName,
+          fileDataType: typeof fileData
         }
       });
     }
@@ -99,15 +133,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Extract base64 from data URL if needed (format: data:application/...;base64,XXX)
     let base64Data = fileData;
-    if (fileData.startsWith('data:')) {
+    let contentType = 'application/octet-stream';
+    
+    if (typeof fileData === 'string' && fileData.startsWith('data:')) {
+      // Extract content type from data URL
+      const dataUrlMatch = fileData.match(/^data:([^;]+);base64,/);
+      if (dataUrlMatch) {
+        contentType = dataUrlMatch[1];
+      }
+      
       const base64Index = fileData.indexOf('base64,');
       if (base64Index !== -1) {
         base64Data = fileData.substring(base64Index + 7);
       }
     }
 
+    // Validate base64Data
+    if (!base64Data || typeof base64Data !== 'string') {
+      console.error('Invalid fileData format:', { 
+        fileDataType: typeof fileData,
+        fileDataPreview: typeof fileData === 'string' ? fileData.substring(0, 100) : fileData
+      });
+      return res.status(400).json({ error: 'Invalid fileData format' });
+    }
+
     // Convert base64 to buffer
-    const fileBuffer = Buffer.from(base64Data, 'base64');
+    let fileBuffer: Buffer;
+    try {
+      fileBuffer = Buffer.from(base64Data, 'base64');
+      if (fileBuffer.length === 0) {
+        return res.status(400).json({ error: 'Empty file buffer after base64 decode' });
+      }
+    } catch (error) {
+      console.error('Failed to decode base64:', error);
+      return res.status(400).json({ error: 'Invalid base64 data' });
+    }
 
     // Upload file - use full path based on folder parameter
     // Default to Frivillige/ if no folder specified, otherwise use specified folder
@@ -167,12 +227,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     
     // Upload file
+    // Use dynamic content type based on file, but default to application/octet-stream for safety
+    const uploadContentType = contentType || 'application/octet-stream';
+    
+    console.log('Uploading to Backblaze:', {
+      fullPath,
+      contentType: uploadContentType,
+      fileSize: fileBuffer.length
+    });
+    
     const uploadResponse = await fetch(uploadUrlData.uploadUrl, {
       method: 'POST',
       headers: {
         'Authorization': uploadUrlData.authorizationToken,
         'X-Bz-File-Name': fullPath,
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Type': uploadContentType,
         'X-Bz-Content-Sha1': 'do_not_verify',
         'Content-Length': fileBuffer.length.toString()
       },
