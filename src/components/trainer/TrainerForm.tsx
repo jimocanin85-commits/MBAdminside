@@ -413,6 +413,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
       <AlertDialog open={showYesDialog} onOpenChange={setShowYesDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
+            <AlertDialogTitle>Godkend i KlubOffice</AlertDialogTitle>
             <AlertDialogDescription className="space-y-4 text-left pt-4">
               <div className="space-y-2">
                 <p>Tjek i KlubOffice:</p>
@@ -445,6 +446,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
       <AlertDialog open={showInfoDialog} onOpenChange={setShowInfoDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
+            <AlertDialogTitle>Tjek KlubOffice</AlertDialogTitle>
             <AlertDialogDescription className="space-y-4 text-left pt-4">
               <div className="space-y-2">
                 <p>Tjek, om den frivillige er kommet ind i KlubOffice:</p>

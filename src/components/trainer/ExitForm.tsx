@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -207,6 +207,9 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Exit Tjekliste</DialogTitle>
+        </DialogHeader>
         <div className="space-y-6 pt-6">
           <div className="space-y-2">
             <Select value={selectedFile} onValueChange={setSelectedFile}>

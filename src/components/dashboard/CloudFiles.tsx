@@ -62,9 +62,16 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
 
       if (data?.success) {
         console.log('CloudFiles: Setting files:', data.files);
-        setFiles(data.files);
+        setFiles(data.files || []);
+        
+        // Show warning if Backblaze is not configured
+        if (data.error && data.message) {
+          console.warn('CloudFiles:', data.message);
+          // Don't show toast for this - it's expected if Backblaze isn't configured
+        }
       } else {
         console.log('CloudFiles: No success flag or no files returned');
+        setFiles([]);
       }
     } catch (error) {
       console.error('CloudFiles: Exception loading files:', error);
