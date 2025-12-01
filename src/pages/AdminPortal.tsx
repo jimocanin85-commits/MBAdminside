@@ -157,6 +157,7 @@ const AdminPortal = () => {
         setIsAdminMode(false);
         setShowAdminDialog(false);
         setAdminPassword("");
+        setShowLogsViewer(false); // Also close logs viewer if open
         toast.success("Admin mode deaktiveret");
       } else {
         // Activate admin mode
@@ -167,6 +168,7 @@ const AdminPortal = () => {
       }
     } else {
       toast.error("Forkert adgangskode");
+      setAdminPassword("");
     }
   };
 
