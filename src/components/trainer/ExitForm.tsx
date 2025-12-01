@@ -184,11 +184,24 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
       let combinedData;
       if (exitStartIndex !== -1) {
         // Replace existing Exit Tjekliste
+        // Find where the old exit data ends (look for next non-empty row after exit data)
+        let exitEndIndex = exitStartIndex + exitData.length;
+        for (let i = exitStartIndex + exitData.length; i < existingData.length; i++) {
+          // Check if this row is part of exit data (empty or has exit-related content)
+          const row = existingData[i];
+          if (row && row.length > 0 && row[0] && typeof row[0] === 'string' && 
+              !row[0].includes('Exit') && row[0].trim() !== '') {
+            exitEndIndex = i;
+            break;
+          }
+        }
+        
         combinedData = [
           ...existingData.slice(0, exitStartIndex),
-          ...exitData
+          ...exitData,
+          ...existingData.slice(exitEndIndex)
         ];
-        console.log('Replaced Exit Tjekliste. Old rows:', existingData.length, 'New rows:', combinedData.length);
+        console.log('Replaced Exit Tjekliste. Old rows:', existingData.length, 'New rows:', combinedData.length, 'Replaced from', exitStartIndex, 'to', exitEndIndex);
       } else {
         // Append new Exit Tjekliste
         combinedData = [...existingData, ...exitData];
@@ -196,14 +209,49 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
       }
       
       // Verify exit data is in combined data
-      const hasExitTitle = combinedData.some(row => row[0] === 'Exit Tjekliste');
-      console.log('Combined data contains Exit Tjekliste:', hasExitTitle);
+      const hasExitTitle = combinedData.some(row => row && row[0] === 'Exit Tjekliste');
+      const exitTitleIndex = combinedData.findIndex(row => row && row[0] === 'Exit Tjekliste');
+      console.log('Combined data contains Exit Tjekliste:', hasExitTitle, 'at index:', exitTitleIndex);
       if (!hasExitTitle) {
         console.error('ERROR: Exit Tjekliste not found in combined data!');
+        console.error('First 5 rows of combined data:', combinedData.slice(0, 5));
+      }
+      
+      // Log a sample of the exit data to verify it's correct
+      const exitDataStart = combinedData.findIndex(row => row && row[0] === 'Exit Tjekliste');
+      if (exitDataStart !== -1) {
+        console.log('Exit data sample:', combinedData.slice(exitDataStart, exitDataStart + 5));
       }
 
-      // Create new worksheet with combined data
+      // Instead of creating a new worksheet, update the existing one
+      // This preserves all formatting, styles, and other data
       const newWorksheet = XLSX.utils.aoa_to_sheet(combinedData);
+      
+      // Preserve existing worksheet properties
+      if (worksheet['!ref']) {
+        newWorksheet['!ref'] = worksheet['!ref'];
+      }
+      
+      // Preserve existing column widths if they exist, otherwise set new ones
+      if (worksheet['!cols']) {
+        newWorksheet['!cols'] = worksheet['!cols'];
+      } else {
+        newWorksheet['!cols'] = [
+          { wpx: 300 },  // Column A - Checklist item
+          { wpx: 400 },  // Column B - Status (with full date)
+          { wpx: 500 }   // Column C - Additional info
+        ];
+      }
+      
+      // Preserve existing row heights if they exist
+      if (worksheet['!rows']) {
+        newWorksheet['!rows'] = worksheet['!rows'];
+      }
+      
+      // Preserve existing merges if they exist
+      if (worksheet['!merges']) {
+        newWorksheet['!merges'] = worksheet['!merges'];
+      }
       
       // Find the row where "Exit Tjekliste" is located (1-indexed for Excel)
       const exitTitleRow = exitStartIndex !== -1 ? exitStartIndex + 3 : existingData.length + 3;
@@ -216,16 +264,14 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
           alignment: { vertical: 'center', horizontal: 'left' }
         };
       }
-      
-      // Set column widths using pixel values for better consistency
-      newWorksheet['!cols'] = [
-        { wpx: 300 },  // Column A - Checklist item
-        { wpx: 400 },  // Column B - Status (with full date)
-        { wpx: 500 }   // Column C - Additional info
-      ];
 
-      // Update workbook - preserve all sheets
+      // Update workbook - preserve all sheets and workbook properties
       workbook.Sheets[sheetName] = newWorksheet;
+      
+      // Preserve workbook properties
+      if (workbook.Props) {
+        // Keep existing workbook properties
+      }
       
       console.log('Updated Excel file:', {
         sheetName,
