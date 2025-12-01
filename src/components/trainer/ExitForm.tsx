@@ -214,29 +214,28 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
         type: 'array',
         cellStyles: true 
       });
-      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       
-      // Convert to base64
-      const reader = new FileReader();
-      reader.readAsDataURL(blob);
-      reader.onloadend = async () => {
-        const base64data = reader.result as string;
+      // Convert array buffer directly to base64 (no need for Blob/FileReader)
+      const base64 = btoa(
+        Array.from(new Uint8Array(excelBuffer))
+          .map(byte => String.fromCharCode(byte))
+          .join('')
+      );
 
-        // Upload back to Backblaze
-        const { error: uploadError } = await functions.invoke('upload-to-backblaze', {
-          method: 'POST',
-          body: {
-            fileData: base64data,
-            fileName: selectedFile
-          }
-        });
+      // Upload back to Backblaze
+      const { error: uploadError } = await functions.invoke('upload-to-backblaze', {
+        method: 'POST',
+        body: {
+          fileData: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64}`,
+          fileName: selectedFile
+        }
+      });
 
-        if (uploadError) throw uploadError;
+      if (uploadError) throw uploadError;
 
-        toast.success('Exit tjekliste opdateret!', { id: loadingToast });
-        onSuccess?.();
-        onOpenChange(false);
-      };
+      toast.success('Exit tjekliste opdateret!', { id: loadingToast });
+      onSuccess?.();
+      onOpenChange(false);
     } catch (error) {
       console.error('Error processing exit:', error);
       toast.error('Kunne ikke behandle exit', { id: loadingToast });

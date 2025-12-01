@@ -79,8 +79,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const uploadUrlData = await uploadUrlResponse.json();
 
+    // Extract base64 from data URL if needed (format: data:application/...;base64,XXX)
+    let base64Data = fileData;
+    if (fileData.startsWith('data:')) {
+      const base64Index = fileData.indexOf('base64,');
+      if (base64Index !== -1) {
+        base64Data = fileData.substring(base64Index + 7);
+      }
+    }
+
     // Convert base64 to buffer
-    const fileBuffer = Buffer.from(fileData, 'base64');
+    const fileBuffer = Buffer.from(base64Data, 'base64');
 
     // Upload file
     const uploadResponse = await fetch(uploadUrlData.uploadUrl, {
