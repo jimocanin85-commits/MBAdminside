@@ -14,11 +14,20 @@ export interface LogEntry {
   source?: string;
 }
 
+export interface LoginEvent {
+  id: string;
+  timestamp: Date;
+  username: string;
+  action: 'login' | 'logout';
+}
+
 class Logger {
   private logs: LogEntry[] = [];
+  private loginHistory: LoginEvent[] = [];
   private maxLogs = 10000; // Keep up to 10000 logs (will be filtered by date)
   private retentionDays = 7; // Keep logs for 7 days
   private listeners: Array<(logs: LogEntry[]) => void> = [];
+  private loginListeners: Array<(events: LoginEvent[]) => void> = [];
   private originalConsole: {
     log: typeof console.log;
     info: typeof console.info;
@@ -39,6 +48,49 @@ class Logger {
 
     // Override console methods
     this.setupConsoleOverrides();
+    
+    // Load login history from localStorage
+    this.loadLoginHistory();
+  }
+
+  private loadLoginHistory() {
+    try {
+      const saved = localStorage.getItem('loginHistory');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        this.loginHistory = parsed.map((event: any) => ({
+          ...event,
+          timestamp: new Date(event.timestamp)
+        }));
+        this.cleanupOldLoginHistory();
+      }
+    } catch (e) {
+      console.error('Failed to load login history:', e);
+    }
+  }
+
+  private saveLoginHistory() {
+    try {
+      localStorage.setItem('loginHistory', JSON.stringify(this.loginHistory));
+    } catch (e) {
+      console.error('Failed to save login history:', e);
+    }
+  }
+
+  private cleanupOldLoginHistory() {
+    const now = new Date();
+    const cutoffDate = new Date(now);
+    cutoffDate.setDate(cutoffDate.getDate() - this.retentionDays);
+    
+    const initialLength = this.loginHistory.length;
+    this.loginHistory = this.loginHistory.filter((event) => {
+      const eventDate = new Date(event.timestamp);
+      return eventDate >= cutoffDate;
+    });
+    
+    if (this.loginHistory.length !== initialLength) {
+      this.saveLoginHistory();
+    }
   }
 
   private setupConsoleOverrides() {
@@ -221,6 +273,57 @@ class Logger {
 
   error(message: string, error?: Error | any) {
     this.addLog('error', [message, error]);
+  }
+
+  // Login history methods
+  logLogin(username: string) {
+    const event: LoginEvent = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date(),
+      username,
+      action: 'login'
+    };
+    
+    this.loginHistory.push(event);
+    this.cleanupOldLoginHistory();
+    this.saveLoginHistory();
+    this.notifyLoginListeners();
+    
+    // Also log to console logs
+    this.addLog('info', [`User login: ${username}`]);
+  }
+
+  logLogout(username: string) {
+    const event: LoginEvent = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date(),
+      username,
+      action: 'logout'
+    };
+    
+    this.loginHistory.push(event);
+    this.cleanupOldLoginHistory();
+    this.saveLoginHistory();
+    this.notifyLoginListeners();
+    
+    // Also log to console logs
+    this.addLog('info', [`User logout: ${username}`]);
+  }
+
+  getLoginHistory(): LoginEvent[] {
+    this.cleanupOldLoginHistory();
+    return [...this.loginHistory];
+  }
+
+  subscribeToLoginHistory(listener: (events: LoginEvent[]) => void) {
+    this.loginListeners.push(listener);
+    return () => {
+      this.loginListeners = this.loginListeners.filter((l) => l !== listener);
+    };
+  }
+
+  private notifyLoginListeners() {
+    this.loginListeners.forEach((listener) => listener([...this.loginHistory]));
   }
 }
 

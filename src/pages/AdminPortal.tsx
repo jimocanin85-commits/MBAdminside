@@ -8,6 +8,7 @@ import ExitForm from "@/components/trainer/ExitForm";
 import { CloudFiles } from "@/components/dashboard/CloudFiles";
 import FrivilligfestDialog from "@/components/dashboard/FrivilligfestDialog";
 import LogsViewer from "@/components/admin/LogsViewer";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown, Camera, Sparkles, ExternalLink, Calendar, RefreshCw } from "lucide-react";
@@ -182,9 +183,13 @@ const AdminPortal = () => {
 
   const handleLogin = (username: string) => {
     setCurrentUser(username);
+    logger.logLogin(username);
   };
 
   const handleLogout = () => {
+    if (currentUser) {
+      logger.logLogout(currentUser);
+    }
     setCurrentUser(null);
     setIsAdminMode(false);
     localStorage.removeItem('currentUser');

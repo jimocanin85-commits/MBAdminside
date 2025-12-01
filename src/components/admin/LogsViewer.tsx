@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Download, Search } from "lucide-react";
-import { logger, type LogEntry } from "@/lib/logger";
+import { logger, type LogEntry, type LoginEvent } from "@/lib/logger";
 import { format } from "date-fns";
+import { Users } from "lucide-react";
 
 interface LogsViewerProps {
   open: boolean;
@@ -14,6 +15,8 @@ interface LogsViewerProps {
 
 const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [loginHistory, setLoginHistory] = useState<LoginEvent[]>([]);
+  const [activeTab, setActiveTab] = useState<'logs' | 'users'>('logs');
   const [filter, setFilter] = useState<'all' | 'error' | 'warn' | 'info' | 'log'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [autoScroll, setAutoScroll] = useState(true);
@@ -24,13 +27,22 @@ const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
 
     // Get initial logs
     setLogs(logger.getLogs());
+    setLoginHistory(logger.getLoginHistory());
 
     // Subscribe to new logs
     const unsubscribe = logger.subscribe((newLogs) => {
       setLogs(newLogs);
     });
 
-    return unsubscribe;
+    // Subscribe to login history
+    const unsubscribeLogin = logger.subscribeToLoginHistory((newHistory) => {
+      setLoginHistory(newHistory);
+    });
+
+    return () => {
+      unsubscribe();
+      unsubscribeLogin();
+    };
   }, [open]);
 
   // Auto-scroll to bottom when new logs arrive
@@ -91,10 +103,35 @@ const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl max-h-[95vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
-          <DialogTitle className="text-xl">Frontend Logs</DialogTitle>
-          <DialogDescription>
-            Viser alle console logs, errors og warnings fra frontend
-          </DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="text-xl">Frontend Logs</DialogTitle>
+              <DialogDescription>
+                {activeTab === 'logs' 
+                  ? 'Viser alle console logs, errors og warnings fra frontend'
+                  : 'Viser login historik for alle brugere'}
+              </DialogDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant={activeTab === 'logs' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setActiveTab('logs')}
+                className="gap-2"
+              >
+                Logs
+              </Button>
+              <Button
+                variant={activeTab === 'users' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setActiveTab('users')}
+                className="gap-2"
+              >
+                <Users className="h-4 w-4" />
+                Brugere
+              </Button>
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
@@ -161,100 +198,164 @@ const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
             </div>
           </div>
 
-          {/* Logs Container */}
+          {/* Content Container */}
           <div 
             className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-4 bg-background"
             style={{ maxHeight: 'calc(95vh - 280px)' }}
           >
-            <div className="space-y-3">
-              {filteredLogs.length === 0 ? (
-                <div className="text-center text-muted-foreground py-12">
-                  <p className="text-lg font-medium">Ingen logs fundet</p>
-                  <p className="text-sm mt-2">
-                    {searchTerm ? 'Prøv at ændre søgeordet eller filteret' : 'Logs vil blive vist her når de opstår'}
-                  </p>
-                </div>
-              ) : (
-                filteredLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    className={`border rounded-lg p-4 transition-all hover:shadow-md ${getLevelBgColor(log.level)}`}
-                  >
-                    <div className="flex items-start gap-3 mb-2">
-                      <Badge 
-                        variant={getLevelColor(log.level)} 
-                        className="text-xs font-semibold shrink-0"
-                      >
-                        {log.level.toUpperCase()}
-                      </Badge>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-mono text-muted-foreground">
-                            {format(log.timestamp, 'HH:mm:ss.SSS')}
-                          </span>
-                          {log.source && (
-                            <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-                              {log.source.split('/').pop()}
+            {activeTab === 'logs' ? (
+              <div className="space-y-3">
+                {filteredLogs.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-12">
+                    <p className="text-lg font-medium">Ingen logs fundet</p>
+                    <p className="text-sm mt-2">
+                      {searchTerm ? 'Prøv at ændre søgeordet eller filteret' : 'Logs vil blive vist her når de opstår'}
+                    </p>
+                  </div>
+                ) : (
+                  filteredLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className={`border rounded-lg p-4 transition-all hover:shadow-md ${getLevelBgColor(log.level)}`}
+                    >
+                      <div className="flex items-start gap-3 mb-2">
+                        <Badge 
+                          variant={getLevelColor(log.level)} 
+                          className="text-xs font-semibold shrink-0"
+                        >
+                          {log.level.toUpperCase()}
+                        </Badge>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-mono text-muted-foreground">
+                              {format(log.timestamp, 'HH:mm:ss.SSS')}
                             </span>
-                          )}
+                            {log.source && (
+                              <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                {log.source.split('/').pop()}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
+                      <div className="text-sm font-mono break-words whitespace-pre-wrap text-foreground leading-relaxed">
+                        {log.message}
+                      </div>
+                      {log.data && (
+                        <details className="mt-3 group">
+                          <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors list-none">
+                            <span className="inline-flex items-center gap-1">
+                              <span>📦</span>
+                              <span>Vis data ({Array.isArray(log.data) ? log.data.length : 1} elementer)</span>
+                            </span>
+                          </summary>
+                          <div className="mt-2 bg-muted/80 border rounded-md p-3 overflow-auto max-h-60">
+                            <pre className="text-xs font-mono whitespace-pre-wrap break-words">
+                              {JSON.stringify(log.data, null, 2)}
+                            </pre>
+                          </div>
+                        </details>
+                      )}
+                      {log.stack && (
+                        <details className="mt-3 group">
+                          <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors list-none">
+                            <span className="inline-flex items-center gap-1">
+                              <span>🔍</span>
+                              <span>Vis stack trace</span>
+                            </span>
+                          </summary>
+                          <div className="mt-2 bg-muted/80 border rounded-md p-3 overflow-auto max-h-60">
+                            <pre className="text-xs font-mono whitespace-pre-wrap break-words text-destructive">
+                              {log.stack}
+                            </pre>
+                          </div>
+                        </details>
+                      )}
                     </div>
-                    <div className="text-sm font-mono break-words whitespace-pre-wrap text-foreground leading-relaxed">
-                      {log.message}
-                    </div>
-                    {log.data && (
-                      <details className="mt-3 group">
-                        <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors list-none">
-                          <span className="inline-flex items-center gap-1">
-                            <span>📦</span>
-                            <span>Vis data ({Array.isArray(log.data) ? log.data.length : 1} elementer)</span>
-                          </span>
-                        </summary>
-                        <div className="mt-2 bg-muted/80 border rounded-md p-3 overflow-auto max-h-60">
-                          <pre className="text-xs font-mono whitespace-pre-wrap break-words">
-                            {JSON.stringify(log.data, null, 2)}
-                          </pre>
-                        </div>
-                      </details>
-                    )}
-                    {log.stack && (
-                      <details className="mt-3 group">
-                        <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors list-none">
-                          <span className="inline-flex items-center gap-1">
-                            <span>🔍</span>
-                            <span>Vis stack trace</span>
-                          </span>
-                        </summary>
-                        <div className="mt-2 bg-muted/80 border rounded-md p-3 overflow-auto max-h-60">
-                          <pre className="text-xs font-mono whitespace-pre-wrap break-words text-destructive">
-                            {log.stack}
-                          </pre>
-                        </div>
-                      </details>
-                    )}
+                  ))
+                )}
+                <div ref={logsEndRef} />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {loginHistory.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-12">
+                    <p className="text-lg font-medium">Ingen login historik</p>
+                    <p className="text-sm mt-2">Login events vil blive vist her når brugere logger ind eller ud</p>
                   </div>
-                ))
-              )}
-              <div ref={logsEndRef} />
-            </div>
+                ) : (
+                  loginHistory
+                    .slice()
+                    .reverse()
+                    .map((event) => (
+                      <div
+                        key={event.id}
+                        className={`border rounded-lg p-4 transition-all hover:shadow-md ${
+                          event.action === 'login' 
+                            ? 'bg-green-500/10 border-green-500/20' 
+                            : 'bg-orange-500/10 border-orange-500/20'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <Badge 
+                            variant={event.action === 'login' ? 'default' : 'secondary'}
+                            className="text-xs font-semibold shrink-0"
+                          >
+                            {event.action === 'login' ? 'LOGIN' : 'LOGOUT'}
+                          </Badge>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <span className="font-semibold text-foreground">
+                                {event.username}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {format(event.timestamp, 'dd/MM/yyyy HH:mm:ss')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                )}
+              </div>
+            )}
           </div>
 
           {/* Footer */}
           <div className="px-6 py-3 border-t bg-muted/30 flex items-center justify-between flex-shrink-0">
-            <div className="text-xs text-muted-foreground">
-              Viser <strong className="text-foreground">{filteredLogs.length}</strong> af <strong className="text-foreground">{logs.length}</strong> logs
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {filteredLogs.length > 0 && (
-                <span>
-                  Seneste: {format(filteredLogs[filteredLogs.length - 1].timestamp, 'HH:mm:ss')}
-                </span>
-              )}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Logs gemmes i 7 dage
-            </div>
+            {activeTab === 'logs' ? (
+              <>
+                <div className="text-xs text-muted-foreground">
+                  Viser <strong className="text-foreground">{filteredLogs.length}</strong> af <strong className="text-foreground">{logs.length}</strong> logs
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {filteredLogs.length > 0 && (
+                    <span>
+                      Seneste: {format(filteredLogs[filteredLogs.length - 1].timestamp, 'HH:mm:ss')}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Logs gemmes i 7 dage
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-xs text-muted-foreground">
+                  Viser <strong className="text-foreground">{loginHistory.length}</strong> login events
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {loginHistory.length > 0 && (
+                    <span>
+                      Seneste: {format(loginHistory[loginHistory.length - 1].timestamp, 'dd/MM/yyyy HH:mm:ss')}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Historik gemmes i 7 dage
+                </div>
+              </>
+            )}
           </div>
         </div>
       </DialogContent>
