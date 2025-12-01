@@ -342,73 +342,68 @@ const AdminPortal = () => {
         <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
           {isRestrictedUser ? (
             // Karina - Only Frivilligfest access
-            <div className="space-y-6">
-              {/* Profile Card */}
-              <Card className="shadow-lg border-2">
-                <CardContent className="pt-6 pb-6">
-                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-                    {/* Avatar */}
-                    <div className="relative group flex-shrink-0">
-                      <Avatar className="h-24 w-24 sm:h-28 sm:w-28 border-2 border-muted shadow-md">
-                        <AvatarImage src={karinaAvatar || undefined} alt={currentUser || ''} />
-                        <AvatarFallback className="bg-gradient-to-br from-pink-400 to-purple-500 text-white text-2xl font-semibold">
-                          {currentUser?.charAt(0).toUpperCase() || 'K'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <label 
-                        htmlFor="avatar-upload" 
-                        className="absolute -bottom-1 -right-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full p-2 cursor-pointer shadow-md transition-all hover:scale-110"
-                        title="Skift profilbillede"
-                      >
-                        <Camera className="h-4 w-4" />
-                        <input
-                          id="avatar-upload"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleAvatarUpload}
-                          className="hidden"
-                          disabled={isUploadingAvatar}
-                        />
-                      </label>
-                    </div>
-                    
-                    {/* User Info */}
-                    <div className="flex-1 text-center sm:text-left space-y-2">
-                      <h1 className="text-2xl sm:text-3xl font-bold">
-                        Velkommen {currentUser}!
-                      </h1>
-                      {isUploadingAvatar && (
-                        <p className="text-sm text-muted-foreground">Uploader billede...</p>
-                      )}
-                    </div>
+            <div className="max-w-2xl mx-auto space-y-8">
+              {/* Welcome Section */}
+              <div className="text-center space-y-4">
+                <div className="flex justify-center">
+                  <div className="relative">
+                    <Avatar className="h-20 w-20 border border-border">
+                      <AvatarImage src={karinaAvatar || undefined} alt={currentUser || ''} />
+                      <AvatarFallback className="bg-muted text-foreground text-xl font-medium">
+                        {currentUser?.charAt(0).toUpperCase() || 'K'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <label 
+                      htmlFor="avatar-upload" 
+                      className="absolute -bottom-1 -right-1 bg-background border border-border rounded-full p-1.5 cursor-pointer hover:bg-muted transition-colors shadow-sm"
+                      title="Skift profilbillede"
+                    >
+                      <Camera className="h-3.5 w-3.5 text-muted-foreground" />
+                      <input
+                        id="avatar-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarUpload}
+                        className="hidden"
+                        disabled={isUploadingAvatar}
+                      />
+                    </label>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div>
+                  <h1 className="text-2xl font-semibold text-foreground">
+                    Velkommen {currentUser}
+                  </h1>
+                  {isUploadingAvatar && (
+                    <p className="text-sm text-muted-foreground mt-2">Uploader billede...</p>
+                  )}
+                </div>
+              </div>
 
-              {/* Main Action Card */}
-              <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow">
-                <CardContent className="pt-8 pb-8">
-                  <div className="text-center space-y-6">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-center gap-2">
-                        <Calendar className="h-8 w-8 text-primary" />
-                        <h2 className="text-2xl sm:text-3xl font-bold">Frivilligfest 2026</h2>
+              {/* Main Action */}
+              <Card className="border hover:border-primary/50 transition-colors">
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 rounded-lg bg-muted">
+                        <Calendar className="h-6 w-6 text-foreground" />
                       </div>
-                      <p className="text-muted-foreground text-sm sm:text-base max-w-md mx-auto">
-                        Klik på knappen nedenfor for at åbne Google Sheet med Frivilligfest checklisten
-                      </p>
+                      <div className="flex-1 space-y-1">
+                        <h2 className="text-lg font-semibold">Frivilligfest 2026</h2>
+                        <p className="text-sm text-muted-foreground">
+                          Åbn Google Sheet med Frivilligfest checklisten
+                        </p>
+                      </div>
                     </div>
                     
                     <Button 
-                      size="lg" 
-                      className="gap-2 text-base px-8 py-6 min-h-[60px] w-full sm:w-auto"
+                      className="w-full justify-start gap-2 h-11"
                       onClick={() => {
                         window.open('https://docs.google.com/spreadsheets/d/15QhvIYCNhci2N-oBbEGIpRgeevWe42L0kjhNyfTjkjQ/edit?usp=sharing_eil&ts=67288c42', '_blank');
                       }}
                     >
-                      <Calendar className="h-5 w-5" />
-                      <span>Åbn Frivilligfest 2026</span>
                       <ExternalLink className="h-4 w-4" />
+                      Åbn i Google Sheets
                     </Button>
                   </div>
                 </CardContent>
