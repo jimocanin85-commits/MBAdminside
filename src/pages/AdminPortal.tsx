@@ -539,12 +539,12 @@ const AdminPortal = () => {
       />
 
       {/* Logs Password Dialog */}
-      {isAdminMode && (
+      {!isRestrictedUser && (
         <Dialog open={showLogsPasswordDialog} onOpenChange={setShowLogsPasswordDialog}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Logs Adgang</DialogTitle>
-              <DialogDescription>Indtast adgangskode for at se frontend logs</DialogDescription>
+              <DialogDescription>Indtast adgangskode (1523) for at se frontend logs</DialogDescription>
             </DialogHeader>
             <Input
               type="password"
