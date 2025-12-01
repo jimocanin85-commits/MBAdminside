@@ -299,6 +299,7 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
       
       // Upload to Backblaze with proper data URL format
       const { data: uploadData, error: uploadError } = await functions.invoke('upload-to-backblaze', {
+        method: 'POST',
         body: {
           fileName,
           fileData: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${cleanBase64}`

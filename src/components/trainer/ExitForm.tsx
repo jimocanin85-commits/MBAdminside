@@ -224,6 +224,7 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
 
         // Upload back to Backblaze
         const { error: uploadError } = await functions.invoke('upload-to-backblaze', {
+          method: 'POST',
           body: {
             fileData: base64data,
             fileName: selectedFile
