@@ -46,15 +46,22 @@ const BottomNavigation = ({
       onOpenLogsViewer: !!onOpenLogsViewer,
       onOpenClearCache: !!onOpenClearCache
     });
+    console.log('BottomNavigation - adminNavItems will be:', isAdminMode ? 'SHOWN' : 'HIDDEN');
+    console.log('BottomNavigation - adminNavItems array length:', isAdminMode ? 3 : 0);
   }, [isAdminMode, onOpenUserManagement, onOpenLogsViewer, onOpenClearCache]);
 
-  const adminNavItems = isAdminMode && onOpenUserManagement && onOpenLogsViewer && onOpenClearCache ? [
+  const adminNavItems = isAdminMode ? [
     {
       id: "users" as const,
       label: "Brugere",
       icon: Users,
       onClick: () => {
-        onOpenUserManagement();
+        console.log('Brugere button clicked');
+        if (onOpenUserManagement) {
+          onOpenUserManagement();
+        } else {
+          console.error('onOpenUserManagement is not defined!');
+        }
       },
     },
     {
@@ -66,8 +73,11 @@ const BottomNavigation = ({
         </svg>
       ),
       onClick: () => {
+        console.log('Logs button clicked');
         if (onOpenLogsViewer) {
           onOpenLogsViewer();
+        } else {
+          console.error('onOpenLogsViewer is not defined!');
         }
       },
     },
@@ -76,12 +86,21 @@ const BottomNavigation = ({
       label: "Cache",
       icon: RefreshCw,
       onClick: () => {
-        onOpenClearCache();
+        console.log('Cache button clicked');
+        if (onOpenClearCache) {
+          onOpenClearCache();
+        } else {
+          console.error('onOpenClearCache is not defined!');
+        }
       },
     },
   ] : [];
 
   const navItems = [...baseNavItems, ...adminNavItems];
+  
+  console.log('BottomNavigation render - navItems count:', navItems.length, 'adminNavItems count:', adminNavItems.length);
+  console.log('BottomNavigation render - isAdminMode:', isAdminMode);
+  console.log('BottomNavigation render - navItems:', navItems.map(i => i.id));
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t-2 z-50 md:hidden safe-area-bottom">
@@ -91,6 +110,11 @@ const BottomNavigation = ({
         </div>
       )}
       <div className="flex justify-end h-16 overflow-x-auto">
+        {navItems.length === 0 && (
+          <div className="flex items-center justify-center px-4 text-xs text-muted-foreground">
+            No nav items (isAdminMode: {String(isAdminMode)})
+          </div>
+        )}
         {navItems.map((item) => {
           const Icon = typeof item.icon === 'function' ? item.icon : item.icon;
           const isActive = currentView === item.id;
