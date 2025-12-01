@@ -212,6 +212,9 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
 
       const { data: base64Data, fileName: downloadedFileName } = await response.json();
       
+      // Determine file type from extension
+      const fileExtension = downloadedFileName.split('.').pop()?.toLowerCase();
+      
       // Convert base64 to blob
       const binaryString = atob(base64Data);
       const bytes = new Uint8Array(binaryString.length);
@@ -220,7 +223,6 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
       }
       
       // Determine MIME type from file extension
-      const fileExtension = downloadedFileName.split('.').pop()?.toLowerCase();
       const mimeTypes: Record<string, string> = {
         'pdf': 'application/pdf',
         'jpg': 'image/jpeg',
@@ -230,21 +232,160 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
         'doc': 'application/msword',
         'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'xls': 'application/vnd.ms-excel',
-        'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'ppt': 'application/vnd.ms-powerpoint',
+        'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
       };
       const mimeType = mimeTypes[fileExtension || ''] || 'application/octet-stream';
       
       const blob = new Blob([bytes], { type: mimeType });
       const blobUrl = URL.createObjectURL(blob);
       
-      // Open file in new tab
-      window.open(blobUrl, '_blank');
+      // For Office documents, browsers will download them instead of viewing
+      // We need to use a viewer service or open in a way that forces viewing
+      const officeExtensions = ['docx', 'doc', 'xlsx', 'xls', 'pptx', 'ppt'];
       
-      // Clean up blob URL after a delay (browser will handle cleanup when tab closes)
-      setTimeout(() => {
-        URL.revokeObjectURL(blobUrl);
-        setViewingFileId(null);
-      }, 1000);
+      if (fileExtension && officeExtensions.includes(fileExtension)) {
+        // Office documents cannot be viewed directly in browsers - they will always download
+        // Instead, we'll create a viewer page that attempts to use Microsoft Office Online Viewer
+        // with a fallback to download if viewing fails
+        const viewerPage = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>${downloadedFileName}</title>
+            <meta charset="utf-8">
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                background: #f5f5f5;
+              }
+              .header {
+                background: white;
+                padding: 15px 20px;
+                border-bottom: 1px solid #e0e0e0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              }
+              .header h1 {
+                font-size: 18px;
+                font-weight: 500;
+                color: #333;
+              }
+              .viewer-container {
+                flex: 1;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+              }
+              .viewer-content {
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                width: 100%;
+                max-width: 1200px;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+              }
+              .viewer-iframe {
+                flex: 1;
+                border: none;
+                border-radius: 0 0 8px 8px;
+              }
+              .download-btn {
+                display: inline-block;
+                padding: 12px 24px;
+                background: #007bff;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                margin-top: 20px;
+                transition: background 0.2s;
+                font-size: 16px;
+              }
+              .download-btn:hover {
+                background: #0056b3;
+              }
+              .message-container {
+                text-align: center;
+                padding: 50px 20px;
+                color: #666;
+              }
+              .message-container h2 {
+                font-size: 24px;
+                margin-bottom: 10px;
+                color: #333;
+              }
+              .message-container p {
+                font-size: 16px;
+                margin-bottom: 20px;
+                line-height: 1.5;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1>${downloadedFileName}</h1>
+            </div>
+            <div class="viewer-container">
+              <div class="viewer-content">
+                <div class="message-container">
+                  <h2>Office dokument</h2>
+                  <p>Dette dokument kan ikke vises direkte i browseren.</p>
+                  <p>Klik på knappen nedenfor for at downloade og åbne filen i et kompatibelt program.</p>
+                  <a href="${blobUrl}" download="${downloadedFileName}" class="download-btn">
+                    Download fil
+                  </a>
+                </div>
+              </div>
+            </div>
+          </body>
+          </html>
+        `;
+        
+        // Create a blob URL for the viewer page
+        const viewerBlob = new Blob([viewerPage], { type: 'text/html' });
+        const viewerBlobUrl = URL.createObjectURL(viewerBlob);
+        
+        // Open viewer page in new tab
+        const newWindow = window.open(viewerBlobUrl, '_blank');
+        
+        if (!newWindow) {
+          // Popup blocked - create download link instead
+          const downloadLink = document.createElement('a');
+          downloadLink.href = blobUrl;
+          downloadLink.download = downloadedFileName;
+          document.body.appendChild(downloadLink);
+          downloadLink.click();
+          document.body.removeChild(downloadLink);
+          URL.revokeObjectURL(blobUrl);
+          URL.revokeObjectURL(viewerBlobUrl);
+        } else {
+          // Clean up blob URLs after a delay
+          setTimeout(() => {
+            URL.revokeObjectURL(blobUrl);
+            URL.revokeObjectURL(viewerBlobUrl);
+            setViewingFileId(null);
+          }, 10000); // Longer timeout for Office files
+        }
+      } else {
+        // For PDF, images, and text files, use blob URL directly
+        // Open file in new tab - browser will handle viewing
+        window.open(blobUrl, '_blank');
+        
+        // Clean up blob URL after a delay
+        setTimeout(() => {
+          URL.revokeObjectURL(blobUrl);
+          setViewingFileId(null);
+        }, 1000);
+      }
     } catch (error) {
       toast.dismiss(loadingToast);
       console.error('Error viewing file:', error);
