@@ -252,11 +252,6 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
               })()}
               {users.length > 0 && (
                 <div className="space-y-2 pb-2">
-                  {users.length === 0 && (
-                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-                      Debug: users array is empty but should have {users.length} users
-                    </div>
-                  )}
                   {users.map((user) => {
                     const active = isUserActive(user);
                     return (
