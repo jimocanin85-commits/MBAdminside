@@ -7,6 +7,7 @@ import TrainerSpreadsheet from "@/components/trainer/TrainerSpreadsheet";
 import ExitForm from "@/components/trainer/ExitForm";
 import { CloudFiles } from "@/components/dashboard/CloudFiles";
 import FrivilligfestDialog from "@/components/dashboard/FrivilligfestDialog";
+import LogsViewer from "@/components/admin/LogsViewer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown } from "lucide-react";
@@ -56,6 +57,9 @@ const AdminPortal = () => {
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [showAdminDialog, setShowAdminDialog] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
+  const [showLogsViewer, setShowLogsViewer] = useState(false);
+  const [logsPassword, setLogsPassword] = useState("");
+  const [showLogsPasswordDialog, setShowLogsPasswordDialog] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [currentView, setCurrentView] = useState<"home" | "cloud" | "form" | "settings">("home");
   const [showFrivilligfestDialog, setShowFrivilligfestDialog] = useState(false);
@@ -156,6 +160,35 @@ const AdminPortal = () => {
       toast.error("Forkert adgangskode");
     }
   };
+
+  const handleLogsPassword = () => {
+    if (logsPassword === "1523") {
+      setShowLogsViewer(true);
+      setShowLogsPasswordDialog(false);
+      setLogsPassword("");
+    } else {
+      toast.error("Forkert adgangskode");
+    }
+  };
+
+  // Keyboard shortcut to open logs (Ctrl+Shift+L or Cmd+Shift+L)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'L') {
+        e.preventDefault();
+        if (isAdminMode) {
+          setShowLogsViewer(true);
+        } else {
+          setShowLogsPasswordDialog(true);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isAuthenticated, isAdminMode]);
 
   const handleDeleteTrainer = (trainer: Trainer) => {
     setTrainers(trainers.filter(t => t.createdAt !== trainer.createdAt));
@@ -450,15 +483,31 @@ const AdminPortal = () => {
 
       {/* Desktop Settings Button - Hidden on Mobile and for restricted users */}
       {!isRestrictedUser && (
-        <Button
-          size="icon"
-          variant="outline"
-          className="hidden md:flex fixed bottom-4 left-4 h-12 w-12 rounded-full shadow-lg z-50 min-h-[48px] min-w-[48px]"
-          onClick={() => setShowAdminDialog(true)}
-          aria-label="Settings"
-        >
-          <Settings className="h-5 w-5" />
-        </Button>
+        <div className="hidden md:flex fixed bottom-4 left-4 gap-2 z-50">
+          <Button
+            size="icon"
+            variant="outline"
+            className="h-12 w-12 rounded-full shadow-lg min-h-[48px] min-w-[48px]"
+            onClick={() => setShowAdminDialog(true)}
+            aria-label="Settings"
+          >
+            <Settings className="h-5 w-5" />
+          </Button>
+          {isAdminMode && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-12 w-12 rounded-full shadow-lg min-h-[48px] min-w-[48px]"
+              onClick={() => setShowLogsViewer(true)}
+              aria-label="View Logs"
+              title="View Logs (Ctrl+Shift+L)"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </Button>
+          )}
+        </div>
       )}
 
       {!isRestrictedUser && (
@@ -485,6 +534,34 @@ const AdminPortal = () => {
       <FrivilligfestDialog
         open={showFrivilligfestDialog}
         onOpenChange={setShowFrivilligfestDialog}
+      />
+
+      {/* Logs Password Dialog */}
+      {isAdminMode && (
+        <Dialog open={showLogsPasswordDialog} onOpenChange={setShowLogsPasswordDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Logs Adgang</DialogTitle>
+              <DialogDescription>Indtast adgangskode for at se frontend logs</DialogDescription>
+            </DialogHeader>
+            <Input
+              type="password"
+              placeholder="Adgangskode (1523)"
+              value={logsPassword}
+              onChange={(e) => setLogsPassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleLogsPassword()}
+            />
+            <DialogFooter>
+              <Button onClick={handleLogsPassword}>Åbn Logs</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Logs Viewer */}
+      <LogsViewer
+        open={showLogsViewer}
+        onOpenChange={setShowLogsViewer}
       />
     </div>
     
