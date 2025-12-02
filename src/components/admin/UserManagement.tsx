@@ -257,7 +257,6 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
                                         className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded"
                                       >
                                         {perm === 'frivillig' && 'Frivillig'}
-                                        {perm === 'aarshjul' && 'Årshjul'}
                                         {perm === 'referater' && 'Referater'}
                                         {perm === 'frivilligfest' && 'Frivilligfest'}
                                       </span>

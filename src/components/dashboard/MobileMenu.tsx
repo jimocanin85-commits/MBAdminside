@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, UserPlus, Cloud, Disc, Settings, DoorOpen } from "lucide-react";
+import { Menu, UserPlus, Cloud, Settings, DoorOpen } from "lucide-react";
 
 interface MobileMenuProps {
   onOpenForm: () => void;
@@ -40,13 +40,6 @@ const MobileMenu = ({
       icon: Cloud,
       onClick: () => {
         onShowCloudFiles();
-        setOpen(false);
-      },
-    },
-    {
-      label: "Årshjul",
-      icon: Disc,
-      onClick: () => {
         setOpen(false);
       },
     },

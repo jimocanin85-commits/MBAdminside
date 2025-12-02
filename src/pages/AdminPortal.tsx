@@ -65,7 +65,7 @@ const AdminPortal = () => {
     
     // Admin and Brian have all permissions
     if (currentUser === 'admin' || currentUser === 'Brian') {
-      return ['frivillig', 'aarshjul', 'referater', 'frivilligfest'];
+      return ['frivillig', 'referater', 'frivilligfest'];
     }
     
     // Check custom users (including Karina and Kyhl)
@@ -93,8 +93,6 @@ const AdminPortal = () => {
   };
   
   const hasFrivilligAccess = hasPermission('frivillig') || currentUser === 'admin' || currentUser === 'Brian';
-  // Årshjul: Alle brugere undtagen Karina har adgang - Temporarily disabled
-  // const hasAarshjulAccess = currentUser !== 'Karina' && currentUser !== null;
   const hasReferaterAccess = hasPermission('referater') || currentUser === 'admin' || currentUser === 'Brian';
   const hasFrivilligfestAccess = hasPermission('frivilligfest') || currentUser === 'admin' || currentUser === 'Brian';
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -120,7 +118,6 @@ const AdminPortal = () => {
   const [showClearCacheDialog, setShowClearCacheDialog] = useState(false);
   const [showReferaterViewer, setShowReferaterViewer] = useState(false);
   const [showUserManagement, setShowUserManagement] = useState(false);
-  // const [showAarshjul, setShowAarshjul] = useState(false); // Temporarily disabled
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [currentView, setCurrentView] = useState<"home" | "cloud" | "form" | "settings">("home");
   const [showFrivilligfestDialog, setShowFrivilligfestDialog] = useState(false);
@@ -159,7 +156,7 @@ const AdminPortal = () => {
       
       // Update user permissions based on current user
       if (currentUser === 'admin' || currentUser === 'Brian') {
-        setUserPermissions(['frivillig', 'aarshjul', 'referater', 'frivilligfest']);
+        setUserPermissions(['frivillig', 'referater', 'frivilligfest']);
       } else {
         // Check custom users (including Karina and Kyhl)
         try {
@@ -452,17 +449,6 @@ const AdminPortal = () => {
                     </DropdownMenu>
                   )}
                   
-                  {/* Årshjul - Show for all users except Karina - Temporarily disabled */}
-                  {/* {hasAarshjulAccess && (
-                    <Button 
-                      size="lg" 
-                      className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
-                      onClick={() => setShowAarshjul(true)}
-                    >
-                      <Disc className="h-5 w-5" />
-                      Opgaver / Årshjul
-                    </Button>
-                  )} */}
                   
                   {/* Referater fra Bestyrelsesmøder - Show for users with referater permission */}
                   {hasReferaterAccess && (
@@ -789,12 +775,6 @@ const AdminPortal = () => {
         onOpenChange={setShowUserManagement}
       />
 
-      {/* Årshjul Dialog - Temporarily disabled */}
-      {/* <AarshjulView
-        open={showAarshjul}
-        onOpenChange={setShowAarshjul}
-        currentUserId={currentUser || undefined}
-      /> */}
     </div>
     
     {/* Always render BottomNavigation to maintain hook order - hidden when not authenticated */}
