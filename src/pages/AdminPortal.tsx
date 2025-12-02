@@ -43,10 +43,20 @@ type Trainer = {
 
 const AdminPortal = () => {
   const [currentUser, setCurrentUser] = useState<string | null>(() => {
-    return localStorage.getItem('currentUser');
+    try {
+      return localStorage.getItem('currentUser');
+    } catch (e) {
+      console.error('Error reading currentUser from localStorage:', e);
+      return null;
+    }
   });
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return !!localStorage.getItem('currentUser');
+    try {
+      return !!localStorage.getItem('currentUser');
+    } catch (e) {
+      console.error('Error reading authentication from localStorage:', e);
+      return false;
+    }
   });
   
   // Get user permissions from localStorage
@@ -95,7 +105,12 @@ const AdminPortal = () => {
   const [selectedTrainer, setSelectedTrainer] = useState<Trainer | null>(null);
   const [isEditingCloudFile, setIsEditingCloudFile] = useState(false);
   const [isAdminMode, setIsAdminMode] = useState(() => {
-    return localStorage.getItem('isAdminMode') === 'true';
+    try {
+      return localStorage.getItem('isAdminMode') === 'true';
+    } catch (e) {
+      console.error('Error reading isAdminMode from localStorage:', e);
+      return false;
+    }
   });
   const [showAdminDialog, setShowAdminDialog] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
@@ -110,19 +125,25 @@ const AdminPortal = () => {
   const [currentView, setCurrentView] = useState<"home" | "cloud" | "form" | "settings">("home");
   const [showFrivilligfestDialog, setShowFrivilligfestDialog] = useState(false);
   const [trainers, setTrainers] = useState<Trainer[]>(() => {
-    const saved = localStorage.getItem('trainers');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Convert date strings back to Date objects
-        return parsed.map((trainer: any) => ({
-          ...trainer,
-          foedselsdato: new Date(trainer.foedselsdato),
-          createdAt: new Date(trainer.createdAt)
-        }));
-      } catch (e) {
-        return [];
+    try {
+      const saved = localStorage.getItem('trainers');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (!Array.isArray(parsed)) return [];
+          // Convert date strings back to Date objects
+          return parsed.map((trainer: any) => ({
+            ...trainer,
+            foedselsdato: trainer.foedselsdato ? new Date(trainer.foedselsdato) : new Date(),
+            createdAt: trainer.createdAt ? new Date(trainer.createdAt) : new Date()
+          }));
+        } catch (e) {
+          console.error('Error parsing trainers from localStorage:', e);
+          return [];
+        }
       }
+    } catch (e) {
+      console.error('Error reading trainers from localStorage:', e);
     }
     return [];
   });
