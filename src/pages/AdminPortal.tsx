@@ -789,6 +789,7 @@ const AdminPortal = () => {
       <AarshjulView
         open={showAarshjul}
         onOpenChange={setShowAarshjul}
+        currentUserId={currentUser || undefined}
       />
     </div>
     

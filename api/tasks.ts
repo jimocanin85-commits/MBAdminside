@@ -18,9 +18,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (req.method === 'GET') {
+      const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
       // TODO: Replace with actual database query
-      // const tasks = await db.query('SELECT * FROM tasks WHERE aar = $1', [year]);
-      return res.status(200).json(mockTasks);
+      // const tasks = await db.query('SELECT * FROM tasks WHERE EXTRACT(YEAR FROM start_dato) = $1 OR EXTRACT(YEAR FROM slut_dato) = $1', [year]);
+      // For now, return mock tasks filtered by year
+      const filteredTasks = mockTasks.filter((task: any) => {
+        const startYear = new Date(task.start_dato).getFullYear();
+        const endYear = new Date(task.slut_dato).getFullYear();
+        return startYear === year || endYear === year;
+      });
+      return res.status(200).json(filteredTasks);
     }
 
     if (req.method === 'POST') {

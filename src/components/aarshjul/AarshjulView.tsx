@@ -3,6 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import YearWheel from "./YearWheel";
+import AddTaskModal from "./AddTaskModal";
+import TaskDetailsPanel from "./TaskDetailsPanel";
+import YearWheelLegend from "./YearWheelLegend";
 import { Task } from "@/types/task";
 import { Section } from "@/types/section";
 import { Plus, List, Calendar } from "lucide-react";
@@ -11,6 +14,7 @@ import { formatDate } from "@/lib/dateHelpers";
 interface AarshjulViewProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  currentUserId?: string;
 }
 
 // Mock data - skal erstattes med API calls
@@ -22,10 +26,12 @@ const mockSections: Section[] = [
   { id: "5", navn: "Kommunikation & Events", farve: "#8b5cf6", aar: 2025 },
 ];
 
-export default function AarshjulView({ open, onOpenChange }: AarshjulViewProps) {
+export default function AarshjulView({ open, onOpenChange, currentUserId }: AarshjulViewProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [sections] = useState<Section[]>(mockSections);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showDetailsPanel, setShowDetailsPanel] = useState(false);
   const [viewMode, setViewMode] = useState<"wheel" | "list">("wheel");
   const [currentYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(false);
@@ -39,15 +45,17 @@ export default function AarshjulView({ open, onOpenChange }: AarshjulViewProps) 
   const loadTasks = async () => {
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/tasks');
-      // const data = await response.json();
-      // setTasks(data);
-      
-      // Mock data for now
-      setTasks([]);
+      const response = await fetch(`/api/tasks?year=${currentYear}`);
+      if (response.ok) {
+        const data = await response.json();
+        setTasks(data);
+      } else {
+        console.error("Failed to load tasks");
+        setTasks([]);
+      }
     } catch (error) {
       console.error("Error loading tasks:", error);
+      setTasks([]);
     } finally {
       setLoading(false);
     }
@@ -55,6 +63,24 @@ export default function AarshjulView({ open, onOpenChange }: AarshjulViewProps) 
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
+    setShowDetailsPanel(true);
+  };
+
+  const handleTaskCreated = (task: Task) => {
+    setTasks([...tasks, task]);
+    loadTasks(); // Reload to get full task data
+  };
+
+  const handleTaskDeleted = (taskId: string) => {
+    setTasks(tasks.filter((t) => t.id !== taskId));
+    setSelectedTask(null);
+  };
+
+  const handleTaskEdit = (task: Task) => {
+    setSelectedTask(task);
+    setShowDetailsPanel(false);
+    // TODO: Open edit modal
+    setShowAddModal(true);
   };
 
   return (
@@ -90,7 +116,7 @@ export default function AarshjulView({ open, onOpenChange }: AarshjulViewProps) 
                 Liste
               </Button>
             </div>
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={() => setShowAddModal(true)}>
               <Plus className="h-4 w-4" />
               Tilføj opgave
             </Button>
@@ -102,13 +128,16 @@ export default function AarshjulView({ open, onOpenChange }: AarshjulViewProps) 
               <p className="text-muted-foreground">Indlæser opgaver...</p>
             </div>
           ) : viewMode === "wheel" ? (
-            <div className="flex justify-center">
-              <YearWheel
-                tasks={tasks}
-                sections={sections}
-                year={currentYear}
-                onTaskClick={handleTaskClick}
-              />
+            <div>
+              <div className="flex justify-center">
+                <YearWheel
+                  tasks={tasks}
+                  sections={sections}
+                  year={currentYear}
+                  onTaskClick={handleTaskClick}
+                />
+              </div>
+              <YearWheelLegend sections={sections} />
             </div>
           ) : (
             <div className="space-y-2">
@@ -146,6 +175,25 @@ export default function AarshjulView({ open, onOpenChange }: AarshjulViewProps) 
             </div>
           )}
         </div>
+
+        {/* Add Task Modal */}
+        <AddTaskModal
+          open={showAddModal}
+          onOpenChange={setShowAddModal}
+          sections={sections}
+          onTaskCreated={handleTaskCreated}
+          currentUserId={currentUserId}
+        />
+
+        {/* Task Details Panel */}
+        <TaskDetailsPanel
+          task={selectedTask}
+          open={showDetailsPanel}
+          onOpenChange={setShowDetailsPanel}
+          sections={sections}
+          onEdit={handleTaskEdit}
+          onDelete={handleTaskDeleted}
+        />
       </DialogContent>
     </Dialog>
   );
