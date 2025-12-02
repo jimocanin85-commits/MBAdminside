@@ -11,7 +11,6 @@ import LogsViewer from "@/components/admin/LogsViewer";
 import ReferaterViewer from "@/components/admin/ReferaterViewer";
 import { User } from "@/components/admin/CreateUserDialog";
 import { UserManagement } from "@/components/admin/UserManagement";
-import AarshjulView from "@/components/aarshjul/AarshjulView";
 import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -84,8 +83,8 @@ const AdminPortal = () => {
   };
   
   const hasFrivilligAccess = hasPermission('frivillig') || currentUser === 'admin' || currentUser === 'Brian';
-  // Årshjul: Alle brugere undtagen Karina har adgang
-  const hasAarshjulAccess = currentUser !== 'Karina' && currentUser !== null;
+  // Årshjul: Alle brugere undtagen Karina har adgang - Temporarily disabled
+  // const hasAarshjulAccess = currentUser !== 'Karina' && currentUser !== null;
   const hasReferaterAccess = hasPermission('referater') || currentUser === 'admin' || currentUser === 'Brian';
   const hasFrivilligfestAccess = hasPermission('frivilligfest') || currentUser === 'admin' || currentUser === 'Brian';
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -106,7 +105,7 @@ const AdminPortal = () => {
   const [showClearCacheDialog, setShowClearCacheDialog] = useState(false);
   const [showReferaterViewer, setShowReferaterViewer] = useState(false);
   const [showUserManagement, setShowUserManagement] = useState(false);
-  const [showAarshjul, setShowAarshjul] = useState(false);
+  // const [showAarshjul, setShowAarshjul] = useState(false); // Temporarily disabled
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [currentView, setCurrentView] = useState<"home" | "cloud" | "form" | "settings">("home");
   const [showFrivilligfestDialog, setShowFrivilligfestDialog] = useState(false);
@@ -447,8 +446,8 @@ const AdminPortal = () => {
                     </DropdownMenu>
                   )}
                   
-                  {/* Årshjul - Show for all users except Karina */}
-                  {hasAarshjulAccess && (
+                  {/* Årshjul - Show for all users except Karina - Temporarily disabled */}
+                  {/* {hasAarshjulAccess && (
                     <Button 
                       size="lg" 
                       className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
@@ -457,7 +456,7 @@ const AdminPortal = () => {
                       <Disc className="h-5 w-5" />
                       Opgaver / Årshjul
                     </Button>
-                  )}
+                  )} */}
                   
                   {/* Referater fra Bestyrelsesmøder - Show for users with referater permission */}
                   {hasReferaterAccess && (
