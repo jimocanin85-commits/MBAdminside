@@ -128,7 +128,6 @@ const AdminPortal = () => {
   });
 
   useEffect(() => {
-    console.log('Saving trainers to localStorage:', trainers);
     localStorage.setItem('trainers', JSON.stringify(trainers));
   }, [trainers]);
 
@@ -228,11 +227,8 @@ const AdminPortal = () => {
       ...data,
       createdAt: new Date()
     };
-    console.log('Adding trainer:', trainerWithDate);
-    console.log('Current trainers:', trainers);
     const newTrainers = [...trainers, trainerWithDate];
     setTrainers(newTrainers);
-    console.log('New trainers array:', newTrainers);
     toast.success(`${trainerWithDate.navn} tilføjet til oversigten`);
   };
 
@@ -465,7 +461,6 @@ const AdminPortal = () => {
                     size="lg" 
                     className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
                     onClick={() => {
-                      console.log('Frivilligfest button clicked');
                       window.open('https://docs.google.com/spreadsheets/d/15QhvIYCNhci2N-oBbEGIpRgeevWe42L0kjhNyfTjkjQ/edit?usp=sharing_eil&ts=67288c42', '_blank');
                     }}
                   >
