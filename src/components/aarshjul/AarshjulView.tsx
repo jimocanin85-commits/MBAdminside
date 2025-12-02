@@ -40,7 +40,8 @@ export default function AarshjulView({ open, onOpenChange, currentUserId }: Aars
     if (open) {
       loadTasks();
     }
-  }, [open, currentYear]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const loadTasks = async () => {
     setLoading(true);

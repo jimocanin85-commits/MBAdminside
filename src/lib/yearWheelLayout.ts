@@ -15,7 +15,13 @@ export function computeYearWheelPositions(
   const baseRadius = 120;
   const ringWidth = 40;
 
-  const positionedTasks: PositionedTask[] = tasks.map((task) => {
+  // Ensure inputs are arrays
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  const safeSections = Array.isArray(sections) ? sections : [];
+
+  const positionedTasks: PositionedTask[] = safeTasks
+    .filter((task) => task && task.start_dato && task.slut_dato && task.spor_id)
+    .map((task) => {
     const startDate = new Date(task.start_dato);
     const endDate = new Date(task.slut_dato);
     
@@ -27,8 +33,8 @@ export function computeYearWheelPositions(
     const startAngle = (monthStart / 12) * Math.PI * 2 - Math.PI / 2;
     const endAngle = (monthEnd / 12) * Math.PI * 2 - Math.PI / 2;
 
-    const sectionIndex = sections.findIndex((s) => s.id === task.spor_id);
-    const radius = baseRadius + sectionIndex * ringWidth;
+    const sectionIndex = safeSections.findIndex((s) => s && s.id === task.spor_id);
+    const radius = baseRadius + (sectionIndex >= 0 ? sectionIndex : 0) * ringWidth;
 
     return {
       task,
@@ -40,6 +46,6 @@ export function computeYearWheelPositions(
 
   return {
     positionedTasks,
-    ringWidths: baseRadius + sections.length * ringWidth,
+    ringWidths: baseRadius + safeSections.length * ringWidth,
   };
 }

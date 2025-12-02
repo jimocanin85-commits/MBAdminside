@@ -33,7 +33,11 @@ export default function YearWheel({ tasks, sections, year, onTaskClick }: YearWh
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
 
-    const { positionedTasks, ringWidths } = computeYearWheelPositions(tasks, sections);
+    // Ensure tasks and sections are arrays
+    const safeTasks = Array.isArray(tasks) ? tasks : [];
+    const safeSections = Array.isArray(sections) ? sections : [];
+    
+    const { positionedTasks, ringWidths } = computeYearWheelPositions(safeTasks, safeSections);
     positionedTasksRef.current = positionedTasks;
 
     // Draw background circle
