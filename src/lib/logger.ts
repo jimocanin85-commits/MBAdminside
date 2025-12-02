@@ -145,44 +145,49 @@ class Logger {
   }
 
   private addLog(level: LogEntry['level'], args: any[]) {
-    const message = args
-      .map((arg) => {
-        if (typeof arg === 'string') return arg;
-        if (arg instanceof Error) return arg.message;
-        try {
-          return JSON.stringify(arg, null, 2);
-        } catch {
-          return String(arg);
-        }
-      })
-      .join(' ');
+    try {
+      const message = args
+        .map((arg) => {
+          if (typeof arg === 'string') return arg;
+          if (arg instanceof Error) return arg.message;
+          try {
+            return JSON.stringify(arg, null, 2);
+          } catch {
+            return String(arg);
+          }
+        })
+        .join(' ');
 
-    const data = args.length > 1 ? args.slice(1) : undefined;
-    const error = args.find((arg) => arg instanceof Error);
-    const stack = error?.stack;
+      const data = args.length > 1 ? args.slice(1) : undefined;
+      const error = args.find((arg) => arg instanceof Error);
+      const stack = error?.stack;
 
-    const logEntry: LogEntry = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: new Date(),
-      level,
-      message,
-      data,
-      stack,
-      source: this.getSource(),
-    };
+      const logEntry: LogEntry = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date(),
+        level,
+        message,
+        data,
+        stack,
+        source: this.getSource(),
+      };
 
-    this.logs.push(logEntry);
+      this.logs.push(logEntry);
 
-    // Clean up old logs (older than retentionDays)
-    this.cleanupOldLogs();
+      // Clean up old logs (older than retentionDays)
+      this.cleanupOldLogs();
 
-    // Keep only last maxLogs entries (if still too many after cleanup)
-    if (this.logs.length > this.maxLogs) {
-      this.logs = this.logs.slice(-this.maxLogs);
+      // Keep only last maxLogs entries (if still too many after cleanup)
+      if (this.logs.length > this.maxLogs) {
+        this.logs = this.logs.slice(-this.maxLogs);
+      }
+
+      // Notify listeners
+      this.notifyListeners();
+    } catch (e) {
+      // Fallback to original console if logger fails
+      this.originalConsole.error('Logger error:', e);
     }
-
-    // Notify listeners
-    this.notifyListeners();
   }
 
   private cleanupOldLogs() {
@@ -204,19 +209,23 @@ class Logger {
   }
 
   private getSource(): string {
-    const stack = new Error().stack;
-    if (!stack) return 'unknown';
+    try {
+      const stack = new Error().stack;
+      if (!stack) return 'unknown';
 
-    const lines = stack.split('\n');
-    // Skip first 3 lines (Error, getSource, addLog)
-    if (lines.length > 3) {
-      const line = lines[3];
-      const match = line.match(/at\s+(.+?)\s+\((.+?):(\d+):(\d+)\)/) || line.match(/at\s+(.+?):(\d+):(\d+)/);
-      if (match) {
-        return match[2] || match[1] || 'unknown';
+      const lines = stack.split('\n');
+      // Skip first 3 lines (Error, getSource, addLog)
+      if (lines.length > 3) {
+        const line = lines[3];
+        const match = line.match(/at\s+(.+?)\s+\((.+?):(\d+):(\d+)\)/) || line.match(/at\s+(.+?):(\d+):(\d+)/);
+        if (match) {
+          return match[2] || match[1] || 'unknown';
+        }
       }
+      return 'unknown';
+    } catch (e) {
+      return 'unknown';
     }
-    return 'unknown';
   }
 
   private notifyListeners() {
