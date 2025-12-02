@@ -11,6 +11,7 @@ import LogsViewer from "@/components/admin/LogsViewer";
 import ReferaterViewer from "@/components/admin/ReferaterViewer";
 import { User } from "@/components/admin/CreateUserDialog";
 import { UserManagement } from "@/components/admin/UserManagement";
+import AarshjulView from "@/components/aarshjul/AarshjulView";
 import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -83,7 +84,8 @@ const AdminPortal = () => {
   };
   
   const hasFrivilligAccess = hasPermission('frivillig') || currentUser === 'admin' || currentUser === 'Brian';
-  const hasAarshjulAccess = hasPermission('aarshjul') || currentUser === 'admin' || currentUser === 'Brian';
+  // Årshjul: Alle brugere undtagen Karina har adgang
+  const hasAarshjulAccess = currentUser !== 'Karina' && currentUser !== null;
   const hasReferaterAccess = hasPermission('referater') || currentUser === 'admin' || currentUser === 'Brian';
   const hasFrivilligfestAccess = hasPermission('frivilligfest') || currentUser === 'admin' || currentUser === 'Brian';
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -104,6 +106,7 @@ const AdminPortal = () => {
   const [showClearCacheDialog, setShowClearCacheDialog] = useState(false);
   const [showReferaterViewer, setShowReferaterViewer] = useState(false);
   const [showUserManagement, setShowUserManagement] = useState(false);
+  const [showAarshjul, setShowAarshjul] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [currentView, setCurrentView] = useState<"home" | "cloud" | "form" | "settings">("home");
   const [showFrivilligfestDialog, setShowFrivilligfestDialog] = useState(false);
@@ -444,15 +447,15 @@ const AdminPortal = () => {
                     </DropdownMenu>
                   )}
                   
-                  {/* Årshjul - Show for users with aarshjul permission */}
+                  {/* Årshjul - Show for all users except Karina */}
                   {hasAarshjulAccess && (
                     <Button 
                       size="lg" 
                       className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
-                      onClick={() => {}}
+                      onClick={() => setShowAarshjul(true)}
                     >
                       <Disc className="h-5 w-5" />
-                      Årshjul
+                      Opgaver / Årshjul
                     </Button>
                   )}
                   
@@ -780,6 +783,12 @@ const AdminPortal = () => {
       <UserManagement
         open={showUserManagement}
         onOpenChange={setShowUserManagement}
+      />
+
+      {/* Årshjul Dialog */}
+      <AarshjulView
+        open={showAarshjul}
+        onOpenChange={setShowAarshjul}
       />
     </div>
     
