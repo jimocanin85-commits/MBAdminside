@@ -38,17 +38,7 @@ const BottomNavigation = ({
     },
   ];
 
-  // Debug: Log admin mode state
-  useEffect(() => {
-    console.log('BottomNavigation - isAdminMode:', isAdminMode);
-    console.log('BottomNavigation - handlers:', {
-      onOpenUserManagement: !!onOpenUserManagement,
-      onOpenLogsViewer: !!onOpenLogsViewer,
-      onOpenClearCache: !!onOpenClearCache
-    });
-    console.log('BottomNavigation - adminNavItems will be:', isAdminMode ? 'SHOWN' : 'HIDDEN');
-    console.log('BottomNavigation - adminNavItems array length:', isAdminMode ? 3 : 0);
-  }, [isAdminMode, onOpenUserManagement, onOpenLogsViewer, onOpenClearCache]);
+  // Removed debug logging
 
   const adminNavItems = isAdminMode ? [
     {
@@ -97,10 +87,6 @@ const BottomNavigation = ({
   ] : [];
 
   const navItems = [...baseNavItems, ...adminNavItems];
-  
-  console.log('BottomNavigation render - navItems count:', navItems.length, 'adminNavItems count:', adminNavItems.length);
-  console.log('BottomNavigation render - isAdminMode:', isAdminMode);
-  console.log('BottomNavigation render - navItems:', navItems.map(i => i.id));
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t-2 z-50 md:hidden safe-area-bottom">

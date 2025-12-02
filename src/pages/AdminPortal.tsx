@@ -193,11 +193,7 @@ const AdminPortal = () => {
     };
   }, []);
 
-  // Debug: Log admin mode changes
-  useEffect(() => {
-    console.log('AdminPortal - isAdminMode changed to:', isAdminMode);
-    console.log('AdminPortal - localStorage isAdminMode:', localStorage.getItem('isAdminMode'));
-  }, [isAdminMode]);
+  // Removed debug logging
 
   // Update current view based on state - MUST be before early return
   useEffect(() => {
