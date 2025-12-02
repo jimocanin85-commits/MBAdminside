@@ -39,6 +39,12 @@ export default function AarshjulView({ open, onOpenChange, currentUserId }: Aars
   useEffect(() => {
     if (open) {
       loadTasks();
+    } else {
+      // Reset state when dialog closes
+      setTasks([]);
+      setSelectedTask(null);
+      setShowAddModal(false);
+      setShowDetailsPanel(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -86,6 +92,11 @@ export default function AarshjulView({ open, onOpenChange, currentUserId }: Aars
     // TODO: Open edit modal
     setShowAddModal(true);
   };
+
+  // Don't render anything if dialog is closed
+  if (!open) {
+    return null;
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
