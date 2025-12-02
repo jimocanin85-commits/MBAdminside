@@ -46,11 +46,8 @@ const BottomNavigation = ({
       label: "Brugere",
       icon: Users,
       onClick: () => {
-        console.log('Brugere button clicked');
         if (onOpenUserManagement) {
           onOpenUserManagement();
-        } else {
-          console.error('onOpenUserManagement is not defined!');
         }
       },
     },
@@ -63,11 +60,8 @@ const BottomNavigation = ({
         </svg>
       ),
       onClick: () => {
-        console.log('Logs button clicked');
         if (onOpenLogsViewer) {
           onOpenLogsViewer();
-        } else {
-          console.error('onOpenLogsViewer is not defined!');
         }
       },
     },
@@ -76,11 +70,8 @@ const BottomNavigation = ({
       label: "Cache",
       icon: RefreshCw,
       onClick: () => {
-        console.log('Cache button clicked');
         if (onOpenClearCache) {
           onOpenClearCache();
-        } else {
-          console.error('onOpenClearCache is not defined!');
         }
       },
     },

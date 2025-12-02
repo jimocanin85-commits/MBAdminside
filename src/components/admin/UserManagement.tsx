@@ -35,20 +35,16 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
   const loadUsers = () => {
     try {
       const customUsersJson = localStorage.getItem('customUsers');
-      console.log('UserManagement - Loading users from localStorage:', customUsersJson);
       if (customUsersJson) {
         const customUsers: User[] = JSON.parse(customUsersJson);
-        console.log('UserManagement - Parsed customUsers:', customUsers);
         // Convert createdAt strings back to Date objects
         // Show all users including Karina and Kyhl
         const usersWithDates = customUsers.map(user => ({
           ...user,
           createdAt: new Date(user.createdAt)
         }));
-        console.log('UserManagement - Setting users:', usersWithDates);
         setUsers(usersWithDates);
       } else {
-        console.log('UserManagement - No customUsers found in localStorage');
         setUsers([]);
       }
     } catch (error) {
@@ -59,27 +55,9 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
 
   useEffect(() => {
     if (open) {
-      console.log('UserManagement - Dialog opened, loading users...');
       loadUsers();
-      // Force a re-render after a short delay to ensure state is updated
-      setTimeout(() => {
-        console.log('UserManagement - Force reload after delay');
-        loadUsers();
-      }, 100);
     }
   }, [open]);
-
-  // Debug: Log users when they change
-  useEffect(() => {
-    console.log('UserManagement - Users state changed:', users.length, 'users');
-    if (users.length > 0) {
-      console.log('UserManagement - Users list:', users.map(u => ({ username: u.username, name: `${u.firstName} ${u.lastName}` })));
-    } else {
-      console.warn('UserManagement - No users found! Check localStorage for customUsers');
-      const customUsersJson = localStorage.getItem('customUsers');
-      console.log('UserManagement - localStorage customUsers:', customUsersJson);
-    }
-  }, [users]);
 
   const handleUserCreated = (newUser: User) => {
     loadUsers();
@@ -217,10 +195,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
                         <Button 
                           size="sm" 
                           variant="outline"
-                          onClick={() => {
-                            console.log('Manual reload triggered');
-                            loadUsers();
-                          }}
+                          onClick={() => loadUsers()}
                           className="w-full sm:w-auto"
                         >
                           Genindlæs brugere

@@ -256,11 +256,9 @@ const AdminPortal = () => {
   };
 
   const handleAdminLogin = () => {
-    console.log('handleAdminLogin called, adminPassword:', adminPassword, 'isAdminMode:', isAdminMode);
     if (adminPassword === "1523") {
       if (isAdminMode) {
         // Deactivate admin mode
-        console.log('Deactivating admin mode');
         setIsAdminMode(false);
         localStorage.setItem('isAdminMode', 'false');
         setShowAdminDialog(false);
@@ -269,16 +267,11 @@ const AdminPortal = () => {
         toast.success("Admin mode deaktiveret");
       } else {
         // Activate admin mode
-        console.log('Activating admin mode');
         setIsAdminMode(true);
         localStorage.setItem('isAdminMode', 'true');
         setShowAdminDialog(false);
         setAdminPassword("");
         toast.success("Admin mode aktiveret");
-        // Force a small delay to ensure state updates
-        setTimeout(() => {
-          console.log('Admin mode should now be active, isAdminMode state:', localStorage.getItem('isAdminMode'));
-        }, 100);
       }
     } else {
       toast.error("Forkert adgangskode");
@@ -798,18 +791,9 @@ const AdminPortal = () => {
         onShowCloudFiles={() => setShowCloudFiles(true)}
         onOpenAdminDialog={() => setShowAdminDialog(true)}
         isAdminMode={isAdminMode}
-        onOpenUserManagement={() => {
-          console.log('Opening user management from BottomNavigation');
-          setShowUserManagement(true);
-        }}
-        onOpenLogsViewer={() => {
-          console.log('Opening logs viewer from BottomNavigation');
-          setShowLogsViewer(true);
-        }}
-        onOpenClearCache={() => {
-          console.log('Opening clear cache from BottomNavigation');
-          setShowClearCacheDialog(true);
-        }}
+        onOpenUserManagement={() => setShowUserManagement(true)}
+        onOpenLogsViewer={() => setShowLogsViewer(true)}
+        onOpenClearCache={() => setShowClearCacheDialog(true)}
       />
     )}
     </>
