@@ -22,8 +22,8 @@ export default function YearWheel({ tasks, sections, year, onTaskClick }: YearWh
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Set canvas size
-    const size = Math.min(window.innerWidth - 40, 800);
+    // Set canvas size - ensure minimum size
+    const size = Math.max(Math.min(window.innerWidth - 40, 800), 400);
     canvas.width = size;
     canvas.height = size;
 
@@ -58,43 +58,51 @@ export default function YearWheel({ tasks, sections, year, onTaskClick }: YearWh
       ctx.fillText(m, x, y);
     });
 
-    // Draw sections (rings)
-    sections.forEach((section, index) => {
-      const baseRadius = 120;
-      const ringWidth = 40;
-      const radius = baseRadius + index * ringWidth;
-      
-      ctx.strokeStyle = section.farve || "#3b82f6";
-      ctx.lineWidth = 2;
-      ctx.setLineDash([5, 5]);
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.setLineDash([]);
+    // Draw sections (rings) - only if sections exist
+    if (sections && sections.length > 0) {
+      sections.forEach((section, index) => {
+        const baseRadius = 120;
+        const ringWidth = 40;
+        const radius = baseRadius + index * ringWidth;
+        
+        ctx.strokeStyle = section.farve || "#3b82f6";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
 
-      // Draw section label
-      ctx.font = "12px Arial";
-      ctx.fillStyle = section.farve || "#3b82f6";
-      ctx.fillText(section.navn, centerX, centerY - radius - 10);
-    });
+        // Draw section label
+        ctx.font = "12px Arial";
+        ctx.fillStyle = section.farve || "#3b82f6";
+        ctx.fillText(section.navn, centerX, centerY - radius - 10);
+      });
+    }
 
-    // Draw tasks
-    positionedTasks.forEach((p) => {
-      ctx.beginPath();
-      ctx.strokeStyle = p.task.farve || "#3b82f6";
-      ctx.lineWidth = 18;
-      ctx.lineCap = "round";
+    // Draw tasks - only if tasks exist
+    if (positionedTasks && positionedTasks.length > 0) {
+      positionedTasks.forEach((p) => {
+        if (!p.task) return;
+        
+        ctx.beginPath();
+        ctx.strokeStyle = p.task.farve || "#3b82f6";
+        ctx.lineWidth = 18;
+        ctx.lineCap = "round";
 
-      ctx.arc(centerX, centerY, p.radius, p.startAngle, p.endAngle);
-      ctx.stroke();
+        ctx.arc(centerX, centerY, p.radius, p.startAngle, p.endAngle);
+        ctx.stroke();
 
-      // Store coords in task for click detection
-      p.task._coords = {
-        startAngle: p.startAngle,
-        endAngle: p.endAngle,
-        radius: p.radius,
-      };
-    });
+        // Store coords in task for click detection
+        if (p.task) {
+          p.task._coords = {
+            startAngle: p.startAngle,
+            endAngle: p.endAngle,
+            radius: p.radius,
+          };
+        }
+      });
+    }
   }, [tasks, sections, year]);
 
   // Click detector
@@ -109,7 +117,12 @@ export default function YearWheel({ tasks, sections, year, onTaskClick }: YearWh
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
 
+    if (!positionedTasksRef.current || positionedTasksRef.current.length === 0) {
+      return;
+    }
+
     for (const p of positionedTasksRef.current) {
+      if (!p.task) continue;
       const coords = p.task._coords;
       if (!coords) continue;
 

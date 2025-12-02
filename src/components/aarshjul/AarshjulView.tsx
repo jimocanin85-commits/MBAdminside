@@ -40,7 +40,7 @@ export default function AarshjulView({ open, onOpenChange, currentUserId }: Aars
     if (open) {
       loadTasks();
     }
-  }, [open]);
+  }, [open, currentYear]);
 
   const loadTasks = async () => {
     setLoading(true);
@@ -48,13 +48,14 @@ export default function AarshjulView({ open, onOpenChange, currentUserId }: Aars
       const response = await fetch(`/api/tasks?year=${currentYear}`);
       if (response.ok) {
         const data = await response.json();
-        setTasks(data);
+        setTasks(Array.isArray(data) ? data : []);
       } else {
         console.error("Failed to load tasks");
         setTasks([]);
       }
     } catch (error) {
       console.error("Error loading tasks:", error);
+      // Don't crash if API fails - just use empty array
       setTasks([]);
     } finally {
       setLoading(false);
