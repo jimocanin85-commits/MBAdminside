@@ -784,12 +784,12 @@ const AdminPortal = () => {
         onOpenChange={setShowUserManagement}
       />
 
-      {/* Årshjul Dialog */}
-      <AarshjulView
+      {/* Årshjul Dialog - Temporarily disabled */}
+      {/* <AarshjulView
         open={showAarshjul}
         onOpenChange={setShowAarshjul}
         currentUserId={currentUser || undefined}
-      />
+      /> */}
     </div>
     
     {/* Always render BottomNavigation to maintain hook order - hidden when not authenticated */}
