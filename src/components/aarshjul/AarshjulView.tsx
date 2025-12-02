@@ -196,23 +196,27 @@ export default function AarshjulView({ open, onOpenChange, currentUserId }: Aars
         </div>
 
         {/* Add Task Modal */}
-        <AddTaskModal
-          open={showAddModal}
-          onOpenChange={setShowAddModal}
-          sections={sections}
-          onTaskCreated={handleTaskCreated}
-          currentUserId={currentUserId}
-        />
+        {open && (
+          <AddTaskModal
+            open={showAddModal}
+            onOpenChange={setShowAddModal}
+            sections={sections}
+            onTaskCreated={handleTaskCreated}
+            currentUserId={currentUserId}
+          />
+        )}
 
         {/* Task Details Panel */}
-        <TaskDetailsPanel
-          task={selectedTask}
-          open={showDetailsPanel}
-          onOpenChange={setShowDetailsPanel}
-          sections={sections}
-          onEdit={handleTaskEdit}
-          onDelete={handleTaskDeleted}
-        />
+        {open && (
+          <TaskDetailsPanel
+            task={selectedTask}
+            open={showDetailsPanel}
+            onOpenChange={setShowDetailsPanel}
+            sections={sections}
+            onEdit={handleTaskEdit}
+            onDelete={handleTaskDeleted}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
