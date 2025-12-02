@@ -22,6 +22,13 @@ export default function YearWheel({ tasks, sections, year, onTaskClick }: YearWh
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // Early return if no tasks or sections
+    if (!tasks || !sections || tasks.length === 0 || sections.length === 0) {
+      // Just clear canvas and return
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+
     // Set canvas size - ensure minimum size
     const size = Math.max(Math.min(window.innerWidth - 40, 800), 400);
     canvas.width = size;
@@ -158,6 +165,15 @@ export default function YearWheel({ tasks, sections, year, onTaskClick }: YearWh
       }
     }
   };
+
+  // Don't render if no sections
+  if (!sections || sections.length === 0) {
+    return (
+      <div className="flex justify-center items-center p-4">
+        <p className="text-muted-foreground">Ingen kategorier tilgængelige</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex justify-center items-center p-4 overflow-auto">

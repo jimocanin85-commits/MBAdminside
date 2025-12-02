@@ -44,6 +44,8 @@ export default function AarshjulView({ open, onOpenChange, currentUserId }: Aars
   }, [open]);
 
   const loadTasks = async () => {
+    if (!open) return; // Don't load if dialog is closed
+    
     setLoading(true);
     try {
       const response = await fetch(`/api/tasks?year=${currentYear}`);
@@ -131,15 +133,19 @@ export default function AarshjulView({ open, onOpenChange, currentUserId }: Aars
             </div>
           ) : viewMode === "wheel" ? (
             <div>
-              <div className="flex justify-center">
-                <YearWheel
-                  tasks={tasks}
-                  sections={sections}
-                  year={currentYear}
-                  onTaskClick={handleTaskClick}
-                />
-              </div>
-              <YearWheelLegend sections={sections} />
+              {open && (
+                <>
+                  <div className="flex justify-center">
+                    <YearWheel
+                      tasks={tasks}
+                      sections={sections}
+                      year={currentYear}
+                      onTaskClick={handleTaskClick}
+                    />
+                  </div>
+                  <YearWheelLegend sections={sections} />
+                </>
+              )}
             </div>
           ) : (
             <div className="space-y-2">
