@@ -43,48 +43,57 @@ type Trainer = {
 };
 
 const AdminPortal = () => {
-  const [currentUser, setCurrentUser] = useState<string | null>(() => {
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // Load from localStorage in useEffect to prevent crashes
+  useEffect(() => {
     try {
-      return localStorage.getItem('currentUser');
+      const user = localStorage.getItem('currentUser');
+      if (user) {
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+      }
     } catch (e) {
-      console.error('Error reading currentUser from localStorage:', e);
-      return null;
+      console.error('Error reading from localStorage:', e);
     }
-  });
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    try {
-      return !!localStorage.getItem('currentUser');
-    } catch (e) {
-      console.error('Error reading authentication from localStorage:', e);
-      return false;
-    }
-  });
+  }, []);
   
   // Get user permissions from localStorage
-  const [userPermissions, setUserPermissions] = useState<string[]>(() => {
-    if (!currentUser) return [];
-    
-    // Admin and Brian have all permissions
-    if (currentUser === 'admin' || currentUser === 'Brian') {
-      return ['frivillig', 'referater', 'frivilligfest'];
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  
+  // Load permissions when currentUser changes
+  useEffect(() => {
+    if (!currentUser) {
+      setUserPermissions([]);
+      return;
     }
     
-    // Check custom users (including Karina and Kyhl)
     try {
+      // Admin and Brian have all permissions
+      if (currentUser === 'admin' || currentUser === 'Brian') {
+        setUserPermissions(['frivillig', 'referater', 'frivilligfest']);
+        return;
+      }
+      
+      // Check custom users (including Karina and Kyhl)
       const customUsersJson = localStorage.getItem('customUsers');
       if (customUsersJson) {
         const customUsers: User[] = JSON.parse(customUsersJson);
         const customUser = customUsers.find(u => u.username === currentUser);
         if (customUser && customUser.isActive !== false) {
-          return customUser.permissions || [];
+          setUserPermissions(customUser.permissions || []);
+        } else {
+          setUserPermissions([]);
         }
+      } else {
+        setUserPermissions([]);
       }
     } catch (error) {
       console.error('Error reading user permissions:', error);
+      setUserPermissions([]);
     }
-    
-    return [];
-  });
+  }, [currentUser]);
 
   const isBrianUser = currentUser === 'Brian';
   
@@ -103,14 +112,17 @@ const AdminPortal = () => {
   const [refreshCloudFiles, setRefreshCloudFiles] = useState(0);
   const [selectedTrainer, setSelectedTrainer] = useState<Trainer | null>(null);
   const [isEditingCloudFile, setIsEditingCloudFile] = useState(false);
-  const [isAdminMode, setIsAdminMode] = useState(() => {
+  const [isAdminMode, setIsAdminMode] = useState(false);
+  
+  // Load admin mode from localStorage
+  useEffect(() => {
     try {
-      return localStorage.getItem('isAdminMode') === 'true';
+      const adminMode = localStorage.getItem('isAdminMode') === 'true';
+      setIsAdminMode(adminMode);
     } catch (e) {
-      console.error('Error reading isAdminMode from localStorage:', e);
-      return false;
+      console.error('Error reading isAdminMode:', e);
     }
-  });
+  }, []);
   const [showAdminDialog, setShowAdminDialog] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [showLogsViewer, setShowLogsViewer] = useState(false);
@@ -122,29 +134,32 @@ const AdminPortal = () => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [currentView, setCurrentView] = useState<"home" | "cloud" | "form" | "settings">("home");
   const [showFrivilligfestDialog, setShowFrivilligfestDialog] = useState(false);
-  const [trainers, setTrainers] = useState<Trainer[]>(() => {
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  
+  // Load trainers from localStorage
+  useEffect(() => {
     try {
       const saved = localStorage.getItem('trainers');
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (!Array.isArray(parsed)) return [];
-          // Convert date strings back to Date objects
-          return parsed.map((trainer: any) => ({
-            ...trainer,
-            foedselsdato: trainer.foedselsdato ? new Date(trainer.foedselsdato) : new Date(),
-            createdAt: trainer.createdAt ? new Date(trainer.createdAt) : new Date()
-          }));
+          if (Array.isArray(parsed)) {
+            // Convert date strings back to Date objects
+            const trainersWithDates = parsed.map((trainer: any) => ({
+              ...trainer,
+              foedselsdato: trainer.foedselsdato ? new Date(trainer.foedselsdato) : new Date(),
+              createdAt: trainer.createdAt ? new Date(trainer.createdAt) : new Date()
+            }));
+            setTrainers(trainersWithDates);
+          }
         } catch (e) {
           console.error('Error parsing trainers from localStorage:', e);
-          return [];
         }
       }
     } catch (e) {
       console.error('Error reading trainers from localStorage:', e);
     }
-    return [];
-  });
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('trainers', JSON.stringify(trainers));
