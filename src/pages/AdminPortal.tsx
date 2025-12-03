@@ -730,7 +730,7 @@ const AdminPortal = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
             <AlertDialogDescription>
-              Dette vil slette alle cookies, localStorage og sessionStorage. Denne fane vil blive redirected til login siden. 
+              Dette vil slette alle cookies og localStorage. Denne fane vil blive redirected til login siden. 
               <br />
               <strong>Bemærk:</strong> Af sikkerhedsmæssige årsager kan vi kun lukke faner som er åbnet af JavaScript. Du skal manuelt lukke andre åbne faner hvis nødvendigt.
             </AlertDialogDescription>
