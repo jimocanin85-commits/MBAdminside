@@ -749,9 +749,6 @@ const AdminPortal = () => {
                 // Clear localStorage
                 localStorage.clear();
                 
-                // Clear sessionStorage
-                sessionStorage.clear();
-                
                 // Try to close all windows/tabs that this page opened
                 // Note: We can only close windows that were opened by JavaScript
                 // Manually opened tabs cannot be closed for security reasons
