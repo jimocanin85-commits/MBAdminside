@@ -11,7 +11,8 @@ import LogsViewer from "@/components/admin/LogsViewer";
 import ReferaterViewer from "@/components/admin/ReferaterViewer";
 import { User } from "@/components/admin/CreateUserDialog";
 import { UserManagement } from "@/components/admin/UserManagement";
-import { logger } from "@/lib/logger";
+// Temporarily disable logger - it may be crashing the app
+// import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown, Sparkles, ExternalLink, RefreshCw, FileText, Users } from "lucide-react";
@@ -226,14 +227,14 @@ const AdminPortal = () => {
 
   const handleLogin = (username: string) => {
     setCurrentUser(username);
-    logger.logLogin(username);
+    // logger.logLogin(username);
     // Permissions will be updated automatically by useEffect when currentUser changes
   };
 
   const handleLogout = () => {
-    if (currentUser) {
-      logger.logLogout(currentUser);
-    }
+    // if (currentUser) {
+    //   logger.logLogout(currentUser);
+    // }
     setCurrentUser(null);
     setIsAdminMode(false);
     localStorage.removeItem('currentUser');
