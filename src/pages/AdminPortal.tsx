@@ -408,6 +408,15 @@ const AdminPortal = () => {
     );
   }
 
+  // Safety check - ensure currentUser exists before rendering
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-muted p-4">
+        <LoginForm onLogin={handleLogin} />
+      </div>
+    );
+  }
+
   return (
     <>
     <div className="min-h-screen bg-background pb-16 md:pb-0">
