@@ -45,6 +45,7 @@ type Trainer = {
 const AdminPortal = () => {
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Load from localStorage in useEffect to prevent crashes
   useEffect(() => {
@@ -56,6 +57,8 @@ const AdminPortal = () => {
       }
     } catch (e) {
       console.error('Error reading from localStorage:', e);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
   
@@ -385,17 +388,19 @@ const AdminPortal = () => {
     }
   };
 
-  // Early return for unauthenticated users - AFTER all hooks
-  if (!isAuthenticated) {
+  // Show loading state while checking authentication
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-muted p-4">
-        <LoginForm onLogin={handleLogin} />
+        <div className="text-center">
+          <p>Indlæser...</p>
+        </div>
       </div>
     );
   }
 
-  // Safety check - ensure we have a valid currentUser before rendering
-  if (!currentUser) {
+  // Early return for unauthenticated users - AFTER all hooks
+  if (!isAuthenticated || !currentUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-muted p-4">
         <LoginForm onLogin={handleLogin} />
