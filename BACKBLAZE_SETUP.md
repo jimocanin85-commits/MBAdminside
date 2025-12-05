@@ -2,9 +2,9 @@
 
 ## Problem: "Backblaze credentials not configured"
 
-Hvis du får denne fejl, betyder det at environment variables ikke er sat op korrekt i Vercel.
+Hvis du får denne fejl, betyder det at environment variables ikke er sat op korrekt i Netlify.
 
-## Løsning: Konfigurer Environment Variables i Vercel
+## Løsning: Konfigurer Environment Variables i Netlify
 
 ### Trin 1: Få dine Backblaze credentials
 
@@ -14,31 +14,31 @@ Hvis du får denne fejl, betyder det at environment variables ikke er sat op kor
 4. Noter ned:
    - **Key ID** (f.eks. `002a1b2c3d4e5f6g7h8i9j0k1l2m`)
    - **Application Key** (f.eks. `K002a1b2c3d4e5f6g7h8i9j0k1l2m`)
-   - **Bucket Name** (f.eks. `mb-adminside-files`)
+   - **Bucket Name** (f.eks. `MaalovBK`)
 
-### Trin 2: Tilføj Environment Variables i Vercel
+### Trin 2: Tilføj Environment Variables i Netlify
 
-1. Gå til dit Vercel projekt: [vercel.com/dashboard](https://vercel.com/dashboard)
+1. Gå til dit Netlify projekt: [app.netlify.com](https://app.netlify.com)
 2. Vælg dit projekt (`mb-adminside` eller lignende)
-3. Gå til **Settings** → **Environment Variables**
+3. Gå til **Site settings** → **Environment variables**
 4. Tilføj følgende tre environment variables:
 
    | Name | Value | Environment |
    |------|-------|-------------|
    | `BACKBLAZE_KEY_ID` | Din Key ID fra Backblaze | Production, Preview, Development |
    | `BACKBLAZE_APPLICATION_KEY` | Din Application Key fra Backblaze | Production, Preview, Development |
-   | `BACKBLAZE_BUCKET_NAME` | Dit bucket navn (f.eks. `mb-adminside-files`) | Production, Preview, Development |
+   | `BACKBLAZE_BUCKET_NAME` | Dit bucket navn (f.eks. `MaalovBK`) | All scopes |
 
-5. **VIGTIGT:** Sørg for at vælge alle tre environments (Production, Preview, Development) for hver variabel
-6. Klik **Save** for hver variabel
+5. **VIGTIGT:** Sørg for at vælge alle scopes (Production, Deploy previews, Branch deploys) for hver variabel
+6. Klik **Save variable** for hver variabel
 
 ### Trin 3: Redeploy
 
 Efter at have tilføjet environment variables skal du redeploye:
 
-1. Gå til **Deployments** i Vercel dashboard
+1. Gå til **Deploys** i Netlify dashboard
 2. Find den seneste deployment
-3. Klik på de tre prikker (⋯) → **Redeploy**
+3. Klik på de tre prikker (⋯) → **Trigger deploy** → **Deploy site**
 4. Eller push en ny commit til din repository
 
 ### Trin 4: Verificer
@@ -53,10 +53,10 @@ Efter redeploy, tjek om det virker:
 
 Hvis det stadig ikke virker, kan du tjekke logs:
 
-1. Gå til Vercel dashboard → **Deployments**
+1. Gå til Netlify dashboard → **Deploys**
 2. Klik på den seneste deployment
 3. Gå til **Functions** tab
-4. Klik på `api/list-backblaze-files`
+4. Klik på `list-backblaze-files`
 5. Se **Logs** for at se hvilke environment variables der faktisk læses
 
 Du skulle se noget lignende:
@@ -76,17 +76,17 @@ Hvis nogle af værdierne er `false` eller `0`, betyder det at environment variab
 ## Almindelige fejl
 
 ### Fejl 1: "Missing environment variables: BACKBLAZE_KEY_ID"
-- **Løsning:** Sørg for at `BACKBLAZE_KEY_ID` er sat op i Vercel dashboard
+- **Løsning:** Sørg for at `BACKBLAZE_KEY_ID` er sat op i Netlify dashboard
 
 ### Fejl 2: "Missing environment variables: BACKBLAZE_APPLICATION_KEY"
-- **Løsning:** Sørg for at `BACKBLAZE_APPLICATION_KEY` er sat op i Vercel dashboard
+- **Løsning:** Sørg for at `BACKBLAZE_APPLICATION_KEY` er sat op i Netlify dashboard
 
 ### Fejl 3: "Missing environment variables: BACKBLAZE_BUCKET_NAME"
-- **Løsning:** Sørg for at `BACKBLAZE_BUCKET_NAME` er sat op i Vercel dashboard
+- **Løsning:** Sørg for at `BACKBLAZE_BUCKET_NAME` er sat op i Netlify dashboard
 
 ### Fejl 4: Variabler er sat op, men virker stadig ikke
 - **Løsning:** 
-  1. Tjek at du har valgt alle tre environments (Production, Preview, Development)
+  1. Tjek at du har valgt alle scopes (Production, Deploy previews, Branch deploys)
   2. Redeploy projektet efter at have tilføjet variablerne
   3. Tjek at variabelnavnene er præcist som vist (case-sensitive)
 

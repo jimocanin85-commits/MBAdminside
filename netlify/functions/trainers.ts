@@ -5,7 +5,7 @@ import {
   updateTrainer,
   deleteTrainer,
   type Trainer
-} from '../src/integrations/database/client.js';
+} from '../../src/integrations/database/client.js';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

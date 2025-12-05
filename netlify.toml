@@ -1,0 +1,54 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# API route redirects - map /api/* to Netlify Functions
+[[redirects]]
+  from = "/api/trainers"
+  to = "/.netlify/functions/trainers"
+  status = 200
+
+[[redirects]]
+  from = "/api/tasks"
+  to = "/.netlify/functions/tasks"
+  status = 200
+
+[[redirects]]
+  from = "/api/frivilligfest-checklist"
+  to = "/.netlify/functions/frivilligfest-checklist"
+  status = 200
+
+[[redirects]]
+  from = "/api/upload-to-backblaze"
+  to = "/.netlify/functions/upload-to-backblaze"
+  status = 200
+
+[[redirects]]
+  from = "/api/list-backblaze-files"
+  to = "/.netlify/functions/list-backblaze-files"
+  status = 200
+
+[[redirects]]
+  from = "/api/download-backblaze-file"
+  to = "/.netlify/functions/download-backblaze-file"
+  status = 200
+
+[[redirects]]
+  from = "/api/delete-backblaze-file"
+  to = "/.netlify/functions/delete-backblaze-file"
+  status = 200
+
+[[redirects]]
+  from = "/api/list-referater-files"
+  to = "/.netlify/functions/list-referater-files"
+  status = 200
+
+# Catch-all redirect for SPA routing (must be last)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -1,4 +1,4 @@
-import { getChecklistData, saveChecklistData } from '../src/integrations/database/client.js';
+import { getChecklistData, saveChecklistData } from '../../src/integrations/database/client.js';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

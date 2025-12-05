@@ -1,6 +1,6 @@
 /**
  * API Client - Replaces Supabase Edge Functions
- * Uses Vercel Serverless Functions
+ * Uses Netlify Functions
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';

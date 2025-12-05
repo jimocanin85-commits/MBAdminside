@@ -6,7 +6,7 @@
 
 import { neon } from '@neondatabase/serverless';
 
-// Get DATABASE_URL from environment (works in Vercel serverless functions)
+// Get DATABASE_URL from environment (works in Netlify Functions)
 const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
