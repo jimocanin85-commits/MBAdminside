@@ -1,24 +1,28 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
 
 // Mock data - skal erstattes med database queries
 const mockTasks = [
   // Add mock tasks here when needed
 ];
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+export const handler = async (event: any, context: any) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: '',
+    };
   }
 
   try {
-    if (req.method === 'GET') {
-      const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+    if (event.httpMethod === 'GET') {
+      const year = event.queryStringParameters?.year 
+        ? parseInt(event.queryStringParameters.year) 
+        : new Date().getFullYear();
       // TODO: Replace with actual database query
       // const tasks = await db.query('SELECT * FROM tasks WHERE EXTRACT(YEAR FROM start_dato) = $1 OR EXTRACT(YEAR FROM slut_dato) = $1', [year]);
       // For now, return mock tasks filtered by year
@@ -27,31 +31,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const endYear = new Date(task.slut_dato).getFullYear();
         return startYear === year || endYear === year;
       });
-      return res.status(200).json(filteredTasks);
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify(filteredTasks),
+      };
     }
 
-    if (req.method === 'POST') {
-      const task = req.body;
+    if (event.httpMethod === 'POST') {
+      const task = JSON.parse(event.body || '{}');
       // TODO: Replace with actual database insert
       // const newTask = await db.query('INSERT INTO tasks ...');
-      return res.status(201).json({ ...task, id: Date.now().toString() });
+      return {
+        statusCode: 201,
+        headers: corsHeaders,
+        body: JSON.stringify({ ...task, id: Date.now().toString() }),
+      };
     }
 
-    if (req.method === 'PUT') {
-      const { id, ...updates } = req.body;
+    if (event.httpMethod === 'PUT') {
+      const body = JSON.parse(event.body || '{}');
+      const { id, ...updates } = body;
       // TODO: Replace with actual database update
-      return res.status(200).json({ id, ...updates });
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({ id, ...updates }),
+      };
     }
 
-    if (req.method === 'DELETE') {
-      const { id } = req.body;
+    if (event.httpMethod === 'DELETE') {
+      const body = JSON.parse(event.body || '{}');
+      const { id } = body;
       // TODO: Replace with actual database delete
-      return res.status(200).json({ success: true });
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({ success: true }),
+      };
     }
 
-    return res.status(405).json({ error: 'Method not allowed' });
+    return {
+      statusCode: 405,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'Method not allowed' }),
+    };
   } catch (error) {
     console.error('Tasks API error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'Internal server error' }),
+    };
   }
-}
+};

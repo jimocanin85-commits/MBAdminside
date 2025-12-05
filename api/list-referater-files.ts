@@ -1,28 +1,37 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export const handler = async (event: any, context: any) => {
   // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(200).setHeader('Access-Control-Allow-Origin', '*')
-      .setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-      .setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-      .end();
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: '',
+    };
   }
 
-  if (req.method !== 'GET' && req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  if (event.httpMethod !== 'GET' && event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'Method not allowed' }),
+    };
   }
 
   // Handle POST for listing files by year
-  if (req.method === 'POST') {
-    const { year } = req.body;
+  if (event.httpMethod === 'POST') {
+    const body = JSON.parse(event.body || '{}');
+    const { year } = body;
     if (!year) {
-      return res.status(400).json({ error: 'Year is required' });
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Year is required' }),
+      };
     }
     
     try {
@@ -31,11 +40,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const bucketName = process.env.BACKBLAZE_BUCKET_NAME;
 
       if (!keyId || !applicationKey || !bucketName) {
-        return res.status(200).json({ 
-          success: true,
-          files: [],
-          error: 'Backblaze credentials not configured'
-        });
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({ 
+            success: true,
+            files: [],
+            error: 'Backblaze credentials not configured'
+          }),
+        };
       }
 
       // Authorize account
@@ -46,7 +59,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
 
       if (!authResponse.ok) {
-        return res.status(authResponse.status).json({ error: 'Backblaze authorization failed' });
+        return {
+          statusCode: authResponse.status,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: 'Backblaze authorization failed' }),
+        };
       }
 
       const authData = await authResponse.json();
@@ -66,7 +83,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const bucket = bucketsData.buckets.find((b: any) => b.bucketName === bucketName);
 
       if (!bucket) {
-        return res.status(404).json({ error: `Bucket '${bucketName}' not found` });
+        return {
+          statusCode: 404,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: `Bucket '${bucketName}' not found` }),
+        };
       }
 
       // List files from specific year folder
@@ -85,17 +106,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
 
       if (!listFilesResponse.ok) {
-        return res.status(listFilesResponse.status).json({ error: 'Failed to list files' });
+        return {
+          statusCode: listFilesResponse.status,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: 'Failed to list files' }),
+        };
       }
 
       const filesData = await listFilesResponse.json();
 
       if (!filesData.files || filesData.files.length === 0) {
-        return res.status(200).json({
-          success: true,
-          files: [],
-          year
-        });
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            success: true,
+            files: [],
+            year
+          }),
+        };
       }
 
       // Only include files from the specific year folder
@@ -150,15 +179,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Sort by filename
       files.sort((a, b) => a.fileName.localeCompare(b.fileName));
 
-      return res.status(200).json({
-        success: true,
-        files,
-        year
-      });
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: true,
+          files,
+          year
+        }),
+      };
 
     } catch (error) {
       console.error('Error listing referater files:', error);
-      return res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+      return {
+        statusCode: 500,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      };
     }
   }
 
@@ -169,11 +206,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const bucketName = process.env.BACKBLAZE_BUCKET_NAME;
 
     if (!keyId || !applicationKey || !bucketName) {
-      return res.status(200).json({ 
-        success: true,
-        files: [],
-        error: 'Backblaze credentials not configured'
-      });
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
+          success: true,
+          files: [],
+          error: 'Backblaze credentials not configured'
+        }),
+      };
     }
 
     // Authorize account
@@ -184,7 +225,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     if (!authResponse.ok) {
-      return res.status(authResponse.status).json({ error: 'Backblaze authorization failed' });
+      return {
+        statusCode: authResponse.status,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Backblaze authorization failed' }),
+      };
     }
 
     const authData = await authResponse.json();
@@ -204,7 +249,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const bucket = bucketsData.buckets.find((b: any) => b.bucketName === bucketName);
 
     if (!bucket) {
-      return res.status(404).json({ error: `Bucket '${bucketName}' not found` });
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: `Bucket '${bucketName}' not found` }),
+      };
     }
 
     // List all file versions
@@ -222,16 +271,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     if (!listFilesResponse.ok) {
-      return res.status(listFilesResponse.status).json({ error: 'Failed to list files' });
+      return {
+        statusCode: listFilesResponse.status,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Failed to list files' }),
+      };
     }
 
     const filesData = await listFilesResponse.json();
 
     if (!filesData.files || filesData.files.length === 0) {
-      return res.status(200).json({
-        success: true,
-        files: []
-      });
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: true,
+          files: []
+        }),
+      };
     }
 
     // Only include files from Referater/ folder
@@ -279,13 +336,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Sort by filename
     files.sort((a, b) => a.fileName.localeCompare(b.fileName));
 
-    return res.status(200).json({
-      success: true,
-      files
-    });
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: true,
+        files
+      }),
+    };
 
   } catch (error) {
     console.error('Error listing referater files:', error);
-    return res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+    };
   }
-}
+};

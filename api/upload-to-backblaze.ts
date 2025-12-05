@@ -1,56 +1,41 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method === 'OPTIONS') {
-    return res.status(200).setHeader('Access-Control-Allow-Origin', '*')
-      .setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-      .setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-      .end();
+export const handler = async (event: any, context: any) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: '',
+    };
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'Method not allowed' }),
+    };
   }
 
   try {
-    // Vercel serverless functions may not auto-parse large JSON bodies
-    // Try to get body from different sources
-    let body: any = req.body;
-    
-    // If body is a string (unparsed), parse it
-    if (typeof body === 'string') {
-      try {
-        body = JSON.parse(body);
-      } catch (e) {
-        console.error('Failed to parse body as JSON:', e);
-        return res.status(400).json({ 
+    // Parse body - Netlify provides body as string
+    let body: any;
+    try {
+      body = JSON.parse(event.body || '{}');
+    } catch (e) {
+      console.error('Failed to parse body as JSON:', e);
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
           error: 'Invalid JSON body',
           details: e instanceof Error ? e.message : 'Unknown parsing error'
-        });
-      }
-    }
-    
-    // If body is still undefined, try to read from raw request
-    if (!body && (req as any).body) {
-      const rawBody = (req as any).body;
-      if (typeof rawBody === 'string') {
-        try {
-          body = JSON.parse(rawBody);
-        } catch (e) {
-          console.error('Failed to parse raw body as JSON:', e);
-          return res.status(400).json({ 
-            error: 'Invalid JSON body format',
-            details: e instanceof Error ? e.message : 'Unknown parsing error'
-          });
-        }
-      } else {
-        body = rawBody;
-      }
+        }),
+      };
     }
 
     // Validate body is an object
@@ -61,14 +46,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         hasBody: !!body,
         bodyKeys: body ? Object.keys(body) : []
       });
-      return res.status(400).json({ 
-        error: 'Invalid request body format',
-        received: { 
-          bodyType: typeof body, 
-          isArray: Array.isArray(body),
-          hasBody: !!body 
-        }
-      });
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
+          error: 'Invalid request body format',
+          received: { 
+            bodyType: typeof body, 
+            isArray: Array.isArray(body),
+            hasBody: !!body 
+          }
+        }),
+      };
     }
 
     // Log request details (but truncate fileData for logging)
@@ -77,7 +66,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       'missing';
     
     console.log('Upload request received:', {
-      method: req.method,
+      method: event.httpMethod,
       hasBody: !!body,
       bodyType: typeof body,
       bodyKeys: body ? Object.keys(body) : [],
@@ -102,17 +91,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         folder: folder
       };
       console.error('Missing required fields:', errorDetails);
-      return res.status(400).json({ 
-        error: 'fileName and fileData are required',
-        received: {
-          hasFileName: !!fileName,
-          hasFileData: !!fileData,
-          hasFolder: !!folder,
-          fileNameValue: fileName,
-          fileDataType: typeof fileData,
-          bodyKeys: Object.keys(body || {})
-        }
-      });
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
+          error: 'fileName and fileData are required',
+          received: {
+            hasFileName: !!fileName,
+            hasFileData: !!fileData,
+            hasFolder: !!folder,
+            fileNameValue: fileName,
+            fileDataType: typeof fileData,
+            bodyKeys: Object.keys(body || {})
+          }
+        }),
+      };
     }
 
     const keyId = process.env.BACKBLAZE_KEY_ID;
@@ -120,7 +113,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const bucketName = process.env.BACKBLAZE_BUCKET_NAME;
 
     if (!keyId || !applicationKey || !bucketName) {
-      return res.status(500).json({ error: 'Backblaze credentials not configured' });
+      return {
+        statusCode: 500,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Backblaze credentials not configured' }),
+      };
     }
 
     // Authorize
@@ -131,7 +128,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     if (!authResponse.ok) {
-      return res.status(authResponse.status).json({ error: 'Backblaze authorization failed' });
+      return {
+        statusCode: authResponse.status,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Backblaze authorization failed' }),
+      };
     }
 
     const authData = await authResponse.json();
@@ -151,7 +152,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const bucket = bucketsData.buckets.find((b: any) => b.bucketName === bucketName);
 
     if (!bucket) {
-      return res.status(404).json({ error: `Bucket '${bucketName}' not found` });
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: `Bucket '${bucketName}' not found` }),
+      };
     }
 
     // Get upload URL
@@ -165,7 +170,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     if (!uploadUrlResponse.ok) {
-      return res.status(uploadUrlResponse.status).json({ error: 'Failed to get upload URL' });
+      return {
+        statusCode: uploadUrlResponse.status,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Failed to get upload URL' }),
+      };
     }
 
     const uploadUrlData = await uploadUrlResponse.json();
@@ -193,7 +202,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         fileDataType: typeof fileData,
         fileDataPreview: typeof fileData === 'string' ? fileData.substring(0, 100) : fileData
       });
-      return res.status(400).json({ error: 'Invalid fileData format' });
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Invalid fileData format' }),
+      };
     }
 
     // Convert base64 to buffer
@@ -201,11 +214,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       fileBuffer = Buffer.from(base64Data, 'base64');
       if (fileBuffer.length === 0) {
-        return res.status(400).json({ error: 'Empty file buffer after base64 decode' });
+        return {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: 'Empty file buffer after base64 decode' }),
+        };
       }
     } catch (error) {
       console.error('Failed to decode base64:', error);
-      return res.status(400).json({ error: 'Invalid base64 data' });
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Invalid base64 data' }),
+      };
     }
 
     // Upload file - use full path based on folder parameter
@@ -303,24 +324,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
-      return res.status(uploadResponse.status).json({ 
-        error: 'Upload failed', 
-        details: errorText 
-      });
+      return {
+        statusCode: uploadResponse.status,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
+          error: 'Upload failed', 
+          details: errorText 
+        }),
+      };
     }
 
     const uploadResult = await uploadResponse.json();
 
-    return res.status(200).json({
-      success: true,
-      fileId: uploadResult.fileId,
-      fileName: uploadResult.fileName
-    });
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: true,
+        fileId: uploadResult.fileId,
+        fileName: uploadResult.fileName
+      }),
+    };
 
   } catch (error) {
     console.error('Error uploading file:', error);
-    return res.status(500).json({ 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    });
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      }),
+    };
   }
-}
+};

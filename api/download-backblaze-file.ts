@@ -1,27 +1,36 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method === 'OPTIONS') {
-    return res.status(200).setHeader('Access-Control-Allow-Origin', '*')
-      .setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-      .setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-      .end();
+export const handler = async (event: any, context: any) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: '',
+    };
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'Method not allowed' }),
+    };
   }
 
   try {
-    const { fileName, fileId } = req.body;
+    const body = JSON.parse(event.body || '{}');
+    const { fileName, fileId } = body;
 
     if (!fileId) {
-      return res.status(400).json({ error: 'fileId is required' });
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'fileId is required' }),
+      };
     }
 
     const keyId = process.env.BACKBLAZE_KEY_ID;
@@ -29,7 +38,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const bucketName = process.env.BACKBLAZE_BUCKET_NAME;
 
     if (!keyId || !applicationKey || !bucketName) {
-      return res.status(500).json({ error: 'Backblaze credentials not configured' });
+      return {
+        statusCode: 500,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Backblaze credentials not configured' }),
+      };
     }
 
     // Authorize
@@ -40,7 +53,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     if (!authResponse.ok) {
-      return res.status(authResponse.status).json({ error: 'Backblaze authorization failed' });
+      return {
+        statusCode: authResponse.status,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Backblaze authorization failed' }),
+      };
     }
 
     const authData = await authResponse.json();
@@ -54,22 +71,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     if (!downloadResponse.ok) {
-      return res.status(downloadResponse.status).json({ error: 'Failed to download file' });
+      return {
+        statusCode: downloadResponse.status,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Failed to download file' }),
+      };
     }
 
     const fileBuffer = await downloadResponse.arrayBuffer();
     const base64 = Buffer.from(fileBuffer).toString('base64');
 
-    return res.status(200).json({
-      success: true,
-      data: base64,
-      fileName
-    });
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: true,
+        data: base64,
+        fileName
+      }),
+    };
 
   } catch (error) {
     console.error('Error downloading file:', error);
-    return res.status(500).json({ 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    });
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      }),
+    };
   }
-}
+};

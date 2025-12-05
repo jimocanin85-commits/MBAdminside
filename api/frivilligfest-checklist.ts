@@ -1,30 +1,35 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getChecklistData, saveChecklistData } from '../src/integrations/database/client.js';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method === 'OPTIONS') {
-    return res.status(200).setHeader('Access-Control-Allow-Origin', '*')
-      .setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-      .setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-      .end();
+export const handler = async (event: any, context: any) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: '',
+    };
   }
 
   try {
-    if (req.method === 'GET') {
+    if (event.httpMethod === 'GET') {
       // Try database first (non-fatal if database not configured)
       try {
         const dbData = await getChecklistData();
         
         if (dbData) {
-          return res.status(200).json({ 
-            success: true, 
-            data: dbData 
-          });
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify({ 
+              success: true, 
+              data: dbData 
+            }),
+          };
         }
       } catch (dbError) {
         console.error('Database error (non-fatal):', dbError);
@@ -32,14 +37,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Fallback: return null if no data (database not configured or no data)
-      return res.status(200).json({ 
-        success: true, 
-        data: null 
-      });
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
+          success: true, 
+          data: null 
+        }),
+      };
     }
 
-    if (req.method === 'POST') {
-      const dataToSave = req.body;
+    if (event.httpMethod === 'POST') {
+      const dataToSave = JSON.parse(event.body || '{}');
       
       // Try to save to database (non-fatal if database not configured)
       try {
@@ -49,18 +58,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Continue anyway - data is saved to localStorage on client side
       }
       
-      return res.status(200).json({ 
-        success: true, 
-        data: dataToSave 
-      });
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
+          success: true, 
+          data: dataToSave 
+        }),
+      };
     }
 
-    return res.status(405).json({ error: 'Method not allowed' });
+    return {
+      statusCode: 405,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'Method not allowed' }),
+    };
   } catch (error) {
     console.error('Checklist API error:', error);
-    return res.status(500).json({ 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      success: false
-    });
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        success: false
+      }),
+    };
   }
-}
+};

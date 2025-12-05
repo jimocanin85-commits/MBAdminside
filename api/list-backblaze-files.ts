@@ -1,21 +1,25 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export const handler = async (event: any, context: any) => {
   // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(200).setHeader('Access-Control-Allow-Origin', '*')
-      .setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-      .setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-      .end();
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: '',
+    };
   }
 
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  if (event.httpMethod !== 'GET') {
+    return {
+      statusCode: 405,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'Method not allowed' }),
+    };
   }
 
   try {
@@ -41,13 +45,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!bucketName) missing.push('BACKBLAZE_BUCKET_NAME');
       
       // Return empty list instead of error - allows app to work without Backblaze
-      return res.status(200).json({ 
-        success: true,
-        files: [],
-        error: 'Backblaze credentials not configured',
-        missing: missing,
-        message: `Missing environment variables: ${missing.join(', ')}. Please configure them in Vercel dashboard → Settings → Environment Variables`
-      });
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
+          success: true,
+          files: [],
+          error: 'Backblaze credentials not configured',
+          missing: missing,
+          message: `Missing environment variables: ${missing.join(', ')}. Please configure them in Netlify dashboard → Site settings → Environment variables`
+        }),
+      };
     }
 
     // Step 1: Authorize account
@@ -64,10 +72,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!authResponse.ok) {
       const errorText = await authResponse.text();
       console.error('Authorization failed:', errorText);
-      return res.status(authResponse.status).json({ 
-        error: 'Backblaze authorization failed', 
-        details: errorText 
-      });
+      return {
+        statusCode: authResponse.status,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
+          error: 'Backblaze authorization failed', 
+          details: errorText 
+        }),
+      };
     }
 
     const authData = await authResponse.json();
@@ -89,10 +101,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!listBucketsResponse.ok) {
       const errorText = await listBucketsResponse.text();
       console.error('Failed to list buckets:', errorText);
-      return res.status(listBucketsResponse.status).json({ 
-        error: 'Failed to list buckets', 
-        details: errorText 
-      });
+      return {
+        statusCode: listBucketsResponse.status,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
+          error: 'Failed to list buckets', 
+          details: errorText 
+        }),
+      };
     }
 
     const bucketsData = await listBucketsResponse.json();
@@ -100,7 +116,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!bucket) {
       console.error('Bucket not found:', bucketName);
-      return res.status(404).json({ error: `Bucket '${bucketName}' not found` });
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: `Bucket '${bucketName}' not found` }),
+      };
     }
 
     const bucketId = bucket.bucketId;
@@ -123,10 +143,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!listFilesResponse.ok) {
       const errorText = await listFilesResponse.text();
       console.error('Failed to list files:', errorText);
-      return res.status(listFilesResponse.status).json({ 
-        error: 'Failed to list files', 
-        details: errorText 
-      });
+      return {
+        statusCode: listFilesResponse.status,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
+          error: 'Failed to list files', 
+          details: errorText 
+        }),
+      };
     }
 
     const filesData = await listFilesResponse.json();
@@ -134,12 +158,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!filesData.files || filesData.files.length === 0) {
       console.log('No files returned from Backblaze');
-      return res.status(200).json({
-        success: true,
-        files: [],
-        bucketName,
-        debug: 'No files found in bucket'
-      });
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: true,
+          files: [],
+          bucketName,
+          debug: 'No files found in bucket'
+        }),
+      };
     }
 
     // Group files by name and get only the latest version of each
@@ -185,15 +213,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       };
     });
 
-    return res.status(200).json({
-      success: true,
-      files,
-      bucketName
-    });
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: true,
+        files,
+        bucketName
+      }),
+    };
 
   } catch (error) {
     console.error('Error listing files:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    return res.status(500).json({ error: errorMessage });
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: errorMessage }),
+    };
   }
-}
+};
