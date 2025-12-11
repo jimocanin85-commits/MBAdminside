@@ -46,6 +46,13 @@ class ApiClient {
     const response = await fetch(url, requestOptions);
 
     if (!response.ok) {
+      // Handle network errors (API route not found/not accessible)
+      if (response.status === 404 || response.status === 0) {
+        throw new Error(
+          'API endpoint not found. Make sure you are running with "vercel dev" for local development, or that the API routes are deployed correctly.'
+        );
+      }
+      
       const error = await response.json().catch(() => ({ error: 'Unknown error' }));
       throw new Error(error.error || `HTTP ${response.status}`);
     }
@@ -97,11 +104,24 @@ class ApiClient {
         error: null 
       };
     } catch (error) {
+      // Handle fetch errors (network issues, CORS, etc.)
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Unknown error';
+      
+      // Check if it's a network error
+      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
+        return {
+          data: null,
+          error: { 
+            message: 'Cannot connect to API. If running locally, use "vercel dev" instead of "npm run dev". If deployed, check that environment variables are set in Vercel dashboard.'
+          },
+        };
+      }
+      
       return {
         data: null,
-        error: error instanceof Error 
-          ? { message: error.message } 
-          : { message: 'Unknown error' },
+        error: { message: errorMessage },
       };
     }
   }

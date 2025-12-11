@@ -14,7 +14,7 @@ Hvis du får denne fejl, betyder det at environment variables ikke er sat op kor
 4. Noter ned:
    - **Key ID** (f.eks. `002a1b2c3d4e5f6g7h8i9j0k1l2m`)
    - **Application Key** (f.eks. `K002a1b2c3d4e5f6g7h8i9j0k1l2m`)
-   - **Bucket Name** (f.eks. `mb-adminside-files`)
+   - **Bucket Name** (f.eks. `MaalovBK`)
 
 ### Trin 2: Tilføj Environment Variables i Vercel
 
@@ -27,7 +27,7 @@ Hvis du får denne fejl, betyder det at environment variables ikke er sat op kor
    |------|-------|-------------|
    | `BACKBLAZE_KEY_ID` | Din Key ID fra Backblaze | Production, Preview, Development |
    | `BACKBLAZE_APPLICATION_KEY` | Din Application Key fra Backblaze | Production, Preview, Development |
-   | `BACKBLAZE_BUCKET_NAME` | Dit bucket navn (f.eks. `mb-adminside-files`) | Production, Preview, Development |
+   | `BACKBLAZE_BUCKET_NAME` | Dit bucket navn (f.eks. `MaalovBK`) | Production, Preview, Development |
 
 5. **VIGTIGT:** Sørg for at vælge alle tre environments (Production, Preview, Development) for hver variabel
 6. Klik **Save** for hver variabel
@@ -67,7 +67,7 @@ Environment check: {
   hasBucketName: true,
   keyIdLength: 24,
   applicationKeyLength: 32,
-  bucketName: 'mb-adminside-files'
+  bucketName: 'MaalovBK'
 }
 ```
 

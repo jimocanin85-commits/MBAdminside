@@ -37,7 +37,7 @@ Go to Vercel Dashboard → Your Project → Settings → Environment Variables:
 ```
 BACKBLAZE_KEY_ID=your_key_id
 BACKBLAZE_APPLICATION_KEY=your_application_key
-BACKBLAZE_BUCKET_NAME=your_bucket_name
+BACKBLAZE_BUCKET_NAME=MaalovBK
 ```
 
 ### 2. Remove Supabase Environment Variables
