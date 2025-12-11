@@ -18,12 +18,17 @@ For your production deployment to work, you MUST add these environment variables
 
 ### Variable 2:
 - **Name:** `BACKBLAZE_APPLICATION_KEY`
-- **Value:** `0032cce8f9a80a34e1a4dfb6293880a86c20112d58`
+- **Value:** `003491de578627b190adb4d23dad769aa47dbe70ef`
 - **Environments:** ✅ Production ✅ Preview ✅ Development
 
 ### Variable 3:
 - **Name:** `BACKBLAZE_BUCKET_NAME`
 - **Value:** `MaalovBK`
+- **Environments:** ✅ Production ✅ Preview ✅ Development
+
+### Variable 4:
+- **Name:** `DATABASE_URL`
+- **Value:** `postgresql://postgres:[YOUR_PASSWORD]@db.ymrzdjwgadbktuvkuntl.supabase.co:5432/postgres`
 - **Environments:** ✅ Production ✅ Preview ✅ Development
 
 5. Click **Save** for each variable
