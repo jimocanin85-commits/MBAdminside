@@ -64,9 +64,13 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
         console.log('CloudFiles: Setting files:', data.files);
         setFiles(data.files || []);
         
-        // Show warning if Backblaze is not configured (but don't show toast - it's expected)
+        // Show warning if Backblaze is not configured
         if (data.error && data.message) {
           console.warn('CloudFiles:', data.message);
+          toast.error("Backblaze ikke konfigureret", {
+            description: data.message,
+            duration: 5000,
+          });
         }
       } else {
         console.log('CloudFiles: No success flag or no files returned');

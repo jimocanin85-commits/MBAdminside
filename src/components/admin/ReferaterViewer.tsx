@@ -53,10 +53,21 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
         setFiles(data.files);
       } else {
         setFiles([]);
+        // Check if there's an error message in the response
+        if (data?.error || data?.message) {
+          toast.error('Kunne ikke indlæse referater', {
+            description: data.message || data.error || 'Backblaze credentials not configured',
+            duration: 5000,
+          });
+        }
       }
     } catch (error) {
       console.error('Error loading referater files:', error);
-      toast.error('Kunne ikke indlæse referater');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error('Kunne ikke indlæse referater', {
+        description: errorMessage,
+        duration: 5000,
+      });
       setFiles([]);
     } finally {
       setIsLoading(false);
