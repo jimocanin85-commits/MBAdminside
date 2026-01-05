@@ -23,6 +23,7 @@ interface Task {
   completed: boolean;
   month: number;
   createdAt: string;
+  updatedAt?: string;
 }
 
 interface AddTaskModalProps {

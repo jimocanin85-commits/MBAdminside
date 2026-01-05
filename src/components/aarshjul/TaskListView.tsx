@@ -11,7 +11,9 @@ import {
   User,
   CheckCircle2,
   Circle,
-  ChevronsUpDown
+  ChevronsUpDown,
+  Clock,
+  CalendarPlus
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -45,6 +47,7 @@ interface Task {
   completed: boolean;
   month: number;
   createdAt: string;
+  updatedAt?: string;
 }
 
 interface TaskListViewProps {
@@ -60,6 +63,35 @@ const MONTHS = [
   "Januar", "Februar", "Marts", "April", "Maj", "Juni",
   "Juli", "August", "September", "Oktober", "November", "December"
 ];
+
+// Format date to Danish locale
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('da-DK', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+// Format relative time (e.g., "2 timer siden", "i går")
+const formatRelativeTime = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Lige nu';
+  if (diffMins < 60) return `${diffMins} min siden`;
+  if (diffHours < 24) return `${diffHours} time${diffHours > 1 ? 'r' : ''} siden`;
+  if (diffDays === 1) return 'I går';
+  if (diffDays < 7) return `${diffDays} dage siden`;
+  return formatDate(dateString);
+};
 
 const TaskListView = ({
   tasks,
@@ -194,6 +226,20 @@ const TaskListView = ({
                     {completedSubtasks}/{totalSubtasks} underopgaver
                   </p>
                 )}
+
+                {/* Timestamps */}
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 text-[10px] text-muted-foreground">
+                  <span className="flex items-center gap-0.5" title={`Oprettet: ${formatDate(task.createdAt)}`}>
+                    <CalendarPlus className="h-2.5 w-2.5" />
+                    {formatRelativeTime(task.createdAt)}
+                  </span>
+                  {task.updatedAt && task.updatedAt !== task.createdAt && (
+                    <span className="flex items-center gap-0.5" title={`Opdateret: ${formatDate(task.updatedAt)}`}>
+                      <Clock className="h-2.5 w-2.5" />
+                      Opdateret {formatRelativeTime(task.updatedAt)}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Actions */}

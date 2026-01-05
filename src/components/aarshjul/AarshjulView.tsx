@@ -23,6 +23,7 @@ interface Task {
   completed: boolean;
   month: number;
   createdAt: string;
+  updatedAt?: string;
 }
 
 interface AarshjulViewProps {
@@ -118,7 +119,8 @@ const AarshjulView = ({ open, onOpenChange }: AarshjulViewProps) => {
   };
 
   const handleTaskUpdated = (updatedTask: Task) => {
-    const newTasks = tasks.map(t => t.id === updatedTask.id ? updatedTask : t);
+    const taskWithTimestamp = { ...updatedTask, updatedAt: new Date().toISOString() };
+    const newTasks = tasks.map(t => t.id === updatedTask.id ? taskWithTimestamp : t);
     saveTasks(newTasks);
     setEditingTask(null);
   };
@@ -132,7 +134,7 @@ const AarshjulView = ({ open, onOpenChange }: AarshjulViewProps) => {
   const handleToggleTask = (taskId: string) => {
     const newTasks = tasks.map(t => {
       if (t.id === taskId) {
-        return { ...t, completed: !t.completed };
+        return { ...t, completed: !t.completed, updatedAt: new Date().toISOString() };
       }
       return t;
     });
@@ -155,7 +157,8 @@ const AarshjulView = ({ open, onOpenChange }: AarshjulViewProps) => {
         return { 
           ...t, 
           subtasks: newSubtasks,
-          completed: allSubtasksComplete && newSubtasks.length > 0 ? true : t.completed
+          completed: allSubtasksComplete && newSubtasks.length > 0 ? true : t.completed,
+          updatedAt: new Date().toISOString()
         };
       }
       return t;
