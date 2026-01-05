@@ -9,13 +9,14 @@ import { CloudFiles } from "@/components/dashboard/CloudFiles";
 import FrivilligfestDialog from "@/components/dashboard/FrivilligfestDialog";
 import LogsViewer from "@/components/admin/LogsViewer";
 import ReferaterViewer from "@/components/admin/ReferaterViewer";
+import AarshjulView from "@/components/aarshjul/AarshjulView";
 import { User } from "@/components/admin/CreateUserDialog";
 import { UserManagement } from "@/components/admin/UserManagement";
 // Temporarily disable logger - it may be crashing the app
 // import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown, Sparkles, ExternalLink, RefreshCw, FileText, Users } from "lucide-react";
+import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown, Sparkles, ExternalLink, RefreshCw, FileText, Users, CircleDot } from "lucide-react";
 // Removed Supabase import - no longer needed
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -133,6 +134,7 @@ const AdminPortal = () => {
   const [showLogsPasswordDialog, setShowLogsPasswordDialog] = useState(false);
   const [showClearCacheDialog, setShowClearCacheDialog] = useState(false);
   const [showReferaterViewer, setShowReferaterViewer] = useState(false);
+  const [showAarshjul, setShowAarshjul] = useState(false);
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [currentView, setCurrentView] = useState<"home" | "cloud" | "form" | "settings">("home");
@@ -505,6 +507,18 @@ const AdminPortal = () => {
                     Frivilligfest 2026
                   </Button>
                   )}
+                  
+                  {/* Årshjul - Show for admin and Brian */}
+                  {(currentUser === 'admin' || currentUser === 'Brian') && (
+                    <Button 
+                      size="lg" 
+                      className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
+                      onClick={() => setShowAarshjul(true)}
+                    >
+                      <CircleDot className="h-5 w-5" />
+                      Årshjul
+                    </Button>
+                  )}
                 </div>
 
               {!isBrianUser && trainers.length > 0 ? (
@@ -736,6 +750,12 @@ const AdminPortal = () => {
       <ReferaterViewer
         open={showReferaterViewer}
         onOpenChange={setShowReferaterViewer}
+      />
+
+      {/* Årshjul View */}
+      <AarshjulView
+        open={showAarshjul}
+        onOpenChange={setShowAarshjul}
       />
 
       {/* Clear Cache Confirmation Dialog */}

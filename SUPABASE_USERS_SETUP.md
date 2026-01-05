@@ -1,8 +1,8 @@
-# Supabase Users Setup Guide
+# Supabase Setup Guide
 
-This guide explains how to set up Supabase for user management so users sync across all devices (desktop and mobile).
+This guide explains how to set up Supabase for user management and Årshjul tasks so data syncs across all devices (desktop and mobile).
 
-## Step 1: Create the Table in Supabase
+## Step 1: Create the Tables in Supabase
 
 1. Go to your Supabase project dashboard: https://supabase.com/dashboard
 2. Navigate to **SQL Editor** (in the left sidebar)
@@ -10,7 +10,9 @@ This guide explains how to set up Supabase for user management so users sync acr
 4. Paste the following SQL and click **Run**:
 
 ```sql
--- Create custom_users table for user management
+-- =====================================================
+-- USERS TABLE - For user management
+-- =====================================================
 CREATE TABLE IF NOT EXISTS custom_users (
   id TEXT PRIMARY KEY,
   first_name VARCHAR(100) NOT NULL,
@@ -22,18 +24,35 @@ CREATE TABLE IF NOT EXISTS custom_users (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create index for faster username lookups
 CREATE INDEX IF NOT EXISTS idx_custom_users_username ON custom_users(username);
 
--- Enable Row Level Security (RLS)
 ALTER TABLE custom_users ENABLE ROW LEVEL SECURITY;
 
--- Create policy to allow all operations (adjust as needed for security)
--- For a simple admin portal, this allows full access
-CREATE POLICY "Allow all operations" ON custom_users
-  FOR ALL
-  USING (true)
-  WITH CHECK (true);
+CREATE POLICY "Allow all operations on custom_users" ON custom_users
+  FOR ALL USING (true) WITH CHECK (true);
+
+-- =====================================================
+-- ÅRSHJUL TASKS TABLE - For year wheel task management
+-- =====================================================
+CREATE TABLE IF NOT EXISTS aarshjul_tasks (
+  id TEXT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  subtasks JSONB DEFAULT '[]',
+  assigned_users TEXT[] DEFAULT '{}',
+  completed BOOLEAN DEFAULT false,
+  month INTEGER NOT NULL CHECK (month >= 0 AND month <= 11),
+  year INTEGER NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_aarshjul_tasks_year ON aarshjul_tasks(year);
+CREATE INDEX IF NOT EXISTS idx_aarshjul_tasks_month ON aarshjul_tasks(month);
+
+ALTER TABLE aarshjul_tasks ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all operations on aarshjul_tasks" ON aarshjul_tasks
+  FOR ALL USING (true) WITH CHECK (true);
 ```
 
 ## Step 2: Get Your Supabase Credentials

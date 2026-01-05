@@ -1,149 +1,301 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Task } from "@/types/task";
-import { Section } from "@/types/section";
-import { formatDate } from "@/lib/dateHelpers";
-import { Edit, Trash2, X } from "lucide-react";
-import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  Plus, 
+  Edit, 
+  Trash2, 
+  ChevronDown, 
+  ChevronUp,
+  User,
+  CheckCircle2,
+  Circle
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-interface TaskDetailsPanelProps {
-  task: Task | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  sections: Section[];
-  onEdit: (task: Task) => void;
-  onDelete: (taskId: string) => void;
+interface Subtask {
+  id: string;
+  title: string;
+  completed: boolean;
 }
 
-export default function TaskDetailsPanel({
-  task,
-  open,
-  onOpenChange,
-  sections,
-  onEdit,
-  onDelete,
-}: TaskDetailsPanelProps) {
-  if (!task) return null;
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  subtasks: Subtask[];
+  assignedUsers: string[];
+  completed: boolean;
+  month: number;
+  createdAt: string;
+}
 
-  const section = sections.find((s) => s.id === task.spor_id);
+interface TaskDetailsPanelProps {
+  month: number;
+  tasks: Task[];
+  onAddTask: () => void;
+  onEditTask: (task: Task) => void;
+  onDeleteTask: (taskId: string) => void;
+  onToggleTask: (taskId: string) => void;
+  onToggleSubtask: (taskId: string, subtaskId: string) => void;
+}
 
-  const handleDelete = async () => {
-    if (!confirm("Er du sikker på at du vil slette denne opgave?")) {
-      return;
+const MONTHS = [
+  "Januar", "Februar", "Marts", "April", "Maj", "Juni",
+  "Juli", "August", "September", "Oktober", "November", "December"
+];
+
+const TaskDetailsPanel = ({
+  month,
+  tasks,
+  onAddTask,
+  onEditTask,
+  onDeleteTask,
+  onToggleTask,
+  onToggleSubtask
+}: TaskDetailsPanelProps) => {
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+
+  const monthTasks = tasks.filter(t => t.month === month);
+  const completedTasks = monthTasks.filter(t => t.completed);
+  const pendingTasks = monthTasks.filter(t => !t.completed);
+
+  const toggleExpanded = (taskId: string) => {
+    const newExpanded = new Set(expandedTasks);
+    if (newExpanded.has(taskId)) {
+      newExpanded.delete(taskId);
+    } else {
+      newExpanded.add(taskId);
     }
+    setExpandedTasks(newExpanded);
+  };
 
-    try {
-      const response = await fetch("/api/tasks", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: task.id }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Kunne ikke slette opgave");
-      }
-
-      toast.success("Opgave slettet");
-      onDelete(task.id);
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Error deleting task:", error);
-      toast.error("Kunne ikke slette opgave");
+  const handleDeleteConfirm = () => {
+    if (taskToDelete) {
+      onDeleteTask(taskToDelete.id);
+      setTaskToDelete(null);
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div
-              className="w-4 h-4 rounded-full shrink-0"
-              style={{ backgroundColor: task.farve }}
-            />
-            <DialogTitle className="flex-1">{task.titel}</DialogTitle>
-          </div>
-          <DialogDescription>
-            Opgave detaljer
-          </DialogDescription>
-        </DialogHeader>
+  const renderTask = (task: Task) => {
+    const isExpanded = expandedTasks.has(task.id);
+    const completedSubtasks = task.subtasks.filter(s => s.completed).length;
+    const totalSubtasks = task.subtasks.length;
 
-        <div className="space-y-4">
-          {section && (
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: section.farve }}
-                  />
-                  <span className="text-sm font-medium">{section.navn}</span>
+    return (
+      <Card key={task.id} className={cn(
+        "transition-all duration-200",
+        task.completed && "opacity-60"
+      )}>
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            {/* Completion checkbox */}
+            <button
+              onClick={() => onToggleTask(task.id)}
+              className="mt-1 shrink-0"
+            >
+              {task.completed ? (
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+              ) : (
+                <Circle className="h-5 w-5 text-muted-foreground hover:text-primary" />
+              )}
+            </button>
+
+            {/* Task content */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <h4 className={cn(
+                    "font-medium truncate",
+                    task.completed && "line-through text-muted-foreground"
+                  )}>
+                    {task.title}
+                  </h4>
+                  
+                  {task.description && (
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                      {task.description}
+                    </p>
+                  )}
+
+                  {/* Subtasks summary */}
+                  {totalSubtasks > 0 && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {completedSubtasks}/{totalSubtasks} underopgaver færdige
+                    </p>
+                  )}
+
+                  {/* Assigned users */}
+                  {task.assignedUsers.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {task.assignedUsers.map(user => (
+                        <span 
+                          key={user}
+                          className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full"
+                        >
+                          <User className="h-3 w-3" />
+                          {user}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
-          )}
 
-          {task.beskrivelse && (
-            <Card>
-              <CardContent className="p-4">
-                <h3 className="text-sm font-semibold mb-2">Beskrivelse</h3>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {task.beskrivelse}
-                </p>
-              </CardContent>
-            </Card>
-          )}
+                {/* Actions */}
+                <div className="flex items-center gap-1 shrink-0">
+                  {totalSubtasks > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => toggleExpanded(task.id)}
+                    >
+                      {isExpanded ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onEditTask(task)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={() => setTaskToDelete(task)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <h3 className="text-sm font-semibold mb-1">Startdato</h3>
-                <p className="text-sm text-muted-foreground">
-                  {formatDate(task.start_dato)}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <h3 className="text-sm font-semibold mb-1">Slutdato</h3>
-                <p className="text-sm text-muted-foreground">
-                  {formatDate(task.slut_dato)}
-                </p>
-              </CardContent>
-            </Card>
+              {/* Expanded subtasks */}
+              {isExpanded && task.subtasks.length > 0 && (
+                <div className="mt-3 ml-2 space-y-2 border-l-2 border-muted pl-3">
+                  {task.subtasks.map(subtask => (
+                    <div 
+                      key={subtask.id}
+                      className="flex items-center gap-2"
+                    >
+                      <Checkbox
+                        checked={subtask.completed}
+                        onCheckedChange={() => onToggleSubtask(task.id, subtask.id)}
+                        className="shrink-0"
+                      />
+                      <span className={cn(
+                        "text-sm",
+                        subtask.completed && "line-through text-muted-foreground"
+                      )}>
+                        {subtask.title}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
-          <Card>
-            <CardContent className="p-4">
-              <h3 className="text-sm font-semibold mb-1">Oprettet</h3>
-              <p className="text-sm text-muted-foreground">
-                {formatDate(task.oprettet_dato)}
-              </p>
-            </CardContent>
-          </Card>
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">{MONTHS[month]}</h2>
+          <p className="text-sm text-muted-foreground">
+            {monthTasks.length} {monthTasks.length === 1 ? 'opgave' : 'opgaver'}
+            {completedTasks.length > 0 && ` • ${completedTasks.length} færdig`}
+          </p>
         </div>
+        <Button onClick={onAddTask} className="gap-2">
+          <Plus className="h-4 w-4" />
+          <span className="hidden sm:inline">Ny opgave</span>
+        </Button>
+      </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
-          <Button
-            variant="outline"
-            onClick={() => onEdit(task)}
-            className="gap-2 w-full sm:w-auto"
-          >
-            <Edit className="h-4 w-4" />
-            Rediger
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            className="gap-2 w-full sm:w-auto"
-          >
-            <Trash2 className="h-4 w-4" />
-            Slet
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      {/* Task lists */}
+      {monthTasks.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p className="text-muted-foreground">Ingen opgaver for {MONTHS[month]}</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Klik på "Ny opgave" for at tilføje en opgave
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {/* Pending tasks */}
+          {pendingTasks.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-muted-foreground">
+                Igangværende ({pendingTasks.length})
+              </h3>
+              <div className="space-y-2">
+                {pendingTasks.map(renderTask)}
+              </div>
+            </div>
+          )}
+
+          {/* Completed tasks */}
+          {completedTasks.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-muted-foreground">
+                Færdige ({completedTasks.length})
+              </h3>
+              <div className="space-y-2">
+                {completedTasks.map(renderTask)}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!taskToDelete} onOpenChange={() => setTaskToDelete(null)}>
+        <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Slet opgave?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Er du sikker på, at du vil slette "{taskToDelete?.title}"? 
+              Denne handling kan ikke fortrydes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <AlertDialogCancel className="w-full sm:w-auto">Annuller</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
+            >
+              Slet
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
-}
+};
+
+export default TaskDetailsPanel;

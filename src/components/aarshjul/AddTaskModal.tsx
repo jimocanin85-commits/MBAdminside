@@ -1,208 +1,318 @@
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Task, CreateTaskInput } from "@/types/task";
-import { Section } from "@/types/section";
 import { toast } from "sonner";
+import { Plus, Trash2, Loader2 } from "lucide-react";
+import { User } from "@/components/admin/CreateUserDialog";
+
+interface Subtask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  subtasks: Subtask[];
+  assignedUsers: string[];
+  completed: boolean;
+  month: number;
+  createdAt: string;
+}
 
 interface AddTaskModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  sections: Section[];
+  month: number;
   onTaskCreated: (task: Task) => void;
-  currentUserId?: string;
+  editingTask?: Task | null;
+  onTaskUpdated?: (task: Task) => void;
 }
 
-const COLORS = [
-  { name: "Rød", value: "#ef4444" },
-  { name: "Blå", value: "#3b82f6" },
-  { name: "Grøn", value: "#10b981" },
-  { name: "Gul", value: "#f59e0b" },
-  { name: "Lilla", value: "#8b5cf6" },
-  { name: "Pink", value: "#ec4899" },
-  { name: "Orange", value: "#f97316" },
-  { name: "Cyan", value: "#06b6d4" },
+const MONTHS = [
+  "Januar", "Februar", "Marts", "April", "Maj", "Juni",
+  "Juli", "August", "September", "Oktober", "November", "December"
 ];
 
-export default function AddTaskModal({
-  open,
-  onOpenChange,
-  sections,
-  onTaskCreated,
-  currentUserId,
-}: AddTaskModalProps) {
-  const [formData, setFormData] = useState<CreateTaskInput>({
-    titel: "",
-    beskrivelse: "",
-    start_dato: new Date().toISOString().split("T")[0],
-    slut_dato: new Date().toISOString().split("T")[0],
-    spor_id: sections[0]?.id || "",
-    farve: COLORS[0].value,
-    ansvarlig_id: currentUserId || "",
-  });
-  const [loading, setLoading] = useState(false);
+const AddTaskModal = ({ 
+  open, 
+  onOpenChange, 
+  month, 
+  onTaskCreated, 
+  editingTask,
+  onTaskUpdated 
+}: AddTaskModalProps) => {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [newSubtask, setNewSubtask] = useState("");
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Load available users
+  useEffect(() => {
+    if (open) {
+      loadUsers();
+      
+      // If editing, populate fields
+      if (editingTask) {
+        setTitle(editingTask.title);
+        setDescription(editingTask.description || "");
+        setSubtasks(editingTask.subtasks || []);
+        setSelectedUsers(editingTask.assignedUsers || []);
+      } else {
+        // Reset form
+        setTitle("");
+        setDescription("");
+        setSubtasks([]);
+        setSelectedUsers([]);
+      }
+    }
+  }, [open, editingTask]);
+
+  const loadUsers = async () => {
+    try {
+      // First try to load from API
+      const response = await fetch('/api/users');
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        setAvailableUsers(result.data);
+      } else {
+        // Fallback to localStorage
+        const customUsersJson = localStorage.getItem('customUsers');
+        if (customUsersJson) {
+          setAvailableUsers(JSON.parse(customUsersJson));
+        }
+      }
+    } catch (error) {
+      // Fallback to localStorage
+      const customUsersJson = localStorage.getItem('customUsers');
+      if (customUsersJson) {
+        setAvailableUsers(JSON.parse(customUsersJson));
+      }
+    }
+  };
+
+  const handleAddSubtask = () => {
+    if (!newSubtask.trim()) return;
+    
+    const subtask: Subtask = {
+      id: `subtask_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      title: newSubtask.trim(),
+      completed: false
+    };
+    
+    setSubtasks([...subtasks, subtask]);
+    setNewSubtask("");
+  };
+
+  const handleRemoveSubtask = (id: string) => {
+    setSubtasks(subtasks.filter(s => s.id !== id));
+  };
+
+  const toggleUserSelection = (username: string) => {
+    setSelectedUsers(prev => 
+      prev.includes(username)
+        ? prev.filter(u => u !== username)
+        : [...prev, username]
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.titel.trim()) {
+
+    if (!title.trim()) {
       toast.error("Titel er påkrævet");
       return;
     }
 
-    if (!formData.spor_id) {
-      toast.error("Vælg en kategori");
-      return;
-    }
+    setIsSubmitting(true);
 
-    if (new Date(formData.start_dato) > new Date(formData.slut_dato)) {
-      toast.error("Slutdato skal være efter startdato");
-      return;
-    }
-
-    setLoading(true);
     try {
-      const response = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          oprettet_af: currentUserId || "",
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Kunne ikke oprette opgave");
+      if (editingTask && onTaskUpdated) {
+        // Update existing task
+        const updatedTask: Task = {
+          ...editingTask,
+          title: title.trim(),
+          description: description.trim() || undefined,
+          subtasks,
+          assignedUsers: selectedUsers,
+        };
+        onTaskUpdated(updatedTask);
+        toast.success("Opgave opdateret!");
+      } else {
+        // Create new task
+        const newTask: Task = {
+          id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          title: title.trim(),
+          description: description.trim() || undefined,
+          subtasks,
+          assignedUsers: selectedUsers,
+          completed: false,
+          month,
+          createdAt: new Date().toISOString()
+        };
+        onTaskCreated(newTask);
+        toast.success("Opgave oprettet!");
       }
 
-      const newTask = await response.json();
-      toast.success("Opgave oprettet!");
-      onTaskCreated(newTask);
-      handleReset();
       onOpenChange(false);
     } catch (error) {
-      console.error("Error creating task:", error);
-      toast.error("Kunne ikke oprette opgave");
+      console.error('Error saving task:', error);
+      toast.error("Kunne ikke gemme opgave");
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleReset = () => {
-    setFormData({
-      titel: "",
-      beskrivelse: "",
-      start_dato: new Date().toISOString().split("T")[0],
-      slut_dato: new Date().toISOString().split("T")[0],
-      spor_id: sections[0]?.id || "",
-      farve: COLORS[0].value,
-      ansvarlig_id: currentUserId || "",
-    });
-  };
+  // System users that are always available
+  const systemUsers = ['admin', 'Brian'];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+      <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle>Tilføj opgave</DialogTitle>
+          <DialogTitle>
+            {editingTask ? "Rediger opgave" : "Ny opgave"} - {MONTHS[month]}
+          </DialogTitle>
           <DialogDescription>
-            Opret en ny opgave til årshjulet
+            {editingTask 
+              ? "Opdater opgavens detaljer"
+              : "Opret en ny opgave for denne måned"
+            }
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="titel">Titel *</Label>
+            <Label htmlFor="title">Titel *</Label>
             <Input
-              id="titel"
-              value={formData.titel}
-              onChange={(e) => setFormData({ ...formData, titel: e.target.value })}
-              placeholder="Indtast opgavens titel"
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Opgavens titel"
               required
+              disabled={isSubmitting}
             />
           </div>
 
+          {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="beskrivelse">Beskrivelse</Label>
+            <Label htmlFor="description">Beskrivelse</Label>
             <Textarea
-              id="beskrivelse"
-              value={formData.beskrivelse}
-              onChange={(e) => setFormData({ ...formData, beskrivelse: e.target.value })}
-              placeholder="Indtast beskrivelse af opgaven"
-              rows={4}
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Valgfri beskrivelse af opgaven"
+              rows={3}
+              disabled={isSubmitting}
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="start_dato">Startdato *</Label>
-              <Input
-                id="start_dato"
-                type="date"
-                value={formData.start_dato}
-                onChange={(e) => setFormData({ ...formData, start_dato: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="slut_dato">Slutdato *</Label>
-              <Input
-                id="slut_dato"
-                type="date"
-                value={formData.slut_dato}
-                onChange={(e) => setFormData({ ...formData, slut_dato: e.target.value })}
-                required
-              />
-            </div>
-          </div>
-
+          {/* Subtasks */}
           <div className="space-y-2">
-            <Label htmlFor="spor_id">Kategori / Spor *</Label>
-            <Select
-              value={formData.spor_id}
-              onValueChange={(value) => setFormData({ ...formData, spor_id: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Vælg kategori" />
-              </SelectTrigger>
-              <SelectContent>
-                {sections.map((section) => (
-                  <SelectItem key={section.id} value={section.id}>
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: section.farve }}
-                      />
-                      {section.navn}
-                    </div>
-                  </SelectItem>
+            <Label>Underopgaver</Label>
+            <div className="flex gap-2">
+              <Input
+                value={newSubtask}
+                onChange={(e) => setNewSubtask(e.target.value)}
+                placeholder="Tilføj underopgave"
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubtask())}
+                disabled={isSubmitting}
+              />
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="icon"
+                onClick={handleAddSubtask}
+                disabled={isSubmitting || !newSubtask.trim()}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            {subtasks.length > 0 && (
+              <div className="space-y-2 mt-2 max-h-32 overflow-y-auto">
+                {subtasks.map((subtask) => (
+                  <div 
+                    key={subtask.id} 
+                    className="flex items-center justify-between p-2 bg-muted rounded-md"
+                  >
+                    <span className="text-sm truncate flex-1">{subtask.title}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 shrink-0"
+                      onClick={() => handleRemoveSubtask(subtask.id)}
+                      disabled={isSubmitting}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
+              </div>
+            )}
           </div>
 
+          {/* Assign Users */}
           <div className="space-y-2">
-            <Label htmlFor="farve">Farve</Label>
-            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-              {COLORS.map((color) => (
-                <button
-                  key={color.value}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, farve: color.value })}
-                  className={`w-10 h-10 rounded-full border-2 transition-all ${
-                    formData.farve === color.value
-                      ? "border-foreground scale-110"
-                      : "border-transparent hover:scale-105"
-                  }`}
-                  style={{ backgroundColor: color.value }}
-                  aria-label={color.name}
-                />
+            <Label>Tildel til brugere</Label>
+            <div className="border rounded-lg p-3 max-h-40 overflow-y-auto space-y-2">
+              {/* System users */}
+              {systemUsers.map((username) => (
+                <label
+                  key={username}
+                  className="flex items-center space-x-2 cursor-pointer hover:bg-muted/50 p-2 rounded"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedUsers.includes(username)}
+                    onChange={() => toggleUserSelection(username)}
+                    className="rounded"
+                    disabled={isSubmitting}
+                  />
+                  <span className="text-sm">{username}</span>
+                  <span className="text-xs text-muted-foreground">(System)</span>
+                </label>
               ))}
+              
+              {/* Custom users */}
+              {availableUsers
+                .filter(u => u.isActive !== false)
+                .map((user) => (
+                  <label
+                    key={user.id}
+                    className="flex items-center space-x-2 cursor-pointer hover:bg-muted/50 p-2 rounded"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedUsers.includes(user.username)}
+                      onChange={() => toggleUserSelection(user.username)}
+                      className="rounded"
+                      disabled={isSubmitting}
+                    />
+                    <span className="text-sm">
+                      {user.firstName} {user.lastName}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      ({user.username})
+                    </span>
+                  </label>
+                ))}
+
+              {availableUsers.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-2">
+                  Ingen brugere oprettet endnu
+                </p>
+              )}
             </div>
           </div>
 
@@ -210,20 +320,29 @@ export default function AddTaskModal({
             <Button
               type="button"
               variant="outline"
-              onClick={() => {
-                handleReset();
-                onOpenChange(false);
-              }}
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
               className="w-full sm:w-auto"
             >
               Annuller
             </Button>
-            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
-              {loading ? "Opretter..." : "Gem"}
+            <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Gemmer...
+                </>
+              ) : editingTask ? (
+                "Gem ændringer"
+              ) : (
+                "Opret opgave"
+              )}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
   );
-}
+};
+
+export default AddTaskModal;
