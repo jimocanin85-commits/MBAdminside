@@ -505,6 +505,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
                                         {perm === 'frivillig' && 'Frivillig'}
                                         {perm === 'referater' && 'Referater'}
                                         {perm === 'frivilligfest' && 'Frivilligfest'}
+                                        {perm === 'aarshjul' && 'Årshjul'}
                                       </span>
                                     ))
                                   ) : (

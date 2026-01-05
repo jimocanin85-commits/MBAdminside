@@ -19,6 +19,7 @@ const PERMISSION_OPTIONS = [
   { value: 'frivillig', label: 'Frivillig (Opret, Exit, Cloud Filer)' },
   { value: 'referater', label: 'Referater fra Bestyrelsesmøder' },
   { value: 'frivilligfest', label: 'Frivilligfest 2026' },
+  { value: 'aarshjul', label: 'Årshjul (Opgavestyring)' },
 ];
 
 const API_BASE = '/api';

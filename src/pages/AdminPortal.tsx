@@ -508,8 +508,8 @@ const AdminPortal = () => {
                   </Button>
                   )}
                   
-                  {/* Årshjul - Show for admin and Brian */}
-                  {(currentUser === 'admin' || currentUser === 'Brian') && (
+                  {/* Årshjul - Show for admin, Brian, or users with aarshjul permission */}
+                  {(currentUser === 'admin' || currentUser === 'Brian' || userPermissions.includes('aarshjul')) && (
                     <Button 
                       size="lg" 
                       className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
