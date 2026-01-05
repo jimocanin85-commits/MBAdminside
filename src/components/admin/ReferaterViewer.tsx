@@ -23,7 +23,7 @@ interface ReferatFile {
 }
 
 const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
-  const [selectedYear, setSelectedYear] = useState<string>('2025');
+  const [selectedYear, setSelectedYear] = useState<string>('2026');
   const [files, setFiles] = useState<ReferatFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -515,8 +515,8 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
     }
   };
 
-  // Only show years 2024 and 2025
-  const years = ['2024', '2025'];
+  // Available years for referater
+  const years = ['2024', '2025', '2026'];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
