@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { User } from "./CreateUserDialog";
+import { Loader2 } from "lucide-react";
 
 interface EditUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   user: User | null;
   onUserUpdated: () => void;
+  useCloud?: boolean;
 }
 
 const PERMISSION_OPTIONS = [
@@ -18,8 +20,11 @@ const PERMISSION_OPTIONS = [
   { value: 'frivilligfest', label: 'Frivilligfest 2026' },
 ];
 
-export const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: EditUserDialogProps) => {
+const API_BASE = '/api';
+
+export const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated, useCloud = true }: EditUserDialogProps) => {
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (user && open) {
@@ -27,7 +32,7 @@ export const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: Edit
     }
   }, [user, open]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!user) return;
@@ -37,7 +42,28 @@ export const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: Edit
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
+      if (useCloud) {
+        // Update via API (Supabase)
+        const response = await fetch(`${API_BASE}/users`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: user.id,
+            permissions: selectedPermissions
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to update user');
+        }
+      }
+
+      // Also update localStorage
       const customUsersJson = localStorage.getItem('customUsers');
       if (customUsersJson) {
         const customUsers: User[] = JSON.parse(customUsersJson);
@@ -47,13 +73,16 @@ export const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: Edit
             : u
         );
         localStorage.setItem('customUsers', JSON.stringify(updatedUsers));
-        toast.success(`Rettigheder for "${user.username}" er opdateret!`);
-        onUserUpdated();
-        onOpenChange(false);
       }
+
+      toast.success(`Rettigheder for "${user.username}" er opdateret!`);
+      onUserUpdated();
+      onOpenChange(false);
     } catch (error) {
       console.error('Error updating user:', error);
-      toast.error('Kunne ikke opdatere bruger');
+      toast.error(error instanceof Error ? error.message : 'Kunne ikke opdatere bruger');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -90,6 +119,7 @@ export const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: Edit
                     checked={selectedPermissions.includes(option.value)}
                     onChange={() => togglePermission(option.value)}
                     className="rounded"
+                    disabled={isSubmitting}
                   />
                   <span className="text-sm">{option.label}</span>
                 </label>
@@ -101,11 +131,24 @@ export const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: Edit
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)} 
+              className="w-full sm:w-auto"
+              disabled={isSubmitting}
+            >
               Annuller
             </Button>
-            <Button type="submit" className="w-full sm:w-auto">
-              Gem ændringer
+            <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Gemmer...
+                </>
+              ) : (
+                'Gem ændringer'
+              )}
             </Button>
           </DialogFooter>
         </form>
