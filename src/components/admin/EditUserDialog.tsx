@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { User } from "./CreateUserDialog";
@@ -23,11 +24,13 @@ const PERMISSION_OPTIONS = [
 const API_BASE = '/api';
 
 export const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated, useCloud = true }: EditUserDialogProps) => {
+  const [email, setEmail] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (user && open) {
+      setEmail(user.email || "");
       setSelectedPermissions(user.permissions || []);
     }
   }, [user, open]);
@@ -36,6 +39,15 @@ export const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated, useClo
     e.preventDefault();
 
     if (!user) return;
+
+    // Email validation
+    if (email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        toast.error("Indtast en gyldig email adresse");
+        return;
+      }
+    }
 
     if (selectedPermissions.length === 0) {
       toast.error("Vælg mindst én adgangsrettighed");
@@ -52,6 +64,7 @@ export const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated, useClo
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             id: user.id,
+            email: email.trim(),
             permissions: selectedPermissions
           })
         });
@@ -69,13 +82,13 @@ export const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated, useClo
         const customUsers: User[] = JSON.parse(customUsersJson);
         const updatedUsers = customUsers.map(u => 
           u.id === user.id 
-            ? { ...u, permissions: selectedPermissions }
+            ? { ...u, email: email.trim(), permissions: selectedPermissions }
             : u
         );
         localStorage.setItem('customUsers', JSON.stringify(updatedUsers));
       }
 
-      toast.success(`Rettigheder for "${user.username}" er opdateret!`);
+      toast.success(`Bruger "${user.username}" er opdateret!`);
       onUserUpdated();
       onOpenChange(false);
     } catch (error) {
@@ -106,6 +119,21 @@ export const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated, useClo
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="edit-email">Email</Label>
+            <Input
+              id="edit-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="bruger@email.dk"
+              disabled={isSubmitting}
+            />
+            <p className="text-xs text-muted-foreground">
+              Bruges til notifikationer når opgaver tildeles
+            </p>
+          </div>
+
           <div className="space-y-2">
             <Label>Adgangsrettigheder</Label>
             <div className="space-y-2 border rounded-lg p-3 max-h-48 overflow-y-auto">

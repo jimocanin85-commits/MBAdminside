@@ -411,6 +411,11 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
                               <p className="text-sm text-muted-foreground truncate">
                                 Brugernavn: {user.username}
                               </p>
+                              {user.email && (
+                                <p className="text-sm text-muted-foreground truncate">
+                                  Email: {user.email}
+                                </p>
+                              )}
                               <div className="mt-2">
                                 <p className="text-xs text-muted-foreground mb-1">Adgangsrettigheder:</p>
                                 <div className="flex flex-wrap gap-1">
