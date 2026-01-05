@@ -35,8 +35,12 @@ interface AarshjulViewProps {
 type ViewMode = 'wheel' | 'list';
 
 const AarshjulView = ({ open, onOpenChange, currentUser }: AarshjulViewProps) => {
-  // Check if user can see timestamps (admin and Brian only)
-  const canSeeTimestamps = currentUser === 'admin' || currentUser === 'Brian';
+  // Check if user is admin or Brian (for special features)
+  const isAdmin = currentUser === 'admin' || currentUser === 'Brian';
+  // Only admin and Brian can see timestamps and list view
+  const canSeeTimestamps = isAdmin;
+  const canSeeListView = isAdmin;
+  
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -44,15 +48,18 @@ const AarshjulView = ({ open, onOpenChange, currentUser }: AarshjulViewProps) =>
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [useCloud, setUseCloud] = useState(true);
   const [cloudError, setCloudError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('list'); // Default to list for better overview
+  // Default to list for admin/Brian, wheel for others
+  const [viewMode, setViewMode] = useState<ViewMode>('wheel');
   const [addTaskMonth, setAddTaskMonth] = useState<number>(0); // Month for adding task in list view
 
   // Load tasks when dialog opens
   useEffect(() => {
     if (open) {
       loadTasks();
+      // Set default view mode based on user role
+      setViewMode(canSeeListView ? 'list' : 'wheel');
     }
-  }, [open]);
+  }, [open, canSeeListView]);
 
   const loadTasks = async () => {
     setIsLoading(true);
@@ -227,30 +234,32 @@ const AarshjulView = ({ open, onOpenChange, currentUser }: AarshjulViewProps) =>
                 </DialogTitle>
               </div>
               <div className="flex items-center gap-2">
-                {/* View toggle */}
-                <div className="flex items-center border rounded-lg p-0.5">
-                  <Button
-                    variant={viewMode === 'wheel' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => {
-                      setViewMode('wheel');
-                      setSelectedMonth(null);
-                    }}
-                    className="h-7 px-2 gap-1"
-                  >
-                    <CircleDot className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline text-xs">Hjul</span>
-                  </Button>
-                  <Button
-                    variant={viewMode === 'list' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('list')}
-                    className="h-7 px-2 gap-1"
-                  >
-                    <List className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline text-xs">Liste</span>
-                  </Button>
-                </div>
+                {/* View toggle - only for admin and Brian */}
+                {canSeeListView && (
+                  <div className="flex items-center border rounded-lg p-0.5">
+                    <Button
+                      variant={viewMode === 'wheel' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => {
+                        setViewMode('wheel');
+                        setSelectedMonth(null);
+                      }}
+                      className="h-7 px-2 gap-1"
+                    >
+                      <CircleDot className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline text-xs">Hjul</span>
+                    </Button>
+                    <Button
+                      variant={viewMode === 'list' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('list')}
+                      className="h-7 px-2 gap-1"
+                    >
+                      <List className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline text-xs">Liste</span>
+                    </Button>
+                  </div>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -263,7 +272,7 @@ const AarshjulView = ({ open, onOpenChange, currentUser }: AarshjulViewProps) =>
               </div>
             </div>
             <DialogDescription>
-              {viewMode === 'list' 
+              {viewMode === 'list' && canSeeListView
                 ? "Oversigt over alle opgaver - klik på en måned for at se detaljer"
                 : selectedMonth === null 
                   ? "Klik på en måned for at se og administrere opgaver"
@@ -273,8 +282,8 @@ const AarshjulView = ({ open, onOpenChange, currentUser }: AarshjulViewProps) =>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto py-4 min-h-0">
-            {viewMode === 'list' ? (
-              // Show list view
+            {viewMode === 'list' && canSeeListView ? (
+              // Show list view (admin and Brian only)
               <TaskListView
                 tasks={tasks}
                 onAddTask={handleAddTaskForMonth}
