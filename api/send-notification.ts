@@ -1,10 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import nodemailer from 'nodemailer';
 
-// SendPulse SMTP Configuration
-// Get these from SendPulse: Settings → SMTP → SMTP settings
-const SMTP_HOST = process.env.SMTP_HOST || 'smtp-pulse.com';
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || '465');
+// Maileroo SMTP Configuration
+// Get these from Maileroo: Sending Domains → SMTP Credentials
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp.maileroo.com';
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587');
 const SMTP_USER = process.env.SMTP_USER || '';
 const SMTP_PASS = process.env.SMTP_PASS || '';
 const FROM_EMAIL = process.env.SMTP_FROM_EMAIL || SMTP_USER;
@@ -15,11 +15,13 @@ const transporter = SMTP_USER && SMTP_PASS
   ? nodemailer.createTransport({
       host: SMTP_HOST,
       port: SMTP_PORT,
-      secure: SMTP_PORT === 465, // true for 465, false for other ports
+      secure: SMTP_PORT === 465, // true for 465 (SSL), false for 587 (STARTTLS)
       auth: {
         user: SMTP_USER,
         pass: SMTP_PASS,
       },
+      // Required for port 587 with STARTTLS
+      ...(SMTP_PORT === 587 && { requireTLS: true }),
     })
   : null;
 

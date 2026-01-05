@@ -84,24 +84,23 @@ CREATE POLICY "Allow all operations on aarshjul_tasks" ON aarshjul_tasks
 5. Click **Save**
 6. **Redeploy** your project for changes to take effect
 
-## Step 4: Set Up Email Notifications with SendPulse
+## Step 4: Set Up Email Notifications with Maileroo
 
 To enable email notifications when tasks are assigned in Årshjul:
 
-### 1. Get SendPulse SMTP Credentials
-1. Log in to https://sendpulse.com
-2. Go to **Settings** (gear icon) → **SMTP**
-3. If not already enabled, click **Enable SMTP**
-4. Note down your SMTP credentials:
-   - SMTP server: `smtp-pulse.com`
-   - Port: `465` (SSL) or `587` (TLS)
-   - Login: Your SMTP username
-   - Password: Your SMTP password
+### 1. Set Up Your Domain in Maileroo
+1. Log in to https://app.maileroo.com
+2. Go to **Sending Domains**
+3. Add your domain and verify it by adding the DNS records Maileroo provides
 
-### 2. Verify Sender Email
-1. In SendPulse, go to **Settings** → **SMTP** → **Sender emails**
-2. Add and verify the email address you want to send from
-3. Click the verification link sent to that email
+### 2. Get SMTP Credentials
+1. In Maileroo, go to **Sending Domains** → Click your domain
+2. Click **SMTP Credentials** or **Generate SMTP Credentials**
+3. Note down:
+   - SMTP Host: `smtp.maileroo.com`
+   - Port: `587` (TLS)
+   - Username: Your SMTP username
+   - Password: Your SMTP password
 
 ### 3. Add Environment Variables in Vercel
 
@@ -109,11 +108,11 @@ Go to Vercel → Your Project → **Settings** → **Environment Variables** and
 
 | Name | Value |
 |------|-------|
-| `SMTP_HOST` | `smtp-pulse.com` |
-| `SMTP_PORT` | `465` |
-| `SMTP_USER` | Your SendPulse SMTP username |
-| `SMTP_PASS` | Your SendPulse SMTP password |
-| `SMTP_FROM_EMAIL` | Your verified sender email |
+| `SMTP_HOST` | `smtp.maileroo.com` |
+| `SMTP_PORT` | `587` |
+| `SMTP_USER` | Your Maileroo SMTP username |
+| `SMTP_PASS` | Your Maileroo SMTP password |
+| `SMTP_FROM_EMAIL` | `noreply@your-verified-domain.com` |
 | `SMTP_FROM_NAME` | `Måløv Boldklub` |
 
 ### 4. Redeploy
