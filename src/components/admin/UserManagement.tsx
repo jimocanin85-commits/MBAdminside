@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { User, CreateUserDialog } from "./CreateUserDialog";
 import { EditUserDialog } from "./EditUserDialog";
-import { Trash2, UserX, UserCheck, Plus, Edit } from "lucide-react";
+import { Trash2, UserX, UserCheck, Plus, Edit, RefreshCw, Cloud, Database } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +24,9 @@ interface UserManagementProps {
 
 const HARDCODED_USERS = ['admin', 'Brian']; // Admin and Brian are system users
 
+// API base URL
+const API_BASE = '/api';
+
 export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
   const [users, setUsers] = useState<User[]>([]);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -31,14 +34,49 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
   const [userToDeactivate, setUserToDeactivate] = useState<User | null>(null);
   const [userToActivate, setUserToActivate] = useState<User | null>(null);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [useCloud, setUseCloud] = useState(true); // Default to cloud/Supabase
+  const [cloudError, setCloudError] = useState<string | null>(null);
 
-  const loadUsers = () => {
+  // Load users from API (Supabase)
+  const loadUsersFromCloud = async () => {
+    try {
+      setIsLoading(true);
+      setCloudError(null);
+      
+      const response = await fetch(`${API_BASE}/users`);
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to load users from cloud');
+      }
+      
+      if (result.success && result.data) {
+        const usersWithDates = result.data.map((user: any) => ({
+          ...user,
+          createdAt: new Date(user.createdAt)
+        }));
+        setUsers(usersWithDates);
+        
+        // Also sync to localStorage as backup
+        localStorage.setItem('customUsers', JSON.stringify(result.data));
+      }
+    } catch (error) {
+      console.error('Error loading users from cloud:', error);
+      setCloudError(error instanceof Error ? error.message : 'Unknown error');
+      // Fallback to localStorage
+      loadUsersFromLocalStorage();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load users from localStorage (fallback)
+  const loadUsersFromLocalStorage = () => {
     try {
       const customUsersJson = localStorage.getItem('customUsers');
       if (customUsersJson) {
         const customUsers: User[] = JSON.parse(customUsersJson);
-        // Convert createdAt strings back to Date objects
-        // Show all users including Karina and Kyhl
         const usersWithDates = customUsers.map(user => ({
           ...user,
           createdAt: new Date(user.createdAt)
@@ -48,32 +86,57 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
         setUsers([]);
       }
     } catch (error) {
-      console.error('Error loading users:', error);
+      console.error('Error loading users from localStorage:', error);
       setUsers([]);
     }
   };
 
-  useEffect(() => {
-    if (open) {
-      loadUsers();
+  // Main load function
+  const loadUsers = async () => {
+    if (useCloud) {
+      await loadUsersFromCloud();
+    } else {
+      loadUsersFromLocalStorage();
     }
-  }, [open]);
+  };
 
-  const handleUserCreated = (newUser: User) => {
-    loadUsers();
+  const handleUserCreated = async (newUser: User) => {
+    if (useCloud && !cloudError) {
+      // User was already created via API in CreateUserDialog
+      await loadUsers();
+    } else {
+      // Fallback: reload from localStorage
+      loadUsersFromLocalStorage();
+    }
     setShowCreateDialog(false);
   };
 
-  const handleDeleteUser = (user: User) => {
+  const handleDeleteUser = async (user: User) => {
     try {
+      if (useCloud && !cloudError) {
+        const response = await fetch(`${API_BASE}/users`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: user.id })
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to delete user');
+        }
+      }
+      
+      // Also update localStorage
       const customUsersJson = localStorage.getItem('customUsers');
       if (customUsersJson) {
         const customUsers: User[] = JSON.parse(customUsersJson);
         const updatedUsers = customUsers.filter(u => u.id !== user.id);
         localStorage.setItem('customUsers', JSON.stringify(updatedUsers));
-        loadUsers();
-        toast.success(`Bruger "${user.username}" er slettet`);
       }
+      
+      await loadUsers();
+      toast.success(`Bruger "${user.username}" er slettet`);
     } catch (error) {
       console.error('Error deleting user:', error);
       toast.error('Kunne ikke slette bruger');
@@ -81,8 +144,23 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
     setUserToDelete(null);
   };
 
-  const handleDeactivateUser = (user: User) => {
+  const handleDeactivateUser = async (user: User) => {
     try {
+      if (useCloud && !cloudError) {
+        const response = await fetch(`${API_BASE}/users`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: user.id, isActive: false })
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to deactivate user');
+        }
+      }
+      
+      // Also update localStorage
       const customUsersJson = localStorage.getItem('customUsers');
       if (customUsersJson) {
         const customUsers: User[] = JSON.parse(customUsersJson);
@@ -90,9 +168,10 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
           u.id === user.id ? { ...u, isActive: false } : u
         );
         localStorage.setItem('customUsers', JSON.stringify(updatedUsers));
-        loadUsers();
-        toast.success(`Bruger "${user.username}" er deaktiveret`);
       }
+      
+      await loadUsers();
+      toast.success(`Bruger "${user.username}" er deaktiveret`);
     } catch (error) {
       console.error('Error deactivating user:', error);
       toast.error('Kunne ikke deaktivere bruger');
@@ -100,8 +179,23 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
     setUserToDeactivate(null);
   };
 
-  const handleActivateUser = (user: User) => {
+  const handleActivateUser = async (user: User) => {
     try {
+      if (useCloud && !cloudError) {
+        const response = await fetch(`${API_BASE}/users`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: user.id, isActive: true })
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to activate user');
+        }
+      }
+      
+      // Also update localStorage
       const customUsersJson = localStorage.getItem('customUsers');
       if (customUsersJson) {
         const customUsers: User[] = JSON.parse(customUsersJson);
@@ -109,9 +203,10 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
           u.id === user.id ? { ...u, isActive: true } : u
         );
         localStorage.setItem('customUsers', JSON.stringify(updatedUsers));
-        loadUsers();
-        toast.success(`Bruger "${user.username}" er aktiveret`);
       }
+      
+      await loadUsers();
+      toast.success(`Bruger "${user.username}" er aktiveret`);
     } catch (error) {
       console.error('Error activating user:', error);
       toast.error('Kunne ikke aktivere bruger');
@@ -123,25 +218,129 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
     return user.isActive !== false; // Default to active if not set
   };
 
+  // Sync localStorage users to cloud
+  const syncToCloud = async () => {
+    try {
+      setIsLoading(true);
+      const customUsersJson = localStorage.getItem('customUsers');
+      if (!customUsersJson) {
+        toast.info('Ingen lokale brugere at synkronisere');
+        return;
+      }
+      
+      const localUsers: User[] = JSON.parse(customUsersJson);
+      let syncedCount = 0;
+      
+      for (const user of localUsers) {
+        try {
+          const response = await fetch(`${API_BASE}/users`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              firstName: user.firstName,
+              lastName: user.lastName,
+              username: user.username,
+              password: user.password,
+              permissions: user.permissions,
+              isActive: user.isActive
+            })
+          });
+          
+          if (response.ok) {
+            syncedCount++;
+          }
+        } catch (e) {
+          // User might already exist, continue
+        }
+      }
+      
+      await loadUsersFromCloud();
+      toast.success(`${syncedCount} brugere synkroniseret til cloud`);
+    } catch (error) {
+      console.error('Error syncing to cloud:', error);
+      toast.error('Kunne ikke synkronisere til cloud');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load users when dialog opens
+  useEffect(() => {
+    if (open) {
+      loadUsers();
+    }
+  }, [open, useCloud]);
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] sm:max-w-4xl h-[90vh] sm:h-auto max-h-[90vh] flex flex-col p-4 sm:p-6">
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl h-[85vh] sm:h-auto max-h-[85vh] flex flex-col p-4 sm:p-6">
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle>Brugerstyring</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              Brugerstyring
+              {useCloud && !cloudError && (
+                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded flex items-center gap-1">
+                  <Cloud className="h-3 w-3" /> Cloud
+                </span>
+              )}
+              {cloudError && (
+                <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded flex items-center gap-1">
+                  <Database className="h-3 w-3" /> Lokal
+                </span>
+              )}
+            </DialogTitle>
             <DialogDescription>
               Administrer brugere i portalen - opret, rediger, deaktiver eller slet brugere
+              {cloudError && (
+                <span className="block text-yellow-600 text-xs mt-1">
+                  ⚠️ Cloud ikke tilgængelig - bruger lokal lagring
+                </span>
+              )}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto space-y-4 min-h-0 py-2">
-            {/* Create User Button */}
-            <div className="flex justify-end">
-              <Button onClick={() => setShowCreateDialog(true)} className="gap-2 w-full sm:w-auto">
+          <div className="flex-1 overflow-y-auto space-y-4 min-h-0 py-2 -mx-4 px-4 sm:-mx-6 sm:px-6">
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-2 justify-between">
+              <Button 
+                onClick={() => setShowCreateDialog(true)} 
+                className="gap-2 w-full sm:w-auto"
+              >
                 <Plus className="h-4 w-4" />
                 Opret ny bruger
               </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => loadUsers()}
+                  disabled={isLoading}
+                  className="gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Genindlæs</span>
+                </Button>
+                {cloudError && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={syncToCloud}
+                    disabled={isLoading}
+                    className="gap-2"
+                  >
+                    <Cloud className="h-4 w-4" />
+                    <span className="hidden sm:inline">Sync til cloud</span>
+                  </Button>
+                )}
+              </div>
             </div>
+
+            {/* Loading indicator */}
+            {isLoading && (
+              <div className="flex justify-center py-4">
+                <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            )}
 
             {/* Hardcoded Users Section */}
             <div>
@@ -174,59 +373,24 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
             </div>
 
             {/* Custom Users Section */}
-            <div className="mt-6 pb-4">
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3">
+            <div className="mt-6 pb-8 sm:pb-4">
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3 sticky top-0 bg-background py-2 -mt-2">
                 Almindelige brugere ({users.length})
               </h3>
-              {(() => {
-                // Debug: Check localStorage directly
-                const customUsersJson = localStorage.getItem('customUsers');
-                const localStorageUsers = customUsersJson ? JSON.parse(customUsersJson) : [];
-                const hasLocalStorageUsers = localStorageUsers.length > 0;
-                
-                if (users.length === 0 && hasLocalStorageUsers) {
-                  // Users exist in localStorage but not in state - show warning
-                  return (
-                    <Card className="border-yellow-300 bg-yellow-50">
-                      <CardContent className="p-4">
-                        <p className="text-sm font-medium text-yellow-800 mb-2">
-                          ⚠️ Brugere findes i localStorage ({localStorageUsers.length}) men vises ikke
-                        </p>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => loadUsers()}
-                          className="w-full sm:w-auto"
-                        >
-                          Genindlæs brugere
-                        </Button>
-                        <div className="mt-2 text-xs text-yellow-700">
-                          <p>Debug info:</p>
-                          <p>State users: {users.length}</p>
-                          <p>localStorage users: {localStorageUsers.length}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                }
-                
-                if (users.length === 0) {
-                  return (
-                    <Card>
-                      <CardContent className="p-8 text-center">
-                        <p className="text-muted-foreground">Ingen brugere oprettet endnu</p>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Klik på "Opret ny bruger" for at tilføje en bruger
-                        </p>
-                      </CardContent>
-                    </Card>
-                  );
-                }
-                
-                return null;
-              })()}
+              
+              {!isLoading && users.length === 0 && (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <p className="text-muted-foreground">Ingen brugere oprettet endnu</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Klik på "Opret ny bruger" for at tilføje en bruger
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+              
               {users.length > 0 && (
-                <div className="space-y-2 pb-2">
+                <div className="space-y-3 pb-4">
                   {users.map((user) => {
                     const active = isUserActive(user);
                     return (
@@ -329,6 +493,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
         onUserCreated={handleUserCreated}
+        useCloud={useCloud && !cloudError}
       />
 
       {/* Edit User Dialog */}
@@ -340,6 +505,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
           loadUsers();
           setUserToEdit(null);
         }}
+        useCloud={useCloud && !cloudError}
       />
 
       {/* Delete User Confirmation */}

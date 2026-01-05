@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 export interface User {
   id: string;
@@ -20,6 +21,7 @@ interface CreateUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUserCreated: (user: User) => void;
+  useCloud?: boolean;
 }
 
 const PERMISSION_OPTIONS = [
@@ -28,14 +30,17 @@ const PERMISSION_OPTIONS = [
   { value: 'frivilligfest', label: 'Frivilligfest 2026' },
 ];
 
-export const CreateUserDialog = ({ open, onOpenChange, onUserCreated }: CreateUserDialogProps) => {
+const API_BASE = '/api';
+
+export const CreateUserDialog = ({ open, onOpenChange, onUserCreated, useCloud = true }: CreateUserDialogProps) => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validation
@@ -54,44 +59,97 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated }: CreateUs
       return;
     }
 
-    // Check if username already exists
-    const existingUsers = JSON.parse(localStorage.getItem('customUsers') || '[]');
-    const reservedUsers = ['admin', 'Brian']; // Only admin and Brian are reserved
-    
-    if (existingUsers.some((u: User) => u.username === username.trim()) || 
-        reservedUsers.includes(username.trim())) {
-      toast.error("Brugernavn findes allerede eller er reserveret");
+    // Check reserved usernames
+    const reservedUsers = ['admin', 'Brian'];
+    if (reservedUsers.includes(username.trim())) {
+      toast.error("Brugernavn er reserveret");
       return;
     }
 
-    // Create new user
-    const newUser: User = {
-      id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      username: username.trim(),
-      password: password.trim(),
-      permissions: selectedPermissions,
-      createdAt: new Date(),
-      isActive: true // New users are active by default
-    };
+    setIsSubmitting(true);
 
-    // Save to localStorage
-    existingUsers.push(newUser);
-    localStorage.setItem('customUsers', JSON.stringify(existingUsers));
+    try {
+      let newUser: User;
 
-    toast.success(`Bruger "${newUser.username}" oprettet!`);
+      if (useCloud) {
+        // Create via API (Supabase)
+        const response = await fetch(`${API_BASE}/users`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            username: username.trim(),
+            password: password.trim(),
+            permissions: selectedPermissions,
+            isActive: true
+          })
+        });
 
-    // Reset form
-    setFirstName("");
-    setLastName("");
-    setUsername("");
-    setPassword("");
-    setSelectedPermissions([]);
+        const result = await response.json();
 
-    // Notify parent
-    onUserCreated(newUser);
-    onOpenChange(false);
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to create user');
+        }
+
+        newUser = {
+          ...result.data,
+          createdAt: new Date(result.data.createdAt)
+        };
+
+        // Also save to localStorage as backup
+        const existingUsers = JSON.parse(localStorage.getItem('customUsers') || '[]');
+        existingUsers.push({
+          ...newUser,
+          createdAt: newUser.createdAt.toISOString()
+        });
+        localStorage.setItem('customUsers', JSON.stringify(existingUsers));
+      } else {
+        // Create locally only
+        const existingUsers = JSON.parse(localStorage.getItem('customUsers') || '[]');
+        
+        if (existingUsers.some((u: User) => u.username === username.trim())) {
+          toast.error("Brugernavn findes allerede");
+          setIsSubmitting(false);
+          return;
+        }
+
+        newUser = {
+          id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          username: username.trim(),
+          password: password.trim(),
+          permissions: selectedPermissions,
+          createdAt: new Date(),
+          isActive: true
+        };
+
+        existingUsers.push({
+          ...newUser,
+          createdAt: newUser.createdAt.toISOString()
+        });
+        localStorage.setItem('customUsers', JSON.stringify(existingUsers));
+      }
+
+      toast.success(`Bruger "${newUser.username}" oprettet!`);
+
+      // Reset form
+      setFirstName("");
+      setLastName("");
+      setUsername("");
+      setPassword("");
+      setSelectedPermissions([]);
+
+      // Notify parent
+      onUserCreated(newUser);
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      toast.error(error instanceof Error ? error.message : 'Kunne ikke oprette bruger');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const togglePermission = (permission: string) => {
@@ -121,6 +179,7 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated }: CreateUs
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="Fornavn"
                 required
+                disabled={isSubmitting}
               />
             </div>
             <div className="space-y-2">
@@ -131,6 +190,7 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated }: CreateUs
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder="Efternavn"
                 required
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -143,6 +203,7 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated }: CreateUs
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Brugernavn"
               required
+              disabled={isSubmitting}
             />
           </div>
 
@@ -156,6 +217,7 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated }: CreateUs
               placeholder="Adgangskode"
               required
               minLength={4}
+              disabled={isSubmitting}
             />
           </div>
 
@@ -172,6 +234,7 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated }: CreateUs
                     checked={selectedPermissions.includes(option.value)}
                     onChange={() => togglePermission(option.value)}
                     className="rounded"
+                    disabled={isSubmitting}
                   />
                   <span className="text-sm">{option.label}</span>
                 </label>
@@ -183,11 +246,24 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated }: CreateUs
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)} 
+              className="w-full sm:w-auto"
+              disabled={isSubmitting}
+            >
               Annuller
             </Button>
-            <Button type="submit" className="w-full sm:w-auto">
-              Opret bruger
+            <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Opretter...
+                </>
+              ) : (
+                'Opret bruger'
+              )}
             </Button>
           </DialogFooter>
         </form>
