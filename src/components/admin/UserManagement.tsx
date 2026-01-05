@@ -53,12 +53,6 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
     }
   };
 
-  useEffect(() => {
-    if (open) {
-      loadUsers();
-    }
-  }, [open]);
-
   const handleUserCreated = (newUser: User) => {
     loadUsers();
     setShowCreateDialog(false);
@@ -123,10 +117,25 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
     return user.isActive !== false; // Default to active if not set
   };
 
+  // Load users when dialog opens - with retry for mobile compatibility
+  useEffect(() => {
+    if (open) {
+      // Immediate load
+      loadUsers();
+      
+      // Also reload after a small delay for mobile browsers where localStorage might need time
+      const timer = setTimeout(() => {
+        loadUsers();
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] sm:max-w-4xl h-[90vh] sm:h-auto max-h-[90vh] flex flex-col p-4 sm:p-6">
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl h-[85vh] sm:h-auto max-h-[85vh] flex flex-col p-4 sm:p-6">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>Brugerstyring</DialogTitle>
             <DialogDescription>
@@ -134,7 +143,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto space-y-4 min-h-0 py-2">
+          <div className="flex-1 overflow-y-auto space-y-4 min-h-0 py-2 -mx-4 px-4 sm:-mx-6 sm:px-6">
             {/* Create User Button */}
             <div className="flex justify-end">
               <Button onClick={() => setShowCreateDialog(true)} className="gap-2 w-full sm:w-auto">
@@ -174,8 +183,8 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
             </div>
 
             {/* Custom Users Section */}
-            <div className="mt-6 pb-4">
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3">
+            <div className="mt-6 pb-8 sm:pb-4">
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3 sticky top-0 bg-background py-2 -mt-2">
                 Almindelige brugere ({users.length})
               </h3>
               {(() => {
@@ -226,7 +235,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
                 return null;
               })()}
               {users.length > 0 && (
-                <div className="space-y-2 pb-2">
+                <div className="space-y-3 pb-4">
                   {users.map((user) => {
                     const active = isUserActive(user);
                     return (
