@@ -546,8 +546,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
 
             {/* Selected Year Section */}
             <div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-                <h2 className="text-xl font-semibold">{selectedYear}</h2>
+              <div className="flex justify-end mb-4">
                 <div className="flex items-center gap-2">
                   <input
                     ref={fileInputRef}
