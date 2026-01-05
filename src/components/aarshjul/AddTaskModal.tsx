@@ -39,6 +39,12 @@ const MONTHS = [
   "Juli", "August", "September", "Oktober", "November", "December"
 ];
 
+interface SystemUserEmails {
+  [username: string]: string;
+}
+
+const SYSTEM_EMAILS_KEY = 'systemUserEmails';
+
 const AddTaskModal = ({ 
   open, 
   onOpenChange, 
@@ -53,6 +59,7 @@ const AddTaskModal = ({
   const [newSubtask, setNewSubtask] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [systemUserEmails, setSystemUserEmails] = useState<SystemUserEmails>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Load available users
@@ -98,6 +105,16 @@ const AddTaskModal = ({
         setAvailableUsers(JSON.parse(customUsersJson));
       }
     }
+
+    // Load system user emails
+    try {
+      const storedEmails = localStorage.getItem(SYSTEM_EMAILS_KEY);
+      if (storedEmails) {
+        setSystemUserEmails(JSON.parse(storedEmails));
+      }
+    } catch (error) {
+      console.error('Error loading system user emails:', error);
+    }
   };
 
   const handleAddSubtask = () => {
@@ -133,6 +150,15 @@ const AddTaskModal = ({
     const recipients: { email: string; name: string }[] = [];
 
     for (const username of newlyAssignedUsers) {
+      // Check if it's a system user with email
+      if (systemUsers.includes(username) && systemUserEmails[username]) {
+        recipients.push({
+          email: systemUserEmails[username],
+          name: username
+        });
+        continue;
+      }
+
       // Check custom users for email
       const customUser = availableUsers.find(u => u.username === username);
       if (customUser && customUser.email) {
@@ -141,7 +167,6 @@ const AddTaskModal = ({
           name: `${customUser.firstName} ${customUser.lastName}`
         });
       }
-      // System users don't have emails in the system
     }
 
     if (recipients.length === 0) return;

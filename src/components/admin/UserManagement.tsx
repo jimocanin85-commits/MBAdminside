@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { User, CreateUserDialog } from "./CreateUserDialog";
 import { EditUserDialog } from "./EditUserDialog";
-import { Trash2, UserX, UserCheck, Plus, Edit, RefreshCw, Cloud, Database } from "lucide-react";
+import { Trash2, UserX, UserCheck, Plus, Edit, RefreshCw, Cloud, Database, Mail } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +24,12 @@ interface UserManagementProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface SystemUserEmails {
+  [username: string]: string;
+}
+
 const HARDCODED_USERS = ['admin', 'Brian']; // Admin and Brian are system users
+const SYSTEM_EMAILS_KEY = 'systemUserEmails';
 
 // API base URL
 const API_BASE = '/api';
@@ -37,6 +44,11 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [useCloud, setUseCloud] = useState(true); // Default to cloud/Supabase
   const [cloudError, setCloudError] = useState<string | null>(null);
+  
+  // System user email editing
+  const [systemUserEmails, setSystemUserEmails] = useState<SystemUserEmails>({});
+  const [systemUserToEdit, setSystemUserToEdit] = useState<string | null>(null);
+  const [editingSystemEmail, setEditingSystemEmail] = useState("");
 
   // Load users from API (Supabase)
   const loadUsersFromCloud = async () => {
@@ -264,10 +276,55 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
     }
   };
 
+  // Load system user emails from localStorage
+  const loadSystemUserEmails = () => {
+    try {
+      const stored = localStorage.getItem(SYSTEM_EMAILS_KEY);
+      if (stored) {
+        setSystemUserEmails(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Error loading system user emails:', error);
+    }
+  };
+
+  // Save system user email
+  const saveSystemUserEmail = (username: string, email: string) => {
+    const updated = { ...systemUserEmails, [username]: email };
+    setSystemUserEmails(updated);
+    localStorage.setItem(SYSTEM_EMAILS_KEY, JSON.stringify(updated));
+    toast.success(`Email for "${username}" er gemt!`);
+  };
+
+  // Handle system user email edit
+  const handleEditSystemUserEmail = (username: string) => {
+    setSystemUserToEdit(username);
+    setEditingSystemEmail(systemUserEmails[username] || "");
+  };
+
+  // Handle save system user email
+  const handleSaveSystemUserEmail = () => {
+    if (!systemUserToEdit) return;
+    
+    // Email validation (allow empty)
+    if (editingSystemEmail.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(editingSystemEmail.trim())) {
+        toast.error("Indtast en gyldig email adresse");
+        return;
+      }
+    }
+    
+    saveSystemUserEmail(systemUserToEdit, editingSystemEmail.trim());
+    setSystemUserToEdit(null);
+    setEditingSystemEmail("");
+  };
+
   // Load users when dialog opens
   useEffect(() => {
     if (open) {
       loadUsers();
+      loadSystemUserEmails();
     }
   }, [open, useCloud]);
 
@@ -345,13 +402,13 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
             {/* Hardcoded Users Section */}
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground mb-2">
-                Systembrugere (kan ikke redigeres)
+                Systembrugere
               </h3>
               <div className="space-y-2">
                 {HARDCODED_USERS.map((username) => (
                   <Card key={username}>
                     <CardContent className="p-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="flex-1">
                           <p className="font-medium">{username}</p>
                           <p className="text-sm text-muted-foreground">
@@ -359,9 +416,29 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
                               ? 'Alle rettigheder' 
                               : 'Standard bruger'}
                           </p>
+                          {systemUserEmails[username] ? (
+                            <p className="text-sm text-muted-foreground truncate">
+                              Email: {systemUserEmails[username]}
+                            </p>
+                          ) : (
+                            <p className="text-sm text-muted-foreground italic">
+                              Ingen email
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs text-muted-foreground bg-green-100 text-green-800 px-2 py-1 rounded">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditSystemUserEmail(username)}
+                            className="gap-2"
+                          >
+                            <Mail className="h-4 w-4" />
+                            <span className="hidden sm:inline">
+                              {systemUserEmails[username] ? 'Rediger email' : 'Tilføj email'}
+                            </span>
+                          </Button>
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
                             Aktiv
                           </span>
                         </div>
@@ -571,6 +648,50 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit System User Email Dialog */}
+      <Dialog open={!!systemUserToEdit} onOpenChange={(open) => !open && setSystemUserToEdit(null)}>
+        <DialogContent className="max-w-[95vw] sm:max-w-md p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>Rediger email for {systemUserToEdit}</DialogTitle>
+            <DialogDescription>
+              Indtast email adresse for systembrugeren. Denne bruges til notifikationer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="system-email">Email</Label>
+              <Input
+                id="system-email"
+                type="email"
+                value={editingSystemEmail}
+                onChange={(e) => setEditingSystemEmail(e.target.value)}
+                placeholder="bruger@email.dk"
+              />
+              <p className="text-xs text-muted-foreground">
+                Bruges til notifikationer når opgaver tildeles i Årshjul
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setSystemUserToEdit(null)}
+              className="w-full sm:w-auto"
+            >
+              Annuller
+            </Button>
+            <Button 
+              type="button" 
+              onClick={handleSaveSystemUserEmail}
+              className="w-full sm:w-auto"
+            >
+              Gem email
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
