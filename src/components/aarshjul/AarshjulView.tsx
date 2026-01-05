@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { RefreshCw, ArrowLeft, Cloud, Database } from "lucide-react";
+import { RefreshCw, ArrowLeft, Cloud, Database, CircleDot, List } from "lucide-react";
 import YearWheel from "./YearWheel";
 import TaskDetailsPanel from "./TaskDetailsPanel";
+import TaskListView from "./TaskListView";
 import AddTaskModal from "./AddTaskModal";
 
 interface Subtask {
@@ -29,6 +30,8 @@ interface AarshjulViewProps {
   onOpenChange: (open: boolean) => void;
 }
 
+type ViewMode = 'wheel' | 'list';
+
 const AarshjulView = ({ open, onOpenChange }: AarshjulViewProps) => {
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -37,6 +40,8 @@ const AarshjulView = ({ open, onOpenChange }: AarshjulViewProps) => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [useCloud, setUseCloud] = useState(true);
   const [cloudError, setCloudError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('list'); // Default to list for better overview
+  const [addTaskMonth, setAddTaskMonth] = useState<number>(0); // Month for adding task in list view
 
   // Load tasks when dialog opens
   useEffect(() => {
@@ -168,10 +173,18 @@ const AarshjulView = ({ open, onOpenChange }: AarshjulViewProps) => {
 
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
+    setAddTaskMonth(task.month); // Set month for the modal
     setShowAddTaskModal(true);
   };
 
   const handleAddTask = () => {
+    setEditingTask(null);
+    setShowAddTaskModal(true);
+  };
+
+  // For list view - add task to specific month
+  const handleAddTaskForMonth = (month: number) => {
+    setAddTaskMonth(month);
     setEditingTask(null);
     setShowAddTaskModal(true);
   };
@@ -183,7 +196,7 @@ const AarshjulView = ({ open, onOpenChange }: AarshjulViewProps) => {
           <DialogHeader className="flex-shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {selectedMonth !== null && (
+                {selectedMonth !== null && viewMode === 'wheel' && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -207,26 +220,64 @@ const AarshjulView = ({ open, onOpenChange }: AarshjulViewProps) => {
                   )}
                 </DialogTitle>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={loadTasks}
-                disabled={isLoading}
-                className="h-8 w-8"
-              >
-                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-              </Button>
+              <div className="flex items-center gap-2">
+                {/* View toggle */}
+                <div className="flex items-center border rounded-lg p-0.5">
+                  <Button
+                    variant={viewMode === 'wheel' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => {
+                      setViewMode('wheel');
+                      setSelectedMonth(null);
+                    }}
+                    className="h-7 px-2 gap-1"
+                  >
+                    <CircleDot className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline text-xs">Hjul</span>
+                  </Button>
+                  <Button
+                    variant={viewMode === 'list' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                    className="h-7 px-2 gap-1"
+                  >
+                    <List className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline text-xs">Liste</span>
+                  </Button>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={loadTasks}
+                  disabled={isLoading}
+                  className="h-8 w-8"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
             </div>
             <DialogDescription>
-              {selectedMonth === null 
-                ? "Klik på en måned for at se og administrere opgaver"
-                : "Administrer opgaver for den valgte måned"
+              {viewMode === 'list' 
+                ? "Oversigt over alle opgaver - klik på en måned for at se detaljer"
+                : selectedMonth === null 
+                  ? "Klik på en måned for at se og administrere opgaver"
+                  : "Administrer opgaver for den valgte måned"
               }
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto py-4 min-h-0">
-            {selectedMonth === null ? (
+            {viewMode === 'list' ? (
+              // Show list view
+              <TaskListView
+                tasks={tasks}
+                onAddTask={handleAddTaskForMonth}
+                onEditTask={handleEditTask}
+                onDeleteTask={handleDeleteTask}
+                onToggleTask={handleToggleTask}
+                onToggleSubtask={handleToggleSubtask}
+              />
+            ) : selectedMonth === null ? (
               // Show wheel
               <div className="h-full flex items-center justify-center">
                 <YearWheel
@@ -236,7 +287,7 @@ const AarshjulView = ({ open, onOpenChange }: AarshjulViewProps) => {
                 />
               </div>
             ) : (
-              // Show task details
+              // Show task details for selected month
               <TaskDetailsPanel
                 month={selectedMonth}
                 tasks={tasks}
@@ -252,16 +303,14 @@ const AarshjulView = ({ open, onOpenChange }: AarshjulViewProps) => {
       </Dialog>
 
       {/* Add/Edit Task Modal */}
-      {selectedMonth !== null && (
-        <AddTaskModal
-          open={showAddTaskModal}
-          onOpenChange={setShowAddTaskModal}
-          month={selectedMonth}
-          onTaskCreated={handleTaskCreated}
-          editingTask={editingTask}
-          onTaskUpdated={handleTaskUpdated}
-        />
-      )}
+      <AddTaskModal
+        open={showAddTaskModal}
+        onOpenChange={setShowAddTaskModal}
+        month={viewMode === 'list' ? addTaskMonth : (selectedMonth ?? 0)}
+        onTaskCreated={handleTaskCreated}
+        editingTask={editingTask}
+        onTaskUpdated={handleTaskUpdated}
+      />
     </>
   );
 };
