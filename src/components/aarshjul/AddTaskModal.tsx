@@ -125,6 +125,53 @@ const AddTaskModal = ({
     );
   };
 
+  // Send email notifications to assigned users
+  const sendNotifications = async (taskTitle: string, taskDescription: string | undefined, newlyAssignedUsers: string[]) => {
+    if (newlyAssignedUsers.length === 0) return;
+
+    // Build recipient list with emails
+    const recipients: { email: string; name: string }[] = [];
+
+    for (const username of newlyAssignedUsers) {
+      // Check custom users for email
+      const customUser = availableUsers.find(u => u.username === username);
+      if (customUser && customUser.email) {
+        recipients.push({
+          email: customUser.email,
+          name: `${customUser.firstName} ${customUser.lastName}`
+        });
+      }
+      // System users don't have emails in the system
+    }
+
+    if (recipients.length === 0) return;
+
+    try {
+      const response = await fetch('/api/send-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'task_assigned',
+          recipients,
+          data: {
+            taskTitle,
+            taskDescription,
+            month: MONTHS[month]
+          }
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.sent) {
+        toast.success(`Email notifikation sendt til ${recipients.length} bruger(e)`);
+      }
+    } catch (error) {
+      console.error('Error sending notifications:', error);
+      // Don't show error to user - task was still created
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -136,6 +183,10 @@ const AddTaskModal = ({
     setIsSubmitting(true);
 
     try {
+      // Determine newly assigned users (for notifications)
+      const previouslyAssigned = editingTask?.assignedUsers || [];
+      const newlyAssignedUsers = selectedUsers.filter(u => !previouslyAssigned.includes(u));
+
       if (editingTask && onTaskUpdated) {
         // Update existing task
         const updatedTask: Task = {
@@ -147,6 +198,11 @@ const AddTaskModal = ({
         };
         onTaskUpdated(updatedTask);
         toast.success("Opgave opdateret!");
+
+        // Send notifications to newly assigned users
+        if (newlyAssignedUsers.length > 0) {
+          await sendNotifications(title.trim(), description.trim() || undefined, newlyAssignedUsers);
+        }
       } else {
         // Create new task
         const newTask: Task = {
@@ -161,6 +217,11 @@ const AddTaskModal = ({
         };
         onTaskCreated(newTask);
         toast.success("Opgave oprettet!");
+
+        // Send notifications to all assigned users
+        if (selectedUsers.length > 0) {
+          await sendNotifications(title.trim(), description.trim() || undefined, selectedUsers);
+        }
       }
 
       onOpenChange(false);

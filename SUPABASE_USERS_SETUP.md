@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS custom_users (
   id TEXT PRIMARY KEY,
   first_name VARCHAR(100) NOT NULL,
   last_name VARCHAR(100) NOT NULL,
+  email VARCHAR(255) NOT NULL,
   username VARCHAR(100) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
   permissions TEXT[] DEFAULT '{}',
@@ -25,11 +26,15 @@ CREATE TABLE IF NOT EXISTS custom_users (
 );
 
 CREATE INDEX IF NOT EXISTS idx_custom_users_username ON custom_users(username);
+CREATE INDEX IF NOT EXISTS idx_custom_users_email ON custom_users(email);
 
 ALTER TABLE custom_users ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow all operations on custom_users" ON custom_users
   FOR ALL USING (true) WITH CHECK (true);
+
+-- If you already have the table, add the email column:
+-- ALTER TABLE custom_users ADD COLUMN IF NOT EXISTS email VARCHAR(255);
 
 -- =====================================================
 -- ÅRSHJUL TASKS TABLE - For year wheel task management
@@ -78,6 +83,32 @@ CREATE POLICY "Allow all operations on aarshjul_tasks" ON aarshjul_tasks
 
 5. Click **Save**
 6. **Redeploy** your project for changes to take effect
+
+## Step 4: Set Up Email Notifications (Optional)
+
+To enable email notifications when tasks are assigned in Årshjul:
+
+### 1. Create a Resend Account
+1. Go to https://resend.com and sign up (free tier available)
+2. Go to **API Keys** and create a new API key
+3. Copy the API key
+
+### 2. Add Resend Environment Variables in Vercel
+
+| Name | Value |
+|------|-------|
+| `RESEND_API_KEY` | Your Resend API key (starts with `re_`) |
+
+### 3. (Optional) Use Custom Email Domain
+By default, emails are sent from `onboarding@resend.dev`. To use your own domain:
+1. In Resend, go to **Domains** and add your domain
+2. Add the DNS records Resend provides
+3. Add these environment variables:
+
+| Name | Value |
+|------|-------|
+| `RESEND_FROM_EMAIL` | `noreply@yourdomain.com` |
+| `RESEND_FROM_NAME` | `Måløv Boldklub` |
 
 ## Step 4: Test the Setup
 

@@ -14,6 +14,7 @@ interface CustomUser {
   id: string;
   first_name: string;
   last_name: string;
+  email: string;
   username: string;
   password: string;
   permissions: string[];
@@ -56,6 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         id: user.id,
         firstName: user.first_name,
         lastName: user.last_name,
+        email: user.email || '',
         username: user.username,
         password: user.password,
         permissions: user.permissions || [],
@@ -68,9 +70,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // POST /api/users - Create new user
     if (req.method === 'POST') {
-      const { firstName, lastName, username, password, permissions, isActive = true } = req.body;
+      const { firstName, lastName, email, username, password, permissions, isActive = true } = req.body;
 
-      if (!firstName || !lastName || !username || !password) {
+      if (!firstName || !lastName || !email || !username || !password) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
@@ -89,6 +91,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         first_name: firstName,
         last_name: lastName,
+        email,
         username,
         password,
         permissions: permissions || [],
@@ -114,6 +117,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           id: data.id,
           firstName: data.first_name,
           lastName: data.last_name,
+          email: data.email || '',
           username: data.username,
           password: data.password,
           permissions: data.permissions || [],
@@ -125,7 +129,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // PUT /api/users - Update user
     if (req.method === 'PUT') {
-      const { id, firstName, lastName, username, password, permissions, isActive } = req.body;
+      const { id, firstName, lastName, email, username, password, permissions, isActive } = req.body;
 
       if (!id) {
         return res.status(400).json({ error: 'User ID required' });
@@ -134,6 +138,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const updates: any = {};
       if (firstName !== undefined) updates.first_name = firstName;
       if (lastName !== undefined) updates.last_name = lastName;
+      if (email !== undefined) updates.email = email;
       if (username !== undefined) updates.username = username;
       if (password !== undefined) updates.password = password;
       if (permissions !== undefined) updates.permissions = permissions;
@@ -161,6 +166,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           id: data.id,
           firstName: data.first_name,
           lastName: data.last_name,
+          email: data.email || '',
           username: data.username,
           password: data.password,
           permissions: data.permissions || [],

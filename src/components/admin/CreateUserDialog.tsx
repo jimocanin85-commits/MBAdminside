@@ -11,6 +11,7 @@ export interface User {
   firstName: string;
   lastName: string;
   username: string;
+  email: string;
   password: string;
   permissions: string[];
   createdAt: Date;
@@ -35,6 +36,7 @@ const API_BASE = '/api';
 export const CreateUserDialog = ({ open, onOpenChange, onUserCreated, useCloud = true }: CreateUserDialogProps) => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
@@ -44,8 +46,15 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated, useCloud =
     e.preventDefault();
 
     // Validation
-    if (!firstName.trim() || !lastName.trim() || !username.trim() || !password.trim()) {
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !username.trim() || !password.trim()) {
       toast.error("Alle felter skal udfyldes");
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      toast.error("Indtast en gyldig email adresse");
       return;
     }
 
@@ -79,6 +88,7 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated, useCloud =
           body: JSON.stringify({
             firstName: firstName.trim(),
             lastName: lastName.trim(),
+            email: email.trim(),
             username: username.trim(),
             password: password.trim(),
             permissions: selectedPermissions,
@@ -118,6 +128,7 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated, useCloud =
           id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           firstName: firstName.trim(),
           lastName: lastName.trim(),
+          email: email.trim(),
           username: username.trim(),
           password: password.trim(),
           permissions: selectedPermissions,
@@ -137,6 +148,7 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated, useCloud =
       // Reset form
       setFirstName("");
       setLastName("");
+      setEmail("");
       setUsername("");
       setPassword("");
       setSelectedPermissions([]);
@@ -193,6 +205,22 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated, useCloud =
                 disabled={isSubmitting}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email *</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="bruger@email.dk"
+              required
+              disabled={isSubmitting}
+            />
+            <p className="text-xs text-muted-foreground">
+              Bruges til notifikationer når opgaver tildeles
+            </p>
           </div>
           
           <div className="space-y-2">
