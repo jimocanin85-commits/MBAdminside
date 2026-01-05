@@ -1,13 +1,27 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
-// Initialize Resend with API key
-const resendApiKey = process.env.RESEND_API_KEY || '';
-const resend = resendApiKey ? new Resend(resendApiKey) : null;
+// SendPulse SMTP Configuration
+// Get these from SendPulse: Settings → SMTP → SMTP settings
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp-pulse.com';
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || '465');
+const SMTP_USER = process.env.SMTP_USER || '';
+const SMTP_PASS = process.env.SMTP_PASS || '';
+const FROM_EMAIL = process.env.SMTP_FROM_EMAIL || SMTP_USER;
+const FROM_NAME = process.env.SMTP_FROM_NAME || 'Måløv Boldklub Admin';
 
-// Email sender - must be a verified domain in Resend or use onboarding@resend.dev for testing
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
-const FROM_NAME = process.env.RESEND_FROM_NAME || 'Måløv Boldklub Admin';
+// Create transporter only if configured
+const transporter = SMTP_USER && SMTP_PASS 
+  ? nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_PORT === 465, // true for 465, false for other ports
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS,
+      },
+    })
+  : null;
 
 interface NotificationRequest {
   type: 'task_assigned';
@@ -23,11 +37,6 @@ interface NotificationRequest {
   };
 }
 
-const MONTHS = [
-  "Januar", "Februar", "Marts", "April", "Maj", "Juni",
-  "Juli", "August", "September", "Oktober", "November", "December"
-];
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -42,11 +51,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (!resend) {
-    console.warn('Resend not configured - email notifications disabled');
+  if (!transporter) {
+    console.warn('SMTP not configured - email notifications disabled');
     return res.status(200).json({ 
       success: true, 
-      message: 'Email notifications disabled - RESEND_API_KEY not set',
+      message: 'Email notifications disabled - SMTP credentials not set',
       sent: false
     });
   }
@@ -126,10 +135,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             </html>
           `;
 
-          return resend.emails.send({
-            from: `${FROM_NAME} <${FROM_EMAIL}>`,
+          const plainText = `
+Hej ${recipient.name},
+
+Du er blevet tildelt en ny opgave i Årshjulet for ${month}.
+
+Opgave: ${taskTitle}
+${taskDescription ? `Beskrivelse: ${taskDescription}` : ''}
+${assignedBy ? `Tildelt af: ${assignedBy}` : ''}
+
+Log ind på https://mb-adminside.vercel.app for at se opgaven.
+
+Med venlig hilsen,
+Måløv Boldklub Admin Portal
+          `.trim();
+
+          return transporter.sendMail({
+            from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
             to: recipient.email,
             subject: `🎯 Ny opgave: ${taskTitle}`,
+            text: plainText,
             html: emailHtml,
           });
         })

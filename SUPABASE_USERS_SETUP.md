@@ -84,31 +84,40 @@ CREATE POLICY "Allow all operations on aarshjul_tasks" ON aarshjul_tasks
 5. Click **Save**
 6. **Redeploy** your project for changes to take effect
 
-## Step 4: Set Up Email Notifications (Optional)
+## Step 4: Set Up Email Notifications with SendPulse
 
 To enable email notifications when tasks are assigned in Årshjul:
 
-### 1. Create a Resend Account
-1. Go to https://resend.com and sign up (free tier available)
-2. Go to **API Keys** and create a new API key
-3. Copy the API key
+### 1. Get SendPulse SMTP Credentials
+1. Log in to https://sendpulse.com
+2. Go to **Settings** (gear icon) → **SMTP**
+3. If not already enabled, click **Enable SMTP**
+4. Note down your SMTP credentials:
+   - SMTP server: `smtp-pulse.com`
+   - Port: `465` (SSL) or `587` (TLS)
+   - Login: Your SMTP username
+   - Password: Your SMTP password
 
-### 2. Add Resend Environment Variables in Vercel
+### 2. Verify Sender Email
+1. In SendPulse, go to **Settings** → **SMTP** → **Sender emails**
+2. Add and verify the email address you want to send from
+3. Click the verification link sent to that email
+
+### 3. Add Environment Variables in Vercel
+
+Go to Vercel → Your Project → **Settings** → **Environment Variables** and add:
 
 | Name | Value |
 |------|-------|
-| `RESEND_API_KEY` | Your Resend API key (starts with `re_`) |
+| `SMTP_HOST` | `smtp-pulse.com` |
+| `SMTP_PORT` | `465` |
+| `SMTP_USER` | Your SendPulse SMTP username |
+| `SMTP_PASS` | Your SendPulse SMTP password |
+| `SMTP_FROM_EMAIL` | Your verified sender email |
+| `SMTP_FROM_NAME` | `Måløv Boldklub` |
 
-### 3. (Optional) Use Custom Email Domain
-By default, emails are sent from `onboarding@resend.dev`. To use your own domain:
-1. In Resend, go to **Domains** and add your domain
-2. Add the DNS records Resend provides
-3. Add these environment variables:
-
-| Name | Value |
-|------|-------|
-| `RESEND_FROM_EMAIL` | `noreply@yourdomain.com` |
-| `RESEND_FROM_NAME` | `Måløv Boldklub` |
+### 4. Redeploy
+After adding the variables, redeploy your project for changes to take effect.
 
 ## Step 4: Test the Setup
 
