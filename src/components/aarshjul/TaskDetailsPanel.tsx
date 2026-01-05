@@ -52,6 +52,7 @@ interface TaskDetailsPanelProps {
   onDeleteTask: (taskId: string) => void;
   onToggleTask: (taskId: string) => void;
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
+  showTimestamps?: boolean;
 }
 
 const MONTHS = [
@@ -95,7 +96,8 @@ const TaskDetailsPanel = ({
   onEditTask,
   onDeleteTask,
   onToggleTask,
-  onToggleSubtask
+  onToggleSubtask,
+  showTimestamps = false
 }: TaskDetailsPanelProps) => {
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
@@ -184,19 +186,21 @@ const TaskDetailsPanel = ({
                     </div>
                   )}
 
-                  {/* Timestamps */}
-                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-2 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1" title={`Oprettet: ${formatDate(task.createdAt)}`}>
-                      <CalendarPlus className="h-3 w-3" />
-                      Oprettet {formatRelativeTime(task.createdAt)}
-                    </span>
-                    {task.updatedAt && task.updatedAt !== task.createdAt && (
-                      <span className="flex items-center gap-1" title={`Opdateret: ${formatDate(task.updatedAt)}`}>
-                        <Clock className="h-3 w-3" />
-                        Opdateret {formatRelativeTime(task.updatedAt)}
+                  {/* Timestamps - only visible for admin and Brian */}
+                  {showTimestamps && (
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-2 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1" title={`Oprettet: ${formatDate(task.createdAt)}`}>
+                        <CalendarPlus className="h-3 w-3" />
+                        Oprettet {formatRelativeTime(task.createdAt)}
                       </span>
-                    )}
-                  </div>
+                      {task.updatedAt && task.updatedAt !== task.createdAt && (
+                        <span className="flex items-center gap-1" title={`Opdateret: ${formatDate(task.updatedAt)}`}>
+                          <Clock className="h-3 w-3" />
+                          Opdateret {formatRelativeTime(task.updatedAt)}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Actions */}

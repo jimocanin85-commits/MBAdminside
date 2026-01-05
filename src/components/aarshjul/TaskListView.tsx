@@ -57,6 +57,7 @@ interface TaskListViewProps {
   onDeleteTask: (taskId: string) => void;
   onToggleTask: (taskId: string) => void;
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
+  showTimestamps?: boolean;
 }
 
 const MONTHS = [
@@ -99,7 +100,8 @@ const TaskListView = ({
   onEditTask,
   onDeleteTask,
   onToggleTask,
-  onToggleSubtask
+  onToggleSubtask,
+  showTimestamps = false
 }: TaskListViewProps) => {
   const [expandedMonths, setExpandedMonths] = useState<Set<number>>(() => {
     // Start with months that have tasks expanded
@@ -227,19 +229,21 @@ const TaskListView = ({
                   </p>
                 )}
 
-                {/* Timestamps */}
-                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 text-[10px] text-muted-foreground">
-                  <span className="flex items-center gap-0.5" title={`Oprettet: ${formatDate(task.createdAt)}`}>
-                    <CalendarPlus className="h-2.5 w-2.5" />
-                    {formatRelativeTime(task.createdAt)}
-                  </span>
-                  {task.updatedAt && task.updatedAt !== task.createdAt && (
-                    <span className="flex items-center gap-0.5" title={`Opdateret: ${formatDate(task.updatedAt)}`}>
-                      <Clock className="h-2.5 w-2.5" />
-                      Opdateret {formatRelativeTime(task.updatedAt)}
+                {/* Timestamps - only visible for admin and Brian */}
+                {showTimestamps && (
+                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 text-[10px] text-muted-foreground">
+                    <span className="flex items-center gap-0.5" title={`Oprettet: ${formatDate(task.createdAt)}`}>
+                      <CalendarPlus className="h-2.5 w-2.5" />
+                      {formatRelativeTime(task.createdAt)}
                     </span>
-                  )}
-                </div>
+                    {task.updatedAt && task.updatedAt !== task.createdAt && (
+                      <span className="flex items-center gap-0.5" title={`Opdateret: ${formatDate(task.updatedAt)}`}>
+                        <Clock className="h-2.5 w-2.5" />
+                        Opdateret {formatRelativeTime(task.updatedAt)}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Actions */}

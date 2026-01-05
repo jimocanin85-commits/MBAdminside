@@ -29,11 +29,14 @@ interface Task {
 interface AarshjulViewProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  currentUser?: string | null;
 }
 
 type ViewMode = 'wheel' | 'list';
 
-const AarshjulView = ({ open, onOpenChange }: AarshjulViewProps) => {
+const AarshjulView = ({ open, onOpenChange, currentUser }: AarshjulViewProps) => {
+  // Check if user can see timestamps (admin and Brian only)
+  const canSeeTimestamps = currentUser === 'admin' || currentUser === 'Brian';
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -279,6 +282,7 @@ const AarshjulView = ({ open, onOpenChange }: AarshjulViewProps) => {
                 onDeleteTask={handleDeleteTask}
                 onToggleTask={handleToggleTask}
                 onToggleSubtask={handleToggleSubtask}
+                showTimestamps={canSeeTimestamps}
               />
             ) : selectedMonth === null ? (
               // Show wheel
@@ -299,6 +303,7 @@ const AarshjulView = ({ open, onOpenChange }: AarshjulViewProps) => {
                 onDeleteTask={handleDeleteTask}
                 onToggleTask={handleToggleTask}
                 onToggleSubtask={handleToggleSubtask}
+                showTimestamps={canSeeTimestamps}
               />
             )}
           </div>

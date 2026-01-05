@@ -756,6 +756,7 @@ const AdminPortal = () => {
       <AarshjulView
         open={showAarshjul}
         onOpenChange={setShowAarshjul}
+        currentUser={currentUser}
       />
 
       {/* Clear Cache Confirmation Dialog */}
