@@ -36,7 +36,8 @@ type ViewMode = 'wheel' | 'list';
 
 const AarshjulView = ({ open, onOpenChange, currentUser }: AarshjulViewProps) => {
   // Check if user is admin or Brian (for special features)
-  const isAdmin = currentUser === 'admin' || currentUser === 'Brian';
+  // Use case-insensitive comparison and handle null/undefined
+  const isAdmin = currentUser?.toLowerCase() === 'admin' || currentUser?.toLowerCase() === 'brian';
   // Only admin and Brian can see timestamps and list view
   const canSeeTimestamps = isAdmin;
   const canSeeListView = isAdmin;
