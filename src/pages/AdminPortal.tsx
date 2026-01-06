@@ -63,7 +63,7 @@ const AdminPortal = () => {
     }
   }, []);
   
-  // Get user permissions from localStorage
+  // Get user permissions
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   
   // Load permissions when currentUser changes
@@ -73,30 +73,51 @@ const AdminPortal = () => {
       return;
     }
     
-    try {
-      // Admin and Brian have all permissions
-      if (currentUser === 'admin' || currentUser === 'Brian') {
-        setUserPermissions(['frivillig', 'referater', 'frivilligfest']);
-        return;
+    // Admin and Brian have all permissions
+    if (currentUser === 'admin' || currentUser === 'Brian') {
+      setUserPermissions(['frivillig', 'referater', 'frivilligfest', 'aarshjul']);
+      return;
+    }
+    
+    // Load permissions from API (cloud) first, then fallback to localStorage
+    const loadPermissions = async () => {
+      try {
+        // Try to load from API first
+        const response = await fetch('/api/users');
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          const cloudUser = result.data.find((u: User) => u.username === currentUser);
+          if (cloudUser && cloudUser.isActive !== false) {
+            setUserPermissions(cloudUser.permissions || []);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Error loading permissions from API:', error);
       }
       
-      // Check custom users (including Karina and Kyhl)
-      const customUsersJson = localStorage.getItem('customUsers');
-      if (customUsersJson) {
-        const customUsers: User[] = JSON.parse(customUsersJson);
-        const customUser = customUsers.find(u => u.username === currentUser);
-        if (customUser && customUser.isActive !== false) {
-          setUserPermissions(customUser.permissions || []);
+      // Fallback to localStorage
+      try {
+        const customUsersJson = localStorage.getItem('customUsers');
+        if (customUsersJson) {
+          const customUsers: User[] = JSON.parse(customUsersJson);
+          const customUser = customUsers.find(u => u.username === currentUser);
+          if (customUser && customUser.isActive !== false) {
+            setUserPermissions(customUser.permissions || []);
+          } else {
+            setUserPermissions([]);
+          }
         } else {
           setUserPermissions([]);
         }
-      } else {
+      } catch (error) {
+        console.error('Error reading user permissions from localStorage:', error);
         setUserPermissions([]);
       }
-    } catch (error) {
-      console.error('Error reading user permissions:', error);
-      setUserPermissions([]);
-    }
+    };
+    
+    loadPermissions();
   }, [currentUser]);
 
   const isBrianUser = currentUser === 'Brian';
