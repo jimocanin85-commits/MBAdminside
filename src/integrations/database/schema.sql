@@ -46,3 +46,18 @@ VALUES
   ('Karina', 'restricted'),
   ('Brian', 'limited')
 ON CONFLICT (username) DO NOTHING;
+
+-- User sessions table (for single-session login limits)
+CREATE TABLE IF NOT EXISTS user_sessions (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR(100) NOT NULL,
+  session_id VARCHAR(255) UNIQUE NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  user_agent TEXT,
+  is_locked BOOLEAN DEFAULT FALSE
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_sessions_username ON user_sessions(username);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_session_id ON user_sessions(session_id);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_last_activity ON user_sessions(last_activity DESC);

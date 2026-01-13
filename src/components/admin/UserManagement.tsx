@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { User, CreateUserDialog } from "./CreateUserDialog";
 import { EditUserDialog } from "./EditUserDialog";
-import { Trash2, UserX, UserCheck, Plus, Edit, RefreshCw, Cloud, Database, Mail } from "lucide-react";
+import { Trash2, UserX, UserCheck, Plus, Edit, RefreshCw, Cloud, Database, Mail, Unlock, Monitor, Clock } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface UserManagementProps {
   open: boolean;
@@ -26,6 +27,16 @@ interface UserManagementProps {
 
 interface SystemUserEmails {
   [username: string]: string;
+}
+
+interface ActiveSession {
+  id: string;
+  username: string;
+  session_id: string;
+  created_at: string;
+  last_activity: string;
+  user_agent?: string;
+  is_locked: boolean;
 }
 
 const HARDCODED_USERS = ['admin', 'Brian']; // Admin and Brian are system users
@@ -49,6 +60,12 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
   const [systemUserEmails, setSystemUserEmails] = useState<SystemUserEmails>({});
   const [systemUserToEdit, setSystemUserToEdit] = useState<string | null>(null);
   const [editingSystemEmail, setEditingSystemEmail] = useState("");
+  
+  // Active sessions management
+  const [activeSessions, setActiveSessions] = useState<ActiveSession[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionToUnlock, setSessionToUnlock] = useState<ActiveSession | null>(null);
+  const [activeTab, setActiveTab] = useState("users");
 
   // Load users from API (Supabase)
   const loadUsersFromCloud = async () => {
@@ -288,6 +305,66 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
     }
   };
 
+  // Load active sessions
+  const loadActiveSessions = async () => {
+    try {
+      setSessionsLoading(true);
+      const response = await fetch(`${API_BASE}/sessions`);
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        setActiveSessions(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading sessions:', error);
+      toast.error('Kunne ikke indlæse aktive sessioner');
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  // Unlock (end) a session
+  const handleUnlockSession = async (session: ActiveSession) => {
+    try {
+      const response = await fetch(`${API_BASE}/sessions`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'unlock',
+          targetUsername: session.username
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success(`Session for "${session.username}" er låst op`);
+        await loadActiveSessions();
+      } else {
+        throw new Error(result.error || 'Failed to unlock session');
+      }
+    } catch (error) {
+      console.error('Error unlocking session:', error);
+      toast.error('Kunne ikke låse session op');
+    }
+    setSessionToUnlock(null);
+  };
+
+  // Format relative time
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'Lige nu';
+    if (diffMins < 60) return `${diffMins} min siden`;
+    if (diffHours < 24) return `${diffHours} timer siden`;
+    return `${diffDays} dage siden`;
+  };
+
   // Save system user email
   const saveSystemUserEmail = (username: string, email: string) => {
     const updated = { ...systemUserEmails, [username]: email };
@@ -320,13 +397,21 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
     setEditingSystemEmail("");
   };
 
-  // Load users when dialog opens
+  // Load users and sessions when dialog opens
   useEffect(() => {
     if (open) {
       loadUsers();
       loadSystemUserEmails();
+      loadActiveSessions();
     }
   }, [open, useCloud]);
+  
+  // Refresh sessions when tab changes to sessions
+  useEffect(() => {
+    if (open && activeTab === 'sessions') {
+      loadActiveSessions();
+    }
+  }, [activeTab, open]);
 
   return (
     <>
@@ -356,218 +441,322 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto space-y-4 min-h-0 py-2 -mx-4 px-4 sm:-mx-6 sm:px-6">
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-2 justify-between">
-              <Button 
-                onClick={() => setShowCreateDialog(true)} 
-                className="gap-2 w-full sm:w-auto"
-              >
-                <Plus className="h-4 w-4" />
-                Opret ny bruger
-              </Button>
-              <div className="flex gap-2">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+            <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
+              <TabsTrigger value="users">Brugere</TabsTrigger>
+              <TabsTrigger value="sessions">
+                Aktive Sessioner
+                {activeSessions.length > 0 && (
+                  <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
+                    {activeSessions.length}
+                  </span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="users" className="flex-1 overflow-y-auto space-y-4 min-h-0 py-2 -mx-4 px-4 sm:-mx-6 sm:px-6 mt-4">
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-2 justify-between">
                 <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => loadUsers()}
-                  disabled={isLoading}
-                  className="gap-2"
+                  onClick={() => setShowCreateDialog(true)} 
+                  className="gap-2 w-full sm:w-auto"
                 >
-                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">Genindlæs</span>
+                  <Plus className="h-4 w-4" />
+                  Opret ny bruger
                 </Button>
-                {cloudError && (
+                <div className="flex gap-2">
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={syncToCloud}
+                    onClick={() => loadUsers()}
                     disabled={isLoading}
                     className="gap-2"
                   >
-                    <Cloud className="h-4 w-4" />
-                    <span className="hidden sm:inline">Sync til cloud</span>
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                    <span className="hidden sm:inline">Genindlæs</span>
                   </Button>
-                )}
+                  {cloudError && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={syncToCloud}
+                      disabled={isLoading}
+                      className="gap-2"
+                    >
+                      <Cloud className="h-4 w-4" />
+                      <span className="hidden sm:inline">Sync til cloud</span>
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* Loading indicator */}
-            {isLoading && (
-              <div className="flex justify-center py-4">
-                <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            )}
+              {/* Loading indicator */}
+              {isLoading && (
+                <div className="flex justify-center py-4">
+                  <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              )}
 
-            {/* Hardcoded Users Section */}
-            <div>
-              <h3 className="text-sm font-semibold text-muted-foreground mb-2">
-                Systembrugere
-              </h3>
-              <div className="space-y-2">
-                {HARDCODED_USERS.map((username) => (
-                  <Card key={username}>
-                    <CardContent className="p-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div className="flex-1">
-                          <p className="font-medium">{username}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {username === 'admin' || username === 'Brian' 
-                              ? 'Alle rettigheder' 
-                              : 'Standard bruger'}
-                          </p>
-                          {systemUserEmails[username] ? (
-                            <p className="text-sm text-muted-foreground truncate">
-                              Email: {systemUserEmails[username]}
+              {/* Hardcoded Users Section */}
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-2">
+                  Systembrugere
+                </h3>
+                <div className="space-y-2">
+                  {HARDCODED_USERS.map((username) => (
+                    <Card key={username}>
+                      <CardContent className="p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <div className="flex-1">
+                            <p className="font-medium">{username}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {username === 'admin' || username === 'Brian' 
+                                ? 'Alle rettigheder' 
+                                : 'Standard bruger'}
                             </p>
-                          ) : (
-                            <p className="text-sm text-muted-foreground italic">
-                              Ingen email
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditSystemUserEmail(username)}
-                            className="gap-2"
-                          >
-                            <Mail className="h-4 w-4" />
-                            <span className="hidden sm:inline">
-                              {systemUserEmails[username] ? 'Rediger email' : 'Tilføj email'}
+                            {systemUserEmails[username] ? (
+                              <p className="text-sm text-muted-foreground truncate">
+                                Email: {systemUserEmails[username]}
+                              </p>
+                            ) : (
+                              <p className="text-sm text-muted-foreground italic">
+                                Ingen email
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditSystemUserEmail(username)}
+                              className="gap-2"
+                            >
+                              <Mail className="h-4 w-4" />
+                              <span className="hidden sm:inline">
+                                {systemUserEmails[username] ? 'Rediger email' : 'Tilføj email'}
+                              </span>
+                            </Button>
+                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                              Aktiv
                             </span>
-                          </Button>
-                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                            Aktiv
-                          </span>
+                          </div>
                         </div>
-                      </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              {/* Custom Users Section */}
+              <div className="mt-6 pb-8 sm:pb-4">
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3 sticky top-0 bg-background py-2 -mt-2">
+                  Almindelige brugere ({users.length})
+                </h3>
+                
+                {!isLoading && users.length === 0 && (
+                  <Card>
+                    <CardContent className="p-8 text-center">
+                      <p className="text-muted-foreground">Ingen brugere oprettet endnu</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Klik på "Opret ny bruger" for at tilføje en bruger
+                      </p>
                     </CardContent>
                   </Card>
-                ))}
+                )}
+                
+                {users.length > 0 && (
+                  <div className="space-y-3 pb-4">
+                    {users.map((user) => {
+                      const active = isUserActive(user);
+                      return (
+                        <Card key={user.id} className={!active ? 'opacity-60' : ''}>
+                          <CardContent className="p-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="font-medium truncate">
+                                    {user.firstName} {user.lastName}
+                                  </p>
+                                  {!active && (
+                                    <span className="text-xs text-muted-foreground bg-gray-100 text-gray-800 px-2 py-1 rounded shrink-0">
+                                      Deaktiveret
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground truncate">
+                                  Brugernavn: {user.username}
+                                </p>
+                                {user.email && (
+                                  <p className="text-sm text-muted-foreground truncate">
+                                    Email: {user.email}
+                                  </p>
+                                )}
+                                <div className="mt-2">
+                                  <p className="text-xs text-muted-foreground mb-1">Adgangsrettigheder:</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {user.permissions.length > 0 ? (
+                                      user.permissions.map((perm) => (
+                                        <span
+                                          key={perm}
+                                          className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded"
+                                        >
+                                          {perm === 'frivillig' && 'Frivillig'}
+                                          {perm === 'referater' && 'Referater'}
+                                          {perm === 'frivilligfest' && 'Frivilligfest'}
+                                          {perm === 'aarshjul' && 'Årshjul'}
+                                        </span>
+                                      ))
+                                    ) : (
+                                      <span className="text-xs text-muted-foreground">Ingen rettigheder</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  Oprettet: {new Date(user.createdAt).toLocaleDateString('da-DK')}
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setUserToEdit(user)}
+                                  className="gap-2 flex-1 sm:flex-initial"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                  <span className="sm:hidden">Red.</span>
+                                  <span className="hidden sm:inline">Rediger</span>
+                                </Button>
+                                {active ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setUserToDeactivate(user)}
+                                    className="gap-2 flex-1 sm:flex-initial"
+                                  >
+                                    <UserX className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Deaktiver</span>
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setUserToActivate(user)}
+                                    className="gap-2 flex-1 sm:flex-initial"
+                                  >
+                                    <UserCheck className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Aktiver</span>
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setUserToDelete(user)}
+                                  className="gap-2 text-destructive hover:text-destructive flex-1 sm:flex-initial"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  <span className="hidden sm:inline">Slet</span>
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            </div>
+            </TabsContent>
+            
+            <TabsContent value="sessions" className="flex-1 overflow-y-auto space-y-4 min-h-0 py-2 -mx-4 px-4 sm:-mx-6 sm:px-6 mt-4">
+              {/* Sessions Header */}
+              <div className="flex flex-col sm:flex-row gap-2 justify-between items-start sm:items-center">
+                <div>
+                  <h3 className="text-sm font-semibold">Aktive Login Sessioner</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Kun én session tilladt per bruger. Lås op for at tillade nyt login.
+                  </p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => loadActiveSessions()}
+                  disabled={sessionsLoading}
+                  className="gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${sessionsLoading ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Opdater</span>
+                </Button>
+              </div>
 
-            {/* Custom Users Section */}
-            <div className="mt-6 pb-8 sm:pb-4">
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3 sticky top-0 bg-background py-2 -mt-2">
-                Almindelige brugere ({users.length})
-              </h3>
-              
-              {!isLoading && users.length === 0 && (
+              {/* Loading indicator */}
+              {sessionsLoading && (
+                <div className="flex justify-center py-4">
+                  <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              )}
+
+              {/* Sessions List */}
+              {!sessionsLoading && activeSessions.length === 0 && (
                 <Card>
                   <CardContent className="p-8 text-center">
-                    <p className="text-muted-foreground">Ingen brugere oprettet endnu</p>
+                    <Monitor className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Ingen aktive sessioner</p>
                     <p className="text-sm text-muted-foreground mt-2">
-                      Klik på "Opret ny bruger" for at tilføje en bruger
+                      Der er ingen brugere logget ind i øjeblikket
                     </p>
                   </CardContent>
                 </Card>
               )}
-              
-              {users.length > 0 && (
+
+              {activeSessions.length > 0 && (
                 <div className="space-y-3 pb-4">
-                  {users.map((user) => {
-                    const active = isUserActive(user);
-                    return (
-                      <Card key={user.id} className={!active ? 'opacity-60' : ''}>
-                        <CardContent className="p-4">
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-medium truncate">
-                                  {user.firstName} {user.lastName}
-                                </p>
-                                {!active && (
-                                  <span className="text-xs text-muted-foreground bg-gray-100 text-gray-800 px-2 py-1 rounded shrink-0">
-                                    Deaktiveret
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-sm text-muted-foreground truncate">
-                                Brugernavn: {user.username}
-                              </p>
-                              {user.email && (
-                                <p className="text-sm text-muted-foreground truncate">
-                                  Email: {user.email}
-                                </p>
-                              )}
-                              <div className="mt-2">
-                                <p className="text-xs text-muted-foreground mb-1">Adgangsrettigheder:</p>
-                                <div className="flex flex-wrap gap-1">
-                                  {user.permissions.length > 0 ? (
-                                    user.permissions.map((perm) => (
-                                      <span
-                                        key={perm}
-                                        className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded"
-                                      >
-                                        {perm === 'frivillig' && 'Frivillig'}
-                                        {perm === 'referater' && 'Referater'}
-                                        {perm === 'frivilligfest' && 'Frivilligfest'}
-                                        {perm === 'aarshjul' && 'Årshjul'}
-                                      </span>
-                                    ))
-                                  ) : (
-                                    <span className="text-xs text-muted-foreground">Ingen rettigheder</span>
-                                  )}
-                                </div>
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-2">
-                                Oprettet: {new Date(user.createdAt).toLocaleDateString('da-DK')}
-                              </p>
+                  {activeSessions.map((session) => (
+                    <Card key={session.session_id}>
+                      <CardContent className="p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-medium">{session.username}</p>
+                              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                                Aktiv
+                              </span>
                             </div>
-                            <div className="flex flex-wrap items-center gap-2 shrink-0">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setUserToEdit(user)}
-                                className="gap-2 flex-1 sm:flex-initial"
-                              >
-                                <Edit className="h-4 w-4" />
-                                <span className="sm:hidden">Red.</span>
-                                <span className="hidden sm:inline">Rediger</span>
-                              </Button>
-                              {active ? (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setUserToDeactivate(user)}
-                                  className="gap-2 flex-1 sm:flex-initial"
-                                >
-                                  <UserX className="h-4 w-4" />
-                                  <span className="hidden sm:inline">Deaktiver</span>
-                                </Button>
-                              ) : (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setUserToActivate(user)}
-                                  className="gap-2 flex-1 sm:flex-initial"
-                                >
-                                  <UserCheck className="h-4 w-4" />
-                                  <span className="hidden sm:inline">Aktiver</span>
-                                </Button>
+                            <div className="mt-2 space-y-1">
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Clock className="h-3 w-3" />
+                                <span>Logget ind: {new Date(session.created_at).toLocaleString('da-DK')}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <RefreshCw className="h-3 w-3" />
+                                <span>Sidste aktivitet: {formatRelativeTime(session.last_activity)}</span>
+                              </div>
+                              {session.user_agent && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Monitor className="h-3 w-3" />
+                                  <span className="truncate max-w-[300px]">{session.user_agent}</span>
+                                </div>
                               )}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setUserToDelete(user)}
-                                className="gap-2 text-destructive hover:text-destructive flex-1 sm:flex-initial"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                <span className="hidden sm:inline">Slet</span>
-                              </Button>
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSessionToUnlock(session)}
+                              className="gap-2"
+                            >
+                              <Unlock className="h-4 w-4" />
+                              <span>Lås op</span>
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               )}
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
@@ -693,6 +882,30 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Unlock Session Confirmation */}
+      <AlertDialog open={!!sessionToUnlock} onOpenChange={() => setSessionToUnlock(null)}>
+        <AlertDialogContent className="max-w-[95vw] sm:max-w-md p-4 sm:p-6">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Lås session op?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dette vil afslutte sessionen for "{sessionToUnlock?.username}" og tillade dem at logge ind igen fra en anden enhed eller browser.
+              <br /><br />
+              <strong>Bemærk:</strong> Brugeren vil blive logget ud og skal logge ind igen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <AlertDialogCancel className="w-full sm:w-auto">Annuller</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => sessionToUnlock && handleUnlockSession(sessionToUnlock)}
+              className="w-full sm:w-auto"
+            >
+              <Unlock className="h-4 w-4 mr-2" />
+              Lås op
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

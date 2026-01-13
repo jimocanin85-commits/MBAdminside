@@ -45,6 +45,7 @@ type Trainer = {
 
 const AdminPortal = () => {
   const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -52,9 +53,14 @@ const AdminPortal = () => {
   useEffect(() => {
     try {
       const user = localStorage.getItem('currentUser');
-      if (user) {
+      const sessionId = localStorage.getItem('sessionId');
+      if (user && sessionId) {
         setCurrentUser(user);
+        setCurrentSessionId(sessionId);
         setIsAuthenticated(true);
+      } else if (user && !sessionId) {
+        // Clear invalid session state
+        localStorage.removeItem('currentUser');
       }
     } catch (e) {
       console.error('Error reading from localStorage:', e);
@@ -62,6 +68,31 @@ const AdminPortal = () => {
       setIsLoading(false);
     }
   }, []);
+  
+  // Session heartbeat - keep session alive while user is active
+  useEffect(() => {
+    if (!isAuthenticated || !currentSessionId) return;
+    
+    const sendHeartbeat = async () => {
+      try {
+        await fetch('/api/sessions', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: currentSessionId })
+        });
+      } catch (error) {
+        console.error('Error sending heartbeat:', error);
+      }
+    };
+    
+    // Send heartbeat every 5 minutes
+    const interval = setInterval(sendHeartbeat, 5 * 60 * 1000);
+    
+    // Send initial heartbeat
+    sendHeartbeat();
+    
+    return () => clearInterval(interval);
+  }, [isAuthenticated, currentSessionId]);
   
   // Get user permissions
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
@@ -229,10 +260,22 @@ const AdminPortal = () => {
   // Logout when browser tab/window is closed
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Clear session from server using sendBeacon for reliability on page close
+      const sessionId = localStorage.getItem('sessionId');
+      if (sessionId) {
+        // Use sendBeacon for reliable cleanup on page close
+        navigator.sendBeacon('/api/sessions', JSON.stringify({
+          _method: 'DELETE', // Since sendBeacon is POST-only
+          sessionId: sessionId
+        }));
+      }
+      
       // Clear authentication on page unload
       localStorage.removeItem('currentUser');
+      localStorage.removeItem('sessionId');
       setIsAuthenticated(false);
       setCurrentUser(null);
+      setCurrentSessionId(null);
       setIsAdminMode(false);
     };
 
@@ -266,19 +309,36 @@ const AdminPortal = () => {
     }
   }, [isAuthenticated, showCloudFiles, isFormOpen, isExitFormOpen, isSpreadsheetOpen]);
 
-  const handleLogin = (username: string) => {
+  const handleLogin = (username: string, sessionId: string) => {
     setCurrentUser(username);
+    setCurrentSessionId(sessionId);
+    localStorage.setItem('sessionId', sessionId);
     // logger.logLogin(username);
     // Permissions will be updated automatically by useEffect when currentUser changes
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Clear session from server
+    if (currentSessionId) {
+      try {
+        await fetch('/api/sessions', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: currentSessionId })
+        });
+      } catch (error) {
+        console.error('Error clearing session:', error);
+      }
+    }
+    
     // if (currentUser) {
     //   logger.logLogout(currentUser);
     // }
     setCurrentUser(null);
+    setCurrentSessionId(null);
     setIsAdminMode(false);
     localStorage.removeItem('currentUser');
+    localStorage.removeItem('sessionId');
     localStorage.removeItem('isAdminMode');
   };
 
@@ -794,7 +854,21 @@ const AdminPortal = () => {
           <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
             <AlertDialogCancel className="w-full sm:w-auto">Nej</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
+              onClick={async () => {
+                // Clear session from server first
+                const sessionId = localStorage.getItem('sessionId');
+                if (sessionId) {
+                  try {
+                    await fetch('/api/sessions', {
+                      method: 'DELETE',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ sessionId })
+                    });
+                  } catch (e) {
+                    console.error('Error clearing session:', e);
+                  }
+                }
+                
                 // Clear all cookies
                 document.cookie.split(";").forEach((c) => {
                   document.cookie = c
