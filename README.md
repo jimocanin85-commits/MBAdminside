@@ -1,6 +1,8 @@
 # MBAdminside
 
-Admin portal for Malov Club management system.
+Admin portal for Måløv Boldklub management system.
+
+**Created by Jazzman**
 
 ## Technologies
 
