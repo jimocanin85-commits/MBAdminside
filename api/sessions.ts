@@ -27,7 +27,21 @@ interface Session {
 }
 
 // In-memory fallback if Supabase is not available
-let inMemorySessions: Session[] = [];
+const inMemorySessions: Session[] = [];
+
+// Helper to clear array while keeping reference
+function clearSessions(sessions: Session[]) {
+  sessions.length = 0;
+}
+
+// Helper to remove sessions by filter
+function removeSessionsWhere(sessions: Session[], predicate: (s: Session) => boolean) {
+  for (let i = sessions.length - 1; i >= 0; i--) {
+    if (predicate(sessions[i])) {
+      sessions.splice(i, 1);
+    }
+  }
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
@@ -90,7 +104,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (supabase) {
             await supabase.from('user_sessions').delete().eq('username', username);
           }
-          inMemorySessions = inMemorySessions.filter(s => s.username !== username);
+          removeSessionsWhere(inMemorySessions, s => s.username === username);
           return res.status(200).json({ success: true, message: 'Sessions deleted for user via beacon' });
         }
         
@@ -179,10 +193,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (error) {
             console.error('Error unlocking session:', error);
             // Fallback to in-memory
-            inMemorySessions = inMemorySessions.filter(s => s.username !== targetUsername);
+            removeSessionsWhere(inMemorySessions, s => s.username === targetUsername);
           }
         } else {
-          inMemorySessions = inMemorySessions.filter(s => s.username !== targetUsername);
+          removeSessionsWhere(inMemorySessions, s => s.username === targetUsername);
         }
         return res.status(200).json({ success: true, message: `Session for ${targetUsername} unlocked` });
       }
@@ -240,10 +254,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
           if (error) {
             console.error('Error deleting sessions by username:', error);
-            inMemorySessions = inMemorySessions.filter(s => s.username !== username);
+            removeSessionsWhere(inMemorySessions, s => s.username === username);
           }
         } else {
-          inMemorySessions = inMemorySessions.filter(s => s.username !== username);
+          removeSessionsWhere(inMemorySessions, s => s.username === username);
         }
         return res.status(200).json({ success: true, message: 'Sessions deleted for user' });
       }
@@ -293,7 +307,7 @@ async function deleteSession(sessionId: string) {
     }
   }
   // Also clean in-memory
-  inMemorySessions = inMemorySessions.filter(s => s.session_id !== sessionId);
+  removeSessionsWhere(inMemorySessions, s => s.session_id === sessionId);
 }
 
 // Clean up expired sessions
@@ -311,9 +325,9 @@ async function cleanupExpiredSessions() {
     }
   }
   
-  // Also clean in-memory
-  inMemorySessions = inMemorySessions.filter(s => {
+  // Also clean in-memory - remove sessions that are older than the timeout
+  removeSessionsWhere(inMemorySessions, s => {
     const lastActivity = new Date(s.last_activity).getTime();
-    return Date.now() - lastActivity < SESSION_TIMEOUT;
+    return Date.now() - lastActivity >= SESSION_TIMEOUT;
   });
 }
