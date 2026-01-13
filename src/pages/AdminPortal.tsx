@@ -474,9 +474,9 @@ const AdminPortal = () => {
   // Show loading state while checking authentication
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-muted p-4">
+      <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-muted px-4 py-8">
         <div className="text-center">
-          <p>Indlæser...</p>
+          <p className="text-lg">Indlæser...</p>
         </div>
       </div>
     );
@@ -485,7 +485,7 @@ const AdminPortal = () => {
   // Early return for unauthenticated users - AFTER all hooks
   if (!isAuthenticated || !currentUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-muted p-4">
+      <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-muted px-2 py-8">
         <LoginForm onLogin={handleLogin} />
       </div>
     );
@@ -493,7 +493,7 @@ const AdminPortal = () => {
 
   return (
     <>
-    <div className="min-h-screen bg-background pb-16 md:pb-0">
+    <div className="min-h-screen w-full bg-background pb-16 md:pb-0">
       <DashboardHeader 
         onLogout={handleLogout}
         onOpenForm={() => setIsFormOpen(true)}
@@ -502,7 +502,7 @@ const AdminPortal = () => {
         onOpenAdminDialog={() => setShowAdminDialog(true)}
         currentUser={currentUser}
       />
-      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8">
+      <main className="w-full px-4 sm:px-6 py-4 sm:py-6 md:py-8">
         <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
           {showCloudFiles ? (
             <CloudFiles 

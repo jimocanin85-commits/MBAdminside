@@ -168,17 +168,17 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
   };
 
   return (
-    <Card className="w-full max-w-md shadow-lg border-2">
-      <CardHeader className="space-y-4 text-center">
+    <Card className="w-full max-w-md shadow-lg border-2 mx-4">
+      <CardHeader className="space-y-4 text-center p-6 sm:p-8">
         <div className="flex justify-center">
-          <img src={mbLogo} alt="Måløv Boldklub Logo" className="w-24 h-24" />
+          <img src={mbLogo} alt="Måløv Boldklub Logo" className="w-20 h-20 sm:w-24 sm:h-24" />
         </div>
         <div>
-          <CardTitle className="text-3xl font-bold">Måløv Boldklub</CardTitle>
+          <CardTitle className="text-2xl sm:text-3xl font-bold">Måløv Boldklub</CardTitle>
         </div>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <CardContent className="p-6 sm:p-8 pt-0 sm:pt-0">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {sessionError && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
               <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
@@ -189,7 +189,7 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
             </div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="username">Brugernavn</Label>
+            <Label htmlFor="username" className="text-base">Brugernavn</Label>
             <Input
               id="username"
               name="username"
@@ -204,10 +204,11 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
               autoCapitalize="none"
               autoCorrect="off"
               required
+              className="h-12 text-base px-4"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Adgangskode</Label>
+            <Label htmlFor="password" className="text-base">Adgangskode</Label>
             <Input
               id="password"
               name="password"
@@ -217,9 +218,10 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               required
+              className="h-12 text-base px-4"
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full h-12 text-base font-medium" disabled={isLoading}>
             {isLoading ? "Logger ind..." : "Log ind"}
           </Button>
         </form>
