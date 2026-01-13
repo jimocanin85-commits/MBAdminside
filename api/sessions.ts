@@ -1,3 +1,8 @@
+/**
+ * Session Management API
+ * Handles single-session login limits - only one active session per user allowed
+ * Admin and Brian can bypass limits and unlock other users' sessions
+ */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
