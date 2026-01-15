@@ -79,7 +79,7 @@ const AdminPortal = () => {
             console.log('Stored browserId:', storedBrowserId);
             console.log('Current browserId:', currentBrowserId);
             
-            setSessionValidationError('Du er allerede logget ind i en anden fane. Du kan kun være logget ind i én fane ad gangen.');
+            setSessionValidationError('Du er allerede logget ind i en anden fane. Log ud først for at kunne logge ind her.');
             // DON'T clear localStorage - the original tab still needs it
             // Just don't allow this tab to auto-login
             setIsLoading(false);
@@ -588,7 +588,7 @@ const AdminPortal = () => {
               </div>
               <p className="text-sm text-red-700 font-medium">{sessionValidationError}</p>
               <div className="mt-3 pt-3 border-t border-red-200">
-                <p className="text-xs text-red-600">Luk den anden fane/browser først, eller vent til sessionen udløber.</p>
+                <p className="text-xs text-red-600">Log ud fra den anden fane/browser først for at kunne logge ind her.</p>
               </div>
             </div>
           )}

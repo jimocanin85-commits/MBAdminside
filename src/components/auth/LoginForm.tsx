@@ -202,7 +202,7 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
                 <p className="font-semibold text-red-800">Kan ikke logge ind</p>
                 <p className="mt-1">{sessionError}</p>
                 <p className="mt-2 text-xs text-red-600 border-t border-red-200 pt-2">
-                  Du skal lukke den anden fane/browser først, eller vente til sessionen udløber (30 min).
+                  Log ud fra den anden fane/browser først for at kunne logge ind her.
                 </p>
               </div>
             </div>

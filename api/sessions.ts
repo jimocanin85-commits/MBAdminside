@@ -196,7 +196,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         } else {
           return res.status(409).json({ 
             error: 'SESSION_EXISTS',
-            message: 'Du er allerede logget ind på en anden enhed eller browser. Du kan kun være logget ind ét sted ad gangen.',
+            message: 'Du er allerede logget ind på en anden enhed eller browser. Log ud først for at kunne logge ind her.',
             existingSession: {
               createdAt: existingSession.created_at,
               lastActivity: existingSession.last_activity,
