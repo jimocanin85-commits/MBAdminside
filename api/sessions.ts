@@ -2,6 +2,12 @@
  * Session Management API
  * Handles single-session login limits - only one active session per user allowed
  * Admin and Brian can bypass limits and unlock other users' sessions
+ * 
+ * UNIQUE SESSION ENFORCEMENT:
+ * - Each user can only have ONE active session at a time
+ * - Sessions are tied to a specific browser/tab via browser_id
+ * - When a user tries to login from another browser/tab, they get an error
+ * - Admin users can force login (which terminates other sessions)
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
@@ -25,6 +31,7 @@ interface Session {
   id: string;
   username: string;
   session_id: string;
+  browser_id: string;
   created_at: string;
   last_activity: string;
   user_agent?: string;
@@ -94,7 +101,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // POST /api/sessions - Create a new session (login) or handle sendBeacon DELETE
+    // POST /api/sessions - Create a new session (login), validate session, or handle sendBeacon DELETE
     if (req.method === 'POST') {
       // Handle sendBeacon DELETE requests (from beforeunload)
       if (req.body._method === 'DELETE') {
@@ -115,17 +122,73 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         
         return res.status(200).end();
       }
-      
-      const { username, sessionId, userAgent, forceLogin } = req.body;
 
-      if (!username || !sessionId) {
-        return res.status(400).json({ error: 'Username and sessionId are required' });
+      // Handle session validation request
+      if (req.body.action === 'validate') {
+        const { sessionId, browserId, username } = req.body;
+        
+        if (!sessionId || !browserId || !username) {
+          return res.status(400).json({ 
+            valid: false, 
+            error: 'Missing sessionId, browserId, or username' 
+          });
+        }
+
+        // Check if session exists and matches browser
+        const session = await getSessionByIdAndBrowser(sessionId, browserId);
+        
+        if (!session) {
+          // Session doesn't exist or browser doesn't match
+          return res.status(200).json({ 
+            valid: false, 
+            error: 'SESSION_INVALID',
+            message: 'Din session er ikke gyldig. Log venligst ind igen.'
+          });
+        }
+
+        // Check if session belongs to the correct user
+        if (session.username !== username) {
+          return res.status(200).json({ 
+            valid: false, 
+            error: 'SESSION_USER_MISMATCH',
+            message: 'Session tilhører en anden bruger.'
+          });
+        }
+
+        // Update last activity
+        await updateSessionActivity(sessionId);
+
+        return res.status(200).json({ 
+          valid: true, 
+          session: {
+            username: session.username,
+            createdAt: session.created_at,
+            lastActivity: session.last_activity
+          }
+        });
+      }
+      
+      const { username, sessionId, browserId, userAgent, forceLogin } = req.body;
+
+      if (!username || !sessionId || !browserId) {
+        return res.status(400).json({ error: 'Username, sessionId, and browserId are required' });
       }
 
       // Check if user already has an active session
       const existingSession = await getActiveSession(username);
       
       if (existingSession && !forceLogin) {
+        // Check if it's the same browser trying to reconnect
+        if (existingSession.browser_id === browserId) {
+          // Same browser - allow reconnection, update the session
+          await updateSessionActivity(existingSession.session_id);
+          return res.status(200).json({ 
+            success: true, 
+            data: existingSession,
+            message: 'Session genoprettet'
+          });
+        }
+        
         // Admin and Brian can always log in (force login)
         if (ADMIN_USERS.includes(username)) {
           // Clear existing session and create new one
@@ -133,7 +196,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         } else {
           return res.status(409).json({ 
             error: 'SESSION_EXISTS',
-            message: 'En anden session er allerede aktiv for denne bruger. Kontakt admin for at låse op.',
+            message: 'Du er allerede logget ind på en anden enhed eller browser. Du kan kun være logget ind ét sted ad gangen.',
             existingSession: {
               createdAt: existingSession.created_at,
               lastActivity: existingSession.last_activity,
@@ -143,11 +206,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // Create new session
+      // Create new session with browser_id
       const newSession: Session = {
         id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         username,
         session_id: sessionId,
+        browser_id: browserId,
         created_at: new Date().toISOString(),
         last_activity: new Date().toISOString(),
         user_agent: userAgent || 'Unknown',
@@ -160,6 +224,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .insert([{
             username: newSession.username,
             session_id: newSession.session_id,
+            browser_id: newSession.browser_id,
             created_at: newSession.created_at,
             last_activity: newSession.last_activity,
             user_agent: newSession.user_agent,
@@ -296,6 +361,45 @@ async function getActiveSession(username: string): Promise<Session | null> {
     return data as Session;
   } else {
     return inMemorySessions.find(s => s.username === username) || null;
+  }
+}
+
+// Helper function to get session by ID and browser ID
+async function getSessionByIdAndBrowser(sessionId: string, browserId: string): Promise<Session | null> {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('user_sessions')
+      .select('*')
+      .eq('session_id', sessionId)
+      .eq('browser_id', browserId)
+      .single();
+
+    if (error || !data) {
+      // Check in-memory as fallback
+      return inMemorySessions.find(s => s.session_id === sessionId && s.browser_id === browserId) || null;
+    }
+
+    return data as Session;
+  } else {
+    return inMemorySessions.find(s => s.session_id === sessionId && s.browser_id === browserId) || null;
+  }
+}
+
+// Helper function to update session activity timestamp
+async function updateSessionActivity(sessionId: string): Promise<void> {
+  const now = new Date().toISOString();
+  
+  if (supabase) {
+    await supabase
+      .from('user_sessions')
+      .update({ last_activity: now })
+      .eq('session_id', sessionId);
+  }
+  
+  // Also update in-memory
+  const idx = inMemorySessions.findIndex(s => s.session_id === sessionId);
+  if (idx !== -1) {
+    inMemorySessions[idx].last_activity = now;
   }
 }
 

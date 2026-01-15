@@ -36,6 +36,18 @@ const generateSessionId = () => {
   return `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
+// Generate or get unique browser/tab ID
+// This is stored in sessionStorage which is unique per tab
+// This ensures each tab has its own identifier
+const getBrowserId = () => {
+  let browserId = sessionStorage.getItem('browserId');
+  if (!browserId) {
+    browserId = `browser_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`;
+    sessionStorage.setItem('browserId', browserId);
+  }
+  return browserId;
+};
+
 const LoginForm = ({ onLogin }: LoginFormProps) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -126,6 +138,7 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
 
     // User is valid, now check for existing session
     const sessionId = generateSessionId();
+    const browserId = getBrowserId();
     const isAdmin = ADMIN_USERS.includes(trimmedUsername);
     
     try {
@@ -135,6 +148,7 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
         body: JSON.stringify({
           username: trimmedUsername,
           sessionId,
+          browserId,
           userAgent: navigator.userAgent,
           forceLogin: isAdmin // Admin users can force login
         })
@@ -153,6 +167,7 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
 
       // Session created successfully
       localStorage.setItem('sessionId', sessionId);
+      localStorage.setItem('browserId', browserId);
       toast.success("Login successful!");
       onLogin(trimmedUsername, sessionId);
     } catch (error) {
@@ -160,6 +175,7 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
       // If session API fails, still allow login (graceful fallback)
       // but store session locally
       localStorage.setItem('sessionId', sessionId);
+      localStorage.setItem('browserId', browserId);
       toast.success("Login successful!");
       onLogin(trimmedUsername, sessionId);
     }

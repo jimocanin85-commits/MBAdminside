@@ -43,30 +43,92 @@ type Trainer = {
   excelData?: any;
 };
 
+// Get or create a unique browser/tab ID
+const getBrowserId = () => {
+  let browserId = sessionStorage.getItem('browserId');
+  if (!browserId) {
+    browserId = `browser_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`;
+    sessionStorage.setItem('browserId', browserId);
+  }
+  return browserId;
+};
+
 const AdminPortal = () => {
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionValidationError, setSessionValidationError] = useState<string | null>(null);
   
-  // Load from localStorage in useEffect to prevent crashes
+  // Load from localStorage and validate session on the server
   useEffect(() => {
-    try {
-      const user = localStorage.getItem('currentUser');
-      const sessionId = localStorage.getItem('sessionId');
-      if (user && sessionId) {
-        setCurrentUser(user);
-        setCurrentSessionId(sessionId);
-        setIsAuthenticated(true);
-      } else if (user && !sessionId) {
-        // Clear invalid session state
-        localStorage.removeItem('currentUser');
+    const validateAndLoadSession = async () => {
+      try {
+        const user = localStorage.getItem('currentUser');
+        const sessionId = localStorage.getItem('sessionId');
+        const storedBrowserId = localStorage.getItem('browserId');
+        const currentBrowserId = getBrowserId();
+        
+        if (user && sessionId) {
+          // Check if this is the same browser/tab that created the session
+          // sessionStorage browserId is unique per tab, so a new tab will have a different ID
+          if (storedBrowserId !== currentBrowserId) {
+            // Different browser/tab - need to validate or re-login
+            console.log('Different browser/tab detected, validating session...');
+            
+            try {
+              const response = await fetch('/api/sessions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'validate',
+                  sessionId,
+                  browserId: storedBrowserId,
+                  username: user
+                })
+              });
+              
+              const result = await response.json();
+              
+              if (!result.valid) {
+                // Session is not valid for this browser
+                console.log('Session validation failed:', result.message);
+                setSessionValidationError(result.message || 'Du er allerede logget ind i en anden fane eller browser.');
+                // Clear local storage since session is invalid
+                localStorage.removeItem('currentUser');
+                localStorage.removeItem('sessionId');
+                localStorage.removeItem('browserId');
+                setIsLoading(false);
+                return;
+              }
+            } catch (error) {
+              console.error('Error validating session:', error);
+              // On error, be strict and require re-login for security
+              setSessionValidationError('Kunne ikke validere session. Log venligst ind igen.');
+              localStorage.removeItem('currentUser');
+              localStorage.removeItem('sessionId');
+              localStorage.removeItem('browserId');
+              setIsLoading(false);
+              return;
+            }
+          }
+          
+          // Session is valid or same browser - allow auto-login
+          setCurrentUser(user);
+          setCurrentSessionId(sessionId);
+          setIsAuthenticated(true);
+        } else if (user && !sessionId) {
+          // Clear invalid session state
+          localStorage.removeItem('currentUser');
+        }
+      } catch (e) {
+        console.error('Error reading from localStorage:', e);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (e) {
-      console.error('Error reading from localStorage:', e);
-    } finally {
-      setIsLoading(false);
-    }
+    };
+    
+    validateAndLoadSession();
   }, []);
   
   // Session heartbeat - keep session alive while user is active
@@ -75,11 +137,26 @@ const AdminPortal = () => {
     
     const sendHeartbeat = async () => {
       try {
-        await fetch('/api/sessions', {
+        const browserId = getBrowserId();
+        const response = await fetch('/api/sessions', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId: currentSessionId })
+          body: JSON.stringify({ sessionId: currentSessionId, browserId })
         });
+        
+        // Check if session was invalidated (e.g., user logged in from another location)
+        const result = await response.json();
+        if (!result.success && result.error === 'SESSION_NOT_FOUND') {
+          // Session was invalidated, force logout
+          console.log('Session invalidated, logging out...');
+          setSessionValidationError('Din session er blevet afsluttet. Muligvis har du logget ind et andet sted.');
+          setCurrentUser(null);
+          setCurrentSessionId(null);
+          setIsAuthenticated(false);
+          localStorage.removeItem('currentUser');
+          localStorage.removeItem('sessionId');
+          localStorage.removeItem('browserId');
+        }
       } catch (error) {
         console.error('Error sending heartbeat:', error);
       }
@@ -273,6 +350,7 @@ const AdminPortal = () => {
       // Clear authentication on page unload
       localStorage.removeItem('currentUser');
       localStorage.removeItem('sessionId');
+      localStorage.removeItem('browserId');
       setIsAuthenticated(false);
       setCurrentUser(null);
       setCurrentSessionId(null);
@@ -312,7 +390,11 @@ const AdminPortal = () => {
   const handleLogin = (username: string, sessionId: string) => {
     setCurrentUser(username);
     setCurrentSessionId(sessionId);
+    setSessionValidationError(null);
     localStorage.setItem('sessionId', sessionId);
+    // Also store the browserId that was used for this session
+    const browserId = getBrowserId();
+    localStorage.setItem('browserId', browserId);
     // logger.logLogin(username);
     // Permissions will be updated automatically by useEffect when currentUser changes
   };
@@ -337,8 +419,10 @@ const AdminPortal = () => {
     setCurrentUser(null);
     setCurrentSessionId(null);
     setIsAdminMode(false);
+    setSessionValidationError(null);
     localStorage.removeItem('currentUser');
     localStorage.removeItem('sessionId');
+    localStorage.removeItem('browserId');
     localStorage.removeItem('isAdminMode');
   };
 
@@ -486,7 +570,21 @@ const AdminPortal = () => {
   if (!isAuthenticated || !currentUser) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-muted px-2 py-8">
-        <LoginForm onLogin={handleLogin} />
+        <div className="w-full max-w-md mx-4">
+          {sessionValidationError && (
+            <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <svg className="h-5 w-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span className="font-medium text-amber-800">Session Problem</span>
+              </div>
+              <p className="text-sm text-amber-700">{sessionValidationError}</p>
+              <p className="text-xs text-amber-600 mt-2">Du kan kun være logget ind på én enhed eller fane ad gangen.</p>
+            </div>
+          )}
+          <LoginForm onLogin={handleLogin} />
+        </div>
       </div>
     );
   }

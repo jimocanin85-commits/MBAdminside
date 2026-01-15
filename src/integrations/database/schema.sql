@@ -48,10 +48,13 @@ VALUES
 ON CONFLICT (username) DO NOTHING;
 
 -- User sessions table (for single-session login limits)
+-- Each user can only have ONE active session at a time
+-- browser_id is used to identify unique browser instances
 CREATE TABLE IF NOT EXISTS user_sessions (
   id SERIAL PRIMARY KEY,
   username VARCHAR(100) NOT NULL,
   session_id VARCHAR(255) UNIQUE NOT NULL,
+  browser_id VARCHAR(255) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   user_agent TEXT,
@@ -60,4 +63,14 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 
 CREATE INDEX IF NOT EXISTS idx_user_sessions_username ON user_sessions(username);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_session_id ON user_sessions(session_id);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_browser_id ON user_sessions(browser_id);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_last_activity ON user_sessions(last_activity DESC);
+
+-- Add browser_id column if it doesn't exist (for existing databases)
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                 WHERE table_name = 'user_sessions' AND column_name = 'browser_id') THEN
+    ALTER TABLE user_sessions ADD COLUMN browser_id VARCHAR(255) DEFAULT '';
+  END IF;
+END $$;
