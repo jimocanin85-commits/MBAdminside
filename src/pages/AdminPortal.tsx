@@ -279,10 +279,14 @@ const AdminPortal = () => {
   
   // Section layout state - for draggable sections
   const DEFAULT_SECTION_ORDER = ['frivillig', 'referater', 'frivilligfest', 'aarshjul'];
+  const DEFAULT_POSITION = { x: 0, y: 0 };
   const [sectionOrder, setSectionOrder] = useState<string[]>(DEFAULT_SECTION_ORDER);
+  const [layoutPosition, setLayoutPosition] = useState<{ x: number; y: number }>(DEFAULT_POSITION);
   const [isLayoutLocked, setIsLayoutLocked] = useState(true);
   const [draggedSectionIndex, setDraggedSectionIndex] = useState<number | null>(null);
   const [isLayoutDirty, setIsLayoutDirty] = useState(false);
+  const [isDraggingContainer, setIsDraggingContainer] = useState(false);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number; posX: number; posY: number } | null>(null);
   
   // Load trainers from localStorage
   useEffect(() => {
@@ -321,6 +325,9 @@ const AdminPortal = () => {
           if (Array.isArray(result.data.sectionOrder)) {
             setSectionOrder(result.data.sectionOrder);
           }
+          if (result.data.position) {
+            setLayoutPosition(result.data.position);
+          }
           setIsLayoutLocked(result.data.isLocked !== false);
         }
       } catch (error) {
@@ -332,6 +339,9 @@ const AdminPortal = () => {
             const parsed = JSON.parse(savedLayout);
             if (Array.isArray(parsed.sectionOrder)) {
               setSectionOrder(parsed.sectionOrder);
+            }
+            if (parsed.position) {
+              setLayoutPosition(parsed.position);
             }
             setIsLayoutLocked(parsed.isLocked !== false);
           }
@@ -614,6 +624,7 @@ const AdminPortal = () => {
     try {
       const layoutData = {
         sectionOrder,
+        position: layoutPosition,
         isLocked: true
       };
 
@@ -639,7 +650,7 @@ const AdminPortal = () => {
     } catch (error) {
       console.error('Error saving layout:', error);
       // Fallback to localStorage only
-      const layoutData = { sectionOrder, isLocked: true };
+      const layoutData = { sectionOrder, position: layoutPosition, isLocked: true };
       localStorage.setItem('sectionLayout', JSON.stringify(layoutData));
       setIsLayoutLocked(true);
       setIsLayoutDirty(false);
@@ -649,7 +660,49 @@ const AdminPortal = () => {
 
   const handleUnlockLayout = () => {
     setIsLayoutLocked(false);
-    toast.info('Layout låst op - træk sektioner for at omorganisere');
+    toast.info('Layout låst op - træk sektioner eller hele layoutet for at flytte');
+  };
+
+  // Container drag handlers for moving the entire layout
+  const handleContainerMouseDown = (e: React.MouseEvent) => {
+    if (isLayoutLocked || !isAdminMode) return;
+    // Only start drag if clicking on the container header (not buttons)
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('[data-no-drag]')) return;
+    
+    e.preventDefault();
+    setIsDraggingContainer(true);
+    setDragStart({
+      x: e.clientX,
+      y: e.clientY,
+      posX: layoutPosition.x,
+      posY: layoutPosition.y
+    });
+  };
+
+  const handleContainerMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingContainer || !dragStart) return;
+    
+    const deltaX = e.clientX - dragStart.x;
+    const deltaY = e.clientY - dragStart.y;
+    
+    setLayoutPosition({
+      x: dragStart.posX + deltaX,
+      y: dragStart.posY + deltaY
+    });
+    setIsLayoutDirty(true);
+  };
+
+  const handleContainerMouseUp = () => {
+    setIsDraggingContainer(false);
+    setDragStart(null);
+  };
+
+  // Reset position to default
+  const handleResetPosition = () => {
+    setLayoutPosition({ x: 0, y: 0 });
+    setIsLayoutDirty(true);
+    toast.info('Position nulstillet');
   };
 
   const getTrainersByMonth = () => {
@@ -744,57 +797,81 @@ const AdminPortal = () => {
           ) : (
             <Card className="shadow-lg border-2">
               <CardContent className="pt-4 sm:pt-6 md:pt-8 space-y-4 sm:space-y-6">
-                {/* Admin mode layout controls */}
-                {isAdminMode && (
-                  <div className="flex items-center justify-between mb-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Settings className="h-4 w-4 text-amber-600" />
-                      <span className="text-sm font-medium text-amber-800">
-                        {isLayoutLocked 
-                          ? 'Layout er låst - klik på hængelåsen for at redigere' 
-                          : 'Træk sektioner for at omorganisere'}
-                      </span>
+                {/* Draggable Layout Container */}
+                <div 
+                  className={`relative ${!isLayoutLocked && isAdminMode ? 'cursor-move' : ''}`}
+                  style={{ 
+                    transform: `translate(${layoutPosition.x}px, ${layoutPosition.y}px)`,
+                    transition: isDraggingContainer ? 'none' : 'transform 0.1s ease-out'
+                  }}
+                  onMouseDown={handleContainerMouseDown}
+                  onMouseMove={handleContainerMouseMove}
+                  onMouseUp={handleContainerMouseUp}
+                  onMouseLeave={handleContainerMouseUp}
+                >
+                  {/* Admin mode layout controls */}
+                  {isAdminMode && (
+                    <div className={`flex items-center justify-between mb-2 p-3 bg-amber-50 border border-amber-200 rounded-lg ${!isLayoutLocked ? 'cursor-move' : ''}`}>
+                      <div className="flex items-center gap-2">
+                        {!isLayoutLocked && <GripVertical className="h-5 w-5 text-amber-600" />}
+                        <Settings className="h-4 w-4 text-amber-600" />
+                        <span className="text-sm font-medium text-amber-800">
+                          {isLayoutLocked 
+                            ? 'Layout er låst - klik på hængelåsen for at redigere' 
+                            : 'Træk hele boksen eller de enkelte sektioner'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2" data-no-drag>
+                        {!isLayoutLocked && (layoutPosition.x !== 0 || layoutPosition.y !== 0) && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="gap-1 text-amber-700"
+                            onClick={handleResetPosition}
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                            Nulstil
+                          </Button>
+                        )}
+                        {!isLayoutLocked && isLayoutDirty && (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="gap-1"
+                            onClick={handleSaveLayout}
+                          >
+                            <Lock className="h-4 w-4" />
+                            Gem & Lås
+                          </Button>
+                        )}
+                        {!isLayoutLocked && !isLayoutDirty && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1"
+                            onClick={handleSaveLayout}
+                          >
+                            <Lock className="h-4 w-4" />
+                            Lås
+                          </Button>
+                        )}
+                        {isLayoutLocked && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1"
+                            onClick={handleUnlockLayout}
+                          >
+                            <Unlock className="h-4 w-4" />
+                            Lås op
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {!isLayoutLocked && isLayoutDirty && (
-                        <Button
-                          size="sm"
-                          variant="default"
-                          className="gap-1"
-                          onClick={handleSaveLayout}
-                        >
-                          <Lock className="h-4 w-4" />
-                          Gem & Lås
-                        </Button>
-                      )}
-                      {!isLayoutLocked && !isLayoutDirty && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-1"
-                          onClick={handleSaveLayout}
-                        >
-                          <Lock className="h-4 w-4" />
-                          Lås
-                        </Button>
-                      )}
-                      {isLayoutLocked && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-1"
-                          onClick={handleUnlockLayout}
-                        >
-                          <Unlock className="h-4 w-4" />
-                          Lås op
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Action Buttons - Visible on all screen sizes */}
-                <div className="flex flex-col sm:flex-row gap-3">
+                  {/* Action Buttons - Visible on all screen sizes */}
+                  <div className="flex flex-col sm:flex-row gap-3" data-no-drag>
                   {sectionOrder.map((sectionId, index) => {
                     // Render section based on ID
                     const isDraggable = isAdminMode && !isLayoutLocked;
@@ -918,6 +995,7 @@ const AdminPortal = () => {
 
                     return null;
                   })}
+                  </div>
                 </div>
 
               {!isBrianUser && trainers.length > 0 ? (
