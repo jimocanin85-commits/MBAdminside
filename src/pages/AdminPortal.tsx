@@ -309,20 +309,39 @@ const AdminPortal = () => {
     }
   }, []);
 
-  // Load section layout from localStorage
+  // Load section layout from API/localStorage
   useEffect(() => {
-    try {
-      const savedLayout = localStorage.getItem('sectionLayout');
-      if (savedLayout) {
-        const parsed = JSON.parse(savedLayout);
-        if (Array.isArray(parsed.sectionOrder)) {
-          setSectionOrder(parsed.sectionOrder);
+    const loadSectionLayout = async () => {
+      try {
+        // Try to load from API first
+        const response = await fetch('/api/layout');
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          if (Array.isArray(result.data.sectionOrder)) {
+            setSectionOrder(result.data.sectionOrder);
+          }
+          setIsLayoutLocked(result.data.isLocked !== false);
         }
-        setIsLayoutLocked(parsed.isLocked !== false);
+      } catch (error) {
+        console.error('Error loading section layout from API:', error);
+        // Fallback to localStorage
+        try {
+          const savedLayout = localStorage.getItem('sectionLayout');
+          if (savedLayout) {
+            const parsed = JSON.parse(savedLayout);
+            if (Array.isArray(parsed.sectionOrder)) {
+              setSectionOrder(parsed.sectionOrder);
+            }
+            setIsLayoutLocked(parsed.isLocked !== false);
+          }
+        } catch (e) {
+          console.error('Error reading section layout from localStorage:', e);
+        }
       }
-    } catch (e) {
-      console.error('Error reading section layout from localStorage:', e);
-    }
+    };
+    
+    loadSectionLayout();
   }, []);
 
   useEffect(() => {
@@ -591,19 +610,40 @@ const AdminPortal = () => {
     setDraggedSectionIndex(null);
   };
 
-  const handleSaveLayout = () => {
+  const handleSaveLayout = async () => {
     try {
       const layoutData = {
         sectionOrder,
         isLocked: true
       };
+
+      // Save to API
+      const response = await fetch('/api/layout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(layoutData)
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setIsLayoutLocked(true);
+        setIsLayoutDirty(false);
+        toast.success('Layout gemt og låst');
+      } else {
+        throw new Error(result.error || 'Failed to save layout');
+      }
+
+      // Also save to localStorage as backup
+      localStorage.setItem('sectionLayout', JSON.stringify(layoutData));
+    } catch (error) {
+      console.error('Error saving layout:', error);
+      // Fallback to localStorage only
+      const layoutData = { sectionOrder, isLocked: true };
       localStorage.setItem('sectionLayout', JSON.stringify(layoutData));
       setIsLayoutLocked(true);
       setIsLayoutDirty(false);
-      toast.success('Layout gemt og låst');
-    } catch (error) {
-      console.error('Error saving layout:', error);
-      toast.error('Kunne ikke gemme layout');
+      toast.success('Layout gemt lokalt');
     }
   };
 
