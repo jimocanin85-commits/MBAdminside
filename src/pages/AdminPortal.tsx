@@ -877,7 +877,7 @@ const AdminPortal = () => {
             />
           ) : (
             <Card 
-              className={`shadow-lg border-2 ${!isLayoutLocked && isAdminMode ? 'cursor-move' : ''}`}
+              className={`shadow-lg border-2 bg-white ${!isLayoutLocked && isAdminMode ? 'cursor-move' : ''}`}
               style={{ 
                 transform: `translate(${layoutPosition.x}px, ${layoutPosition.y}px)`,
                 transition: isDraggingContainer ? 'none' : 'transform 0.1s ease-out'
