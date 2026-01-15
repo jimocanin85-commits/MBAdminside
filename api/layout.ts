@@ -9,9 +9,10 @@ const supabase = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey)
   : null;
 
-// Default section order and position
+// Default section order, position, and custom sections
 const DEFAULT_SECTION_ORDER = ['frivillig', 'referater', 'frivilligfest', 'aarshjul'];
 const DEFAULT_POSITION = { x: 0, y: 0 }; // Relative position (0,0 = default location)
+const DEFAULT_CUSTOM_SECTIONS: any[] = [];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
@@ -33,6 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           data: {
             sectionOrder: DEFAULT_SECTION_ORDER,
             position: DEFAULT_POSITION,
+            customSections: DEFAULT_CUSTOM_SECTIONS,
             isLocked: false
           }
         });
@@ -53,16 +55,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           data: {
             sectionOrder: DEFAULT_SECTION_ORDER,
             position: DEFAULT_POSITION,
+            customSections: DEFAULT_CUSTOM_SECTIONS,
             isLocked: false
           }
         });
       }
 
       if (data) {
-        // Ensure position exists in returned data
+        // Ensure position and customSections exist in returned data
         const layoutData = data.value;
         if (!layoutData.position) {
           layoutData.position = DEFAULT_POSITION;
+        }
+        if (!layoutData.customSections) {
+          layoutData.customSections = DEFAULT_CUSTOM_SECTIONS;
         }
         return res.status(200).json({
           success: true,
@@ -76,6 +82,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         data: {
           sectionOrder: DEFAULT_SECTION_ORDER,
           position: DEFAULT_POSITION,
+          customSections: DEFAULT_CUSTOM_SECTIONS,
           isLocked: false
         }
       });
@@ -86,6 +93,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         data: {
           sectionOrder: DEFAULT_SECTION_ORDER,
           position: DEFAULT_POSITION,
+          customSections: DEFAULT_CUSTOM_SECTIONS,
           isLocked: false
         }
       });
@@ -95,7 +103,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // POST /api/layout - Save section layout
   if (req.method === 'POST') {
     try {
-      const { sectionOrder, position, isLocked } = req.body;
+      const { sectionOrder, position, customSections, isLocked } = req.body;
 
       if (!sectionOrder || !Array.isArray(sectionOrder)) {
         return res.status(400).json({
@@ -115,6 +123,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const layoutData = {
         sectionOrder,
         position: position || DEFAULT_POSITION,
+        customSections: customSections || DEFAULT_CUSTOM_SECTIONS,
         isLocked: isLocked ?? true,
         updatedAt: new Date().toISOString()
       };

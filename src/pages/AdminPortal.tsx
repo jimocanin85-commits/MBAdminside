@@ -16,7 +16,7 @@ import { UserManagement } from "@/components/admin/UserManagement";
 // import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown, Sparkles, ExternalLink, RefreshCw, FileText, Users, CircleDot, Lock, Unlock } from "lucide-react";
+import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown, Sparkles, ExternalLink, RefreshCw, FileText, Users, CircleDot, Lock, Unlock, Plus, X, Link } from "lucide-react";
 // Removed Supabase import - no longer needed
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -288,6 +288,19 @@ const AdminPortal = () => {
   const [isDraggingContainer, setIsDraggingContainer] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number; posX: number; posY: number } | null>(null);
   
+  // Custom sections state
+  interface CustomSection {
+    id: string;
+    name: string;
+    url?: string;
+    icon?: string;
+  }
+  const [customSections, setCustomSections] = useState<CustomSection[]>([]);
+  const [showCreateSectionDialog, setShowCreateSectionDialog] = useState(false);
+  const [newSectionName, setNewSectionName] = useState('');
+  const [newSectionUrl, setNewSectionUrl] = useState('');
+  const [sectionToDelete, setSectionToDelete] = useState<string | null>(null);
+  
   // Load trainers from localStorage
   useEffect(() => {
     try {
@@ -328,6 +341,9 @@ const AdminPortal = () => {
           if (result.data.position) {
             setLayoutPosition(result.data.position);
           }
+          if (Array.isArray(result.data.customSections)) {
+            setCustomSections(result.data.customSections);
+          }
           setIsLayoutLocked(result.data.isLocked !== false);
         }
       } catch (error) {
@@ -342,6 +358,9 @@ const AdminPortal = () => {
             }
             if (parsed.position) {
               setLayoutPosition(parsed.position);
+            }
+            if (Array.isArray(parsed.customSections)) {
+              setCustomSections(parsed.customSections);
             }
             setIsLayoutLocked(parsed.isLocked !== false);
           }
@@ -625,6 +644,7 @@ const AdminPortal = () => {
       const layoutData = {
         sectionOrder,
         position: layoutPosition,
+        customSections,
         isLocked: true
       };
 
@@ -650,7 +670,7 @@ const AdminPortal = () => {
     } catch (error) {
       console.error('Error saving layout:', error);
       // Fallback to localStorage only
-      const layoutData = { sectionOrder, position: layoutPosition, isLocked: true };
+      const layoutData = { sectionOrder, position: layoutPosition, customSections, isLocked: true };
       localStorage.setItem('sectionLayout', JSON.stringify(layoutData));
       setIsLayoutLocked(true);
       setIsLayoutDirty(false);
@@ -704,6 +724,56 @@ const AdminPortal = () => {
     setIsLayoutDirty(true);
     toast.info('Position nulstillet');
   };
+
+  // Create a new custom section
+  const handleCreateSection = () => {
+    if (!newSectionName.trim()) {
+      toast.error('Indtast et navn til sektionen');
+      return;
+    }
+
+    const sectionId = `custom_${Date.now()}`;
+    const newSection: CustomSection = {
+      id: sectionId,
+      name: newSectionName.trim(),
+      url: newSectionUrl.trim() || undefined
+    };
+
+    setCustomSections([...customSections, newSection]);
+    setSectionOrder([...sectionOrder, sectionId]);
+    setNewSectionName('');
+    setNewSectionUrl('');
+    setShowCreateSectionDialog(false);
+    setIsLayoutDirty(true);
+    toast.success(`Sektion "${newSection.name}" oprettet`);
+  };
+
+  // Delete a section
+  const handleDeleteSection = (sectionId: string) => {
+    // Remove from section order
+    setSectionOrder(sectionOrder.filter(id => id !== sectionId));
+    
+    // If it's a custom section, also remove from customSections
+    if (sectionId.startsWith('custom_')) {
+      setCustomSections(customSections.filter(s => s.id !== sectionId));
+    }
+    
+    setSectionToDelete(null);
+    setIsLayoutDirty(true);
+    toast.success('Sektion slettet');
+  };
+
+  // Restore a default section
+  const handleRestoreSection = (sectionId: string) => {
+    if (!sectionOrder.includes(sectionId)) {
+      setSectionOrder([...sectionOrder, sectionId]);
+      setIsLayoutDirty(true);
+      toast.success('Sektion gendannet');
+    }
+  };
+
+  // Get deleted default sections (for restore option)
+  const deletedDefaultSections = DEFAULT_SECTION_ORDER.filter(id => !sectionOrder.includes(id));
 
   const getTrainersByMonth = () => {
     const grouped: Record<string, Trainer[]> = {};
@@ -811,70 +881,113 @@ const AdminPortal = () => {
                 >
                   {/* Admin mode layout controls */}
                   {isAdminMode && (
-                    <div className={`flex items-center justify-between mb-2 p-3 bg-amber-50 border border-amber-200 rounded-lg ${!isLayoutLocked ? 'cursor-move' : ''}`}>
-                      <div className="flex items-center gap-2">
-                        {!isLayoutLocked && <GripVertical className="h-5 w-5 text-amber-600" />}
-                        <Settings className="h-4 w-4 text-amber-600" />
-                        <span className="text-sm font-medium text-amber-800">
-                          {isLayoutLocked 
-                            ? 'Layout er låst - klik på hængelåsen for at redigere' 
-                            : 'Træk hele boksen eller de enkelte sektioner'}
-                        </span>
+                    <div className={`mb-2 p-3 bg-amber-50 border border-amber-200 rounded-lg ${!isLayoutLocked ? 'cursor-move' : ''}`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {!isLayoutLocked && <GripVertical className="h-5 w-5 text-amber-600" />}
+                          <Settings className="h-4 w-4 text-amber-600" />
+                          <span className="text-sm font-medium text-amber-800">
+                            {isLayoutLocked 
+                              ? 'Layout er låst - klik på hængelåsen for at redigere' 
+                              : 'Træk, tilføj eller slet sektioner'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2" data-no-drag>
+                          {!isLayoutLocked && (layoutPosition.x !== 0 || layoutPosition.y !== 0) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="gap-1 text-amber-700"
+                              onClick={handleResetPosition}
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                              Nulstil
+                            </Button>
+                          )}
+                          {!isLayoutLocked && isLayoutDirty && (
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="gap-1"
+                              onClick={handleSaveLayout}
+                            >
+                              <Lock className="h-4 w-4" />
+                              Gem & Lås
+                            </Button>
+                          )}
+                          {!isLayoutLocked && !isLayoutDirty && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1"
+                              onClick={handleSaveLayout}
+                            >
+                              <Lock className="h-4 w-4" />
+                              Lås
+                            </Button>
+                          )}
+                          {isLayoutLocked && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1"
+                              onClick={handleUnlockLayout}
+                            >
+                              <Unlock className="h-4 w-4" />
+                              Lås op
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2" data-no-drag>
-                        {!isLayoutLocked && (layoutPosition.x !== 0 || layoutPosition.y !== 0) && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="gap-1 text-amber-700"
-                            onClick={handleResetPosition}
-                          >
-                            <RefreshCw className="h-4 w-4" />
-                            Nulstil
-                          </Button>
-                        )}
-                        {!isLayoutLocked && isLayoutDirty && (
-                          <Button
-                            size="sm"
-                            variant="default"
-                            className="gap-1"
-                            onClick={handleSaveLayout}
-                          >
-                            <Lock className="h-4 w-4" />
-                            Gem & Lås
-                          </Button>
-                        )}
-                        {!isLayoutLocked && !isLayoutDirty && (
+                      
+                      {/* Create/Restore section buttons - only when unlocked */}
+                      {!isLayoutLocked && (
+                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-amber-200" data-no-drag>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="gap-1"
-                            onClick={handleSaveLayout}
+                            className="gap-1 bg-white"
+                            onClick={() => setShowCreateSectionDialog(true)}
                           >
-                            <Lock className="h-4 w-4" />
-                            Lås
+                            <Plus className="h-4 w-4" />
+                            Ny sektion
                           </Button>
-                        )}
-                        {isLayoutLocked && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1"
-                            onClick={handleUnlockLayout}
-                          >
-                            <Unlock className="h-4 w-4" />
-                            Lås op
-                          </Button>
-                        )}
-                      </div>
+                          
+                          {deletedDefaultSections.length > 0 && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="outline" className="gap-1 bg-white">
+                                  <RefreshCw className="h-4 w-4" />
+                                  Gendan sektion
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                {deletedDefaultSections.map(sectionId => (
+                                  <DropdownMenuItem 
+                                    key={sectionId}
+                                    onClick={() => handleRestoreSection(sectionId)}
+                                    className="cursor-pointer"
+                                  >
+                                    {sectionId === 'frivillig' && 'Frivillig'}
+                                    {sectionId === 'referater' && 'Referater fra Bestyrelsesmøder'}
+                                    {sectionId === 'frivilligfest' && 'Frivilligfest 2026'}
+                                    {sectionId === 'aarshjul' && 'Årshjul'}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 
                   {/* Action Buttons - Visible on all screen sizes */}
-                  <div className="flex flex-col sm:flex-row gap-3" data-no-drag>
+                  <div className="flex flex-col sm:flex-row gap-3 flex-wrap" data-no-drag>
                   {sectionOrder.map((sectionId, index) => {
                     // Render section based on ID
                     const isDraggable = isAdminMode && !isLayoutLocked;
+                    const showDelete = isAdminMode && !isLayoutLocked;
                     const dragProps = isDraggable ? {
                       draggable: true,
                       onDragStart: () => handleSectionDragStart(index),
@@ -887,10 +1000,10 @@ const AdminPortal = () => {
                       return (
                         <div 
                           key={sectionId} 
-                          className={`flex-1 ${isDraggable ? 'cursor-move' : ''} ${draggedSectionIndex === index ? 'opacity-50' : ''}`}
+                          className={`flex-1 min-w-[140px] ${isDraggable ? 'cursor-move' : ''} ${draggedSectionIndex === index ? 'opacity-50' : ''}`}
                           {...dragProps}
                         >
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 relative">
                             {isDraggable && <GripVertical className="h-5 w-5 text-muted-foreground flex-shrink-0" />}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -917,6 +1030,16 @@ const AdminPortal = () => {
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
+                            {showDelete && (
+                              <Button
+                                size="icon"
+                                variant="destructive"
+                                className="h-6 w-6 absolute -top-2 -right-2 rounded-full"
+                                onClick={() => setSectionToDelete(sectionId)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            )}
                           </div>
                         </div>
                       );
@@ -927,10 +1050,10 @@ const AdminPortal = () => {
                       return (
                         <div 
                           key={sectionId} 
-                          className={`flex-1 ${isDraggable ? 'cursor-move' : ''} ${draggedSectionIndex === index ? 'opacity-50' : ''}`}
+                          className={`flex-1 min-w-[140px] ${isDraggable ? 'cursor-move' : ''} ${draggedSectionIndex === index ? 'opacity-50' : ''}`}
                           {...dragProps}
                         >
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 relative">
                             {isDraggable && <GripVertical className="h-5 w-5 text-muted-foreground flex-shrink-0" />}
                             <Button 
                               size="lg" 
@@ -940,6 +1063,16 @@ const AdminPortal = () => {
                               <FileText className="h-5 w-5" />
                               Referater fra Bestyrelsesmøder
                             </Button>
+                            {showDelete && (
+                              <Button
+                                size="icon"
+                                variant="destructive"
+                                className="h-6 w-6 absolute -top-2 -right-2 rounded-full"
+                                onClick={() => setSectionToDelete(sectionId)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            )}
                           </div>
                         </div>
                       );
@@ -950,10 +1083,10 @@ const AdminPortal = () => {
                       return (
                         <div 
                           key={sectionId} 
-                          className={`flex-1 ${isDraggable ? 'cursor-move' : ''} ${draggedSectionIndex === index ? 'opacity-50' : ''}`}
+                          className={`flex-1 min-w-[140px] ${isDraggable ? 'cursor-move' : ''} ${draggedSectionIndex === index ? 'opacity-50' : ''}`}
                           {...dragProps}
                         >
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 relative">
                             {isDraggable && <GripVertical className="h-5 w-5 text-muted-foreground flex-shrink-0" />}
                             <Button 
                               size="lg" 
@@ -965,6 +1098,16 @@ const AdminPortal = () => {
                               <UserPlus className="h-5 w-5" />
                               Frivilligfest 2026
                             </Button>
+                            {showDelete && (
+                              <Button
+                                size="icon"
+                                variant="destructive"
+                                className="h-6 w-6 absolute -top-2 -right-2 rounded-full"
+                                onClick={() => setSectionToDelete(sectionId)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            )}
                           </div>
                         </div>
                       );
@@ -975,10 +1118,10 @@ const AdminPortal = () => {
                       return (
                         <div 
                           key={sectionId} 
-                          className={`flex-1 ${isDraggable ? 'cursor-move' : ''} ${draggedSectionIndex === index ? 'opacity-50' : ''}`}
+                          className={`flex-1 min-w-[140px] ${isDraggable ? 'cursor-move' : ''} ${draggedSectionIndex === index ? 'opacity-50' : ''}`}
                           {...dragProps}
                         >
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 relative">
                             {isDraggable && <GripVertical className="h-5 w-5 text-muted-foreground flex-shrink-0" />}
                             <Button 
                               size="lg" 
@@ -988,6 +1131,56 @@ const AdminPortal = () => {
                               <CircleDot className="h-5 w-5" />
                               Årshjul
                             </Button>
+                            {showDelete && (
+                              <Button
+                                size="icon"
+                                variant="destructive"
+                                className="h-6 w-6 absolute -top-2 -right-2 rounded-full"
+                                onClick={() => setSectionToDelete(sectionId)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Custom sections
+                    if (sectionId.startsWith('custom_')) {
+                      const customSection = customSections.find(s => s.id === sectionId);
+                      if (!customSection) return null;
+                      
+                      return (
+                        <div 
+                          key={sectionId} 
+                          className={`flex-1 min-w-[140px] ${isDraggable ? 'cursor-move' : ''} ${draggedSectionIndex === index ? 'opacity-50' : ''}`}
+                          {...dragProps}
+                        >
+                          <div className="flex items-center gap-1 relative">
+                            {isDraggable && <GripVertical className="h-5 w-5 text-muted-foreground flex-shrink-0" />}
+                            <Button 
+                              size="lg" 
+                              className="gap-2 text-base px-6 py-6 w-full min-h-[60px]"
+                              onClick={() => {
+                                if (customSection.url) {
+                                  window.open(customSection.url, '_blank');
+                                }
+                              }}
+                            >
+                              <Link className="h-5 w-5" />
+                              {customSection.name}
+                            </Button>
+                            {showDelete && (
+                              <Button
+                                size="icon"
+                                variant="destructive"
+                                className="h-6 w-6 absolute -top-2 -right-2 rounded-full"
+                                onClick={() => setSectionToDelete(sectionId)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            )}
                           </div>
                         </div>
                       );
@@ -1313,6 +1506,70 @@ const AdminPortal = () => {
         open={showUserManagement}
         onOpenChange={setShowUserManagement}
       />
+
+      {/* Create Section Dialog */}
+      <Dialog open={showCreateSectionDialog} onOpenChange={setShowCreateSectionDialog}>
+        <DialogContent className="max-w-[95vw] sm:max-w-md p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>Opret ny sektion</DialogTitle>
+            <DialogDescription>
+              Tilføj en ny knap til layoutet. Du kan linke til en ekstern URL.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Navn *</label>
+              <Input
+                placeholder="F.eks. 'Google Docs'"
+                value={newSectionName}
+                onChange={(e) => setNewSectionName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">URL (valgfrit)</label>
+              <Input
+                placeholder="https://example.com"
+                value={newSectionUrl}
+                onChange={(e) => setNewSectionUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Hvis du tilføjer en URL, åbnes den i et nyt vindue når der klikkes på knappen.
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowCreateSectionDialog(false)}>
+              Annuller
+            </Button>
+            <Button onClick={handleCreateSection}>
+              Opret sektion
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Section Confirmation Dialog */}
+      <AlertDialog open={!!sectionToDelete} onOpenChange={(open) => !open && setSectionToDelete(null)}>
+        <AlertDialogContent className="max-w-[95vw] sm:max-w-md p-4 sm:p-6">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Slet sektion?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {sectionToDelete?.startsWith('custom_') 
+                ? 'Denne sektion vil blive slettet permanent.'
+                : 'Denne sektion vil blive skjult. Du kan gendanne den senere via "Gendan sektion" knappen.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <AlertDialogCancel>Annuller</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => sectionToDelete && handleDeleteSection(sectionToDelete)}
+            >
+              Slet
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
     
