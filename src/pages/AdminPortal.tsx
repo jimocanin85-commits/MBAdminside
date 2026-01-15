@@ -254,14 +254,10 @@ const AdminPortal = () => {
   const [isEditingCloudFile, setIsEditingCloudFile] = useState(false);
   const [isAdminMode, setIsAdminMode] = useState(false);
   
-  // Load admin mode from localStorage
+  // Admin mode always starts deactivated - don't load from localStorage
+  // Clear any stored admin mode on component mount
   useEffect(() => {
-    try {
-      const adminMode = localStorage.getItem('isAdminMode') === 'true';
-      setIsAdminMode(adminMode);
-    } catch (e) {
-      console.error('Error reading isAdminMode:', e);
-    }
+    localStorage.removeItem('isAdminMode');
   }, []);
   const [showAdminDialog, setShowAdminDialog] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
@@ -328,10 +324,18 @@ const AdminPortal = () => {
 
   // Load section layout from API/localStorage
   useEffect(() => {
+    // Only load layout when authenticated
+    if (!isAuthenticated) return;
+    
     const loadSectionLayout = async () => {
       try {
-        // Try to load from API first
-        const response = await fetch('/api/layout');
+        // Try to load from API first with cache busting for mobile
+        const response = await fetch('/api/layout', {
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
         const result = await response.json();
         
         if (result.success && result.data) {
@@ -371,7 +375,7 @@ const AdminPortal = () => {
     };
     
     loadSectionLayout();
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     localStorage.setItem('trainers', JSON.stringify(trainers));
@@ -981,7 +985,11 @@ const AdminPortal = () => {
                   )}
 
                   {/* Action Buttons - Visible on all screen sizes */}
-                  <div className="flex flex-col sm:flex-row gap-3 flex-wrap" data-no-drag>
+                  <div 
+                    className="flex flex-col sm:flex-row gap-3 flex-wrap" 
+                    data-no-drag
+                    key={`sections-${sectionOrder.join('-')}`}
+                  >
                   {sectionOrder.map((sectionId, index) => {
                     // Render section based on ID
                     const isDraggable = isAdminMode && !isLayoutLocked;
