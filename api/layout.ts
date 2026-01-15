@@ -49,6 +49,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
         console.error('Error fetching layout:', error);
+        
+        // Check if table doesn't exist
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+          console.error('app_settings table does not exist. Please create it in Supabase.');
+          return res.status(200).json({
+            success: true,
+            tableExists: false,
+            data: {
+              sectionOrder: DEFAULT_SECTION_ORDER,
+              position: DEFAULT_POSITION,
+              customSections: DEFAULT_CUSTOM_SECTIONS,
+              isLocked: false
+            }
+          });
+        }
+        
         // Return default on error
         return res.status(200).json({
           success: true,
@@ -141,6 +157,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (error) {
         console.error('Error saving layout:', error);
+        
+        // Check if table doesn't exist
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+          return res.status(500).json({
+            success: false,
+            error: 'Database table missing',
+            details: 'The app_settings table does not exist. Please run the database migration.',
+            tableExists: false
+          });
+        }
+        
         return res.status(500).json({
           success: false,
           error: 'Failed to save layout',

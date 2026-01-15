@@ -662,15 +662,22 @@ const AdminPortal = () => {
       const result = await response.json();
       
       if (result.success) {
+        // Also save to localStorage as backup
+        localStorage.setItem('sectionLayout', JSON.stringify(layoutData));
         setIsLayoutLocked(true);
         setIsLayoutDirty(false);
-        toast.success('Layout gemt og låst');
+        toast.success('Layout gemt og låst for alle brugere');
+      } else if (result.tableExists === false) {
+        // Database table doesn't exist
+        console.error('Database table missing:', result.details);
+        // Save to localStorage only
+        localStorage.setItem('sectionLayout', JSON.stringify(layoutData));
+        setIsLayoutLocked(true);
+        setIsLayoutDirty(false);
+        toast.warning('Layout gemt lokalt. Database tabel mangler - kontakt administrator.');
       } else {
         throw new Error(result.error || 'Failed to save layout');
       }
-
-      // Also save to localStorage as backup
-      localStorage.setItem('sectionLayout', JSON.stringify(layoutData));
     } catch (error) {
       console.error('Error saving layout:', error);
       // Fallback to localStorage only
@@ -678,7 +685,7 @@ const AdminPortal = () => {
       localStorage.setItem('sectionLayout', JSON.stringify(layoutData));
       setIsLayoutLocked(true);
       setIsLayoutDirty(false);
-      toast.success('Layout gemt lokalt');
+      toast.warning('Layout gemt kun lokalt (ikke for andre brugere)');
     }
   };
 

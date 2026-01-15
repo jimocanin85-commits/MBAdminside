@@ -74,3 +74,13 @@ BEGIN
     ALTER TABLE user_sessions ADD COLUMN browser_id VARCHAR(255) DEFAULT '';
   END IF;
 END $$;
+
+-- App settings table (for storing layout and other app-wide settings)
+CREATE TABLE IF NOT EXISTS app_settings (
+  id SERIAL PRIMARY KEY,
+  key VARCHAR(100) UNIQUE NOT NULL,
+  value JSONB NOT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_app_settings_key ON app_settings(key);
