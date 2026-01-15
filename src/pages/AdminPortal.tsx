@@ -329,14 +329,21 @@ const AdminPortal = () => {
     
     const loadSectionLayout = async () => {
       try {
-        // Try to load from API first with cache busting for mobile
-        const response = await fetch('/api/layout', {
+        // Try to load from API first with aggressive cache busting for mobile
+        // Adding timestamp to URL prevents all browser caching (iOS Safari, Chrome, etc.)
+        const timestamp = Date.now();
+        const response = await fetch(`/api/layout?_t=${timestamp}`, {
+          method: 'GET',
+          cache: 'no-store', // Strongest cache prevention
           headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
           }
         });
         const result = await response.json();
+        
+        console.log('Layout loaded from API:', result); // Debug log for mobile
         
         if (result.success && result.data) {
           if (Array.isArray(result.data.sectionOrder)) {
@@ -357,6 +364,7 @@ const AdminPortal = () => {
           const savedLayout = localStorage.getItem('sectionLayout');
           if (savedLayout) {
             const parsed = JSON.parse(savedLayout);
+            console.log('Layout loaded from localStorage:', parsed); // Debug log
             if (Array.isArray(parsed.sectionOrder)) {
               setSectionOrder(parsed.sectionOrder);
             }
