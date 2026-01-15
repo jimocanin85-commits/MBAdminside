@@ -865,24 +865,22 @@ const AdminPortal = () => {
               }}
             />
           ) : (
-            <Card className="shadow-lg border-2">
+            <Card 
+              className={`shadow-lg border-2 ${!isLayoutLocked && isAdminMode ? 'cursor-move' : ''}`}
+              style={{ 
+                transform: `translate(${layoutPosition.x}px, ${layoutPosition.y}px)`,
+                transition: isDraggingContainer ? 'none' : 'transform 0.1s ease-out'
+              }}
+              onMouseDown={handleContainerMouseDown}
+              onMouseMove={handleContainerMouseMove}
+              onMouseUp={handleContainerMouseUp}
+              onMouseLeave={handleContainerMouseUp}
+            >
               <CardContent className="pt-4 sm:pt-6 md:pt-8 space-y-4 sm:space-y-6">
-                {/* Draggable Layout Container */}
-                <div 
-                  className={`relative ${!isLayoutLocked && isAdminMode ? 'cursor-move' : ''}`}
-                  style={{ 
-                    transform: `translate(${layoutPosition.x}px, ${layoutPosition.y}px)`,
-                    transition: isDraggingContainer ? 'none' : 'transform 0.1s ease-out'
-                  }}
-                  onMouseDown={handleContainerMouseDown}
-                  onMouseMove={handleContainerMouseMove}
-                  onMouseUp={handleContainerMouseUp}
-                  onMouseLeave={handleContainerMouseUp}
-                >
-                  {/* Admin mode layout controls */}
-                  {isAdminMode && (
-                    <div className={`mb-2 p-3 bg-amber-50 border border-amber-200 rounded-lg ${!isLayoutLocked ? 'cursor-move' : ''}`}>
-                      <div className="flex items-center justify-between">
+                {/* Admin mode layout controls */}
+                {isAdminMode && (
+                  <div className={`mb-2 p-3 bg-amber-50 border border-amber-200 rounded-lg ${!isLayoutLocked ? 'cursor-move' : ''}`}>
+                    <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           {!isLayoutLocked && <GripVertical className="h-5 w-5 text-amber-600" />}
                           <Settings className="h-4 w-4 text-amber-600" />
@@ -1057,11 +1055,11 @@ const AdminPortal = () => {
                             {isDraggable && <GripVertical className="h-5 w-5 text-muted-foreground flex-shrink-0" />}
                             <Button 
                               size="lg" 
-                              className="gap-2 text-base px-6 py-6 w-full min-h-[60px]"
+                              className="gap-2 text-base px-4 py-6 w-full min-h-[60px] whitespace-normal text-center leading-tight"
                               onClick={() => setShowReferaterViewer(true)}
                             >
-                              <FileText className="h-5 w-5" />
-                              Referater fra Bestyrelsesmøder
+                              <FileText className="h-5 w-5 flex-shrink-0" />
+                              <span>Referater</span>
                             </Button>
                             {showDelete && (
                               <Button
@@ -1189,7 +1187,6 @@ const AdminPortal = () => {
                     return null;
                   })}
                   </div>
-                </div>
 
               {!isBrianUser && trainers.length > 0 ? (
                 <div className="pt-6 border-t">
