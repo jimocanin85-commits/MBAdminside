@@ -16,7 +16,7 @@ import { UserManagement } from "@/components/admin/UserManagement";
 // import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown, Sparkles, ExternalLink, RefreshCw, FileText, Users, CircleDot } from "lucide-react";
+import { UserPlus, Cloud, Settings, Trash2, GripVertical, DoorOpen, Disc, ChevronDown, Sparkles, ExternalLink, RefreshCw, FileText, Users, CircleDot, Lock, Unlock } from "lucide-react";
 // Removed Supabase import - no longer needed
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -277,6 +277,13 @@ const AdminPortal = () => {
   const [showFrivilligfestDialog, setShowFrivilligfestDialog] = useState(false);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   
+  // Section layout state - for draggable sections
+  const DEFAULT_SECTION_ORDER = ['frivillig', 'referater', 'frivilligfest', 'aarshjul'];
+  const [sectionOrder, setSectionOrder] = useState<string[]>(DEFAULT_SECTION_ORDER);
+  const [isLayoutLocked, setIsLayoutLocked] = useState(true);
+  const [draggedSectionIndex, setDraggedSectionIndex] = useState<number | null>(null);
+  const [isLayoutDirty, setIsLayoutDirty] = useState(false);
+  
   // Load trainers from localStorage
   useEffect(() => {
     try {
@@ -300,6 +307,41 @@ const AdminPortal = () => {
     } catch (e) {
       console.error('Error reading trainers from localStorage:', e);
     }
+  }, []);
+
+  // Load section layout from API/localStorage
+  useEffect(() => {
+    const loadSectionLayout = async () => {
+      try {
+        // Try to load from API first
+        const response = await fetch('/api/layout');
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          if (Array.isArray(result.data.sectionOrder)) {
+            setSectionOrder(result.data.sectionOrder);
+          }
+          setIsLayoutLocked(result.data.isLocked !== false);
+        }
+      } catch (error) {
+        console.error('Error loading section layout from API:', error);
+        // Fallback to localStorage
+        try {
+          const savedLayout = localStorage.getItem('sectionLayout');
+          if (savedLayout) {
+            const parsed = JSON.parse(savedLayout);
+            if (Array.isArray(parsed.sectionOrder)) {
+              setSectionOrder(parsed.sectionOrder);
+            }
+            setIsLayoutLocked(parsed.isLocked !== false);
+          }
+        } catch (e) {
+          console.error('Error reading section layout from localStorage:', e);
+        }
+      }
+    };
+    
+    loadSectionLayout();
   }, []);
 
   useEffect(() => {
@@ -543,6 +585,73 @@ const AdminPortal = () => {
     setDraggedIndex(null);
   };
 
+  // Section layout drag handlers
+  const handleSectionDragStart = (index: number) => {
+    if (!isAdminMode || isLayoutLocked) return;
+    setDraggedSectionIndex(index);
+  };
+
+  const handleSectionDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (!isAdminMode || isLayoutLocked) return;
+    if (draggedSectionIndex === null || draggedSectionIndex === index) return;
+
+    const newOrder = [...sectionOrder];
+    const draggedSection = newOrder[draggedSectionIndex];
+    newOrder.splice(draggedSectionIndex, 1);
+    newOrder.splice(index, 0, draggedSection);
+    
+    setSectionOrder(newOrder);
+    setDraggedSectionIndex(index);
+    setIsLayoutDirty(true);
+  };
+
+  const handleSectionDragEnd = () => {
+    setDraggedSectionIndex(null);
+  };
+
+  const handleSaveLayout = async () => {
+    try {
+      const layoutData = {
+        sectionOrder,
+        isLocked: true
+      };
+
+      // Save to API
+      const response = await fetch('/api/layout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(layoutData)
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setIsLayoutLocked(true);
+        setIsLayoutDirty(false);
+        toast.success('Layout gemt og låst');
+      } else {
+        throw new Error(result.error || 'Failed to save layout');
+      }
+
+      // Also save to localStorage as backup
+      localStorage.setItem('sectionLayout', JSON.stringify(layoutData));
+    } catch (error) {
+      console.error('Error saving layout:', error);
+      // Fallback to localStorage only
+      const layoutData = { sectionOrder, isLocked: true };
+      localStorage.setItem('sectionLayout', JSON.stringify(layoutData));
+      setIsLayoutLocked(true);
+      setIsLayoutDirty(false);
+      toast.success('Layout gemt lokalt');
+    }
+  };
+
+  const handleUnlockLayout = () => {
+    setIsLayoutLocked(false);
+    toast.info('Layout låst op - træk sektioner for at omorganisere');
+  };
+
   const getTrainersByMonth = () => {
     const grouped: Record<string, Trainer[]> = {};
     trainers.forEach(trainer => {
@@ -635,75 +744,180 @@ const AdminPortal = () => {
           ) : (
             <Card className="shadow-lg border-2">
               <CardContent className="pt-4 sm:pt-6 md:pt-8 space-y-4 sm:space-y-6">
+                {/* Admin mode layout controls */}
+                {isAdminMode && (
+                  <div className="flex items-center justify-between mb-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Settings className="h-4 w-4 text-amber-600" />
+                      <span className="text-sm font-medium text-amber-800">
+                        {isLayoutLocked 
+                          ? 'Layout er låst - klik på hængelåsen for at redigere' 
+                          : 'Træk sektioner for at omorganisere'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!isLayoutLocked && isLayoutDirty && (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="gap-1"
+                          onClick={handleSaveLayout}
+                        >
+                          <Lock className="h-4 w-4" />
+                          Gem & Lås
+                        </Button>
+                      )}
+                      {!isLayoutLocked && !isLayoutDirty && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1"
+                          onClick={handleSaveLayout}
+                        >
+                          <Lock className="h-4 w-4" />
+                          Lås
+                        </Button>
+                      )}
+                      {isLayoutLocked && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1"
+                          onClick={handleUnlockLayout}
+                        >
+                          <Unlock className="h-4 w-4" />
+                          Lås op
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Action Buttons - Visible on all screen sizes */}
                 <div className="flex flex-col sm:flex-row gap-3">
-                  {/* Frivillig dropdown - Show for users with frivillig permission */}
-                  {hasFrivilligAccess && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button 
-                          size="lg" 
-                          className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
+                  {sectionOrder.map((sectionId, index) => {
+                    // Render section based on ID
+                    const isDraggable = isAdminMode && !isLayoutLocked;
+                    const dragProps = isDraggable ? {
+                      draggable: true,
+                      onDragStart: () => handleSectionDragStart(index),
+                      onDragOver: (e: React.DragEvent) => handleSectionDragOver(e, index),
+                      onDragEnd: handleSectionDragEnd,
+                    } : {};
+
+                    // Frivillig section
+                    if (sectionId === 'frivillig' && hasFrivilligAccess) {
+                      return (
+                        <div 
+                          key={sectionId} 
+                          className={`flex-1 ${isDraggable ? 'cursor-move' : ''} ${draggedSectionIndex === index ? 'opacity-50' : ''}`}
+                          {...dragProps}
                         >
-                          Frivillig
-                          <ChevronDown className="h-5 w-5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-56">
-                        <DropdownMenuItem onClick={() => setIsFormOpen(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
-                          <UserPlus className="h-4 w-4" />
-                          Opret
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setIsExitFormOpen(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
-                          <DoorOpen className="h-4 w-4" />
-                          Exit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setShowCloudFiles(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
-                          <Cloud className="h-4 w-4" />
-                          Cloud Filer
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                  
-                  
-                  {/* Referater fra Bestyrelsesmøder - Show for users with referater permission */}
-                  {hasReferaterAccess && (
-                    <Button 
-                      size="lg" 
-                      className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
-                      onClick={() => setShowReferaterViewer(true)}
-                    >
-                      <FileText className="h-5 w-5" />
-                      Referater fra Bestyrelsesmøder
-                    </Button>
-                  )}
-                  
-                  {/* Frivilligfest - Show for users with frivilligfest permission */}
-                  {hasFrivilligfestAccess && (
-                  <Button 
-                    size="lg" 
-                    className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
-                    onClick={() => {
-                      window.open('https://docs.google.com/spreadsheets/d/15QhvIYCNhci2N-oBbEGIpRgeevWe42L0kjhNyfTjkjQ/edit?usp=sharing_eil&ts=67288c42', '_blank');
-                    }}
-                  >
-                    <UserPlus className="h-5 w-5" />
-                    Frivilligfest 2026
-                  </Button>
-                  )}
-                  
-                  {/* Årshjul - Show for admin, Brian, or users with aarshjul permission */}
-                  {(currentUser === 'admin' || currentUser === 'Brian' || userPermissions.includes('aarshjul')) && (
-                    <Button 
-                      size="lg" 
-                      className="gap-2 text-base px-6 py-6 flex-1 min-h-[60px]"
-                      onClick={() => setShowAarshjul(true)}
-                    >
-                      <CircleDot className="h-5 w-5" />
-                      Årshjul
-                    </Button>
-                  )}
+                          <div className="flex items-center gap-1">
+                            {isDraggable && <GripVertical className="h-5 w-5 text-muted-foreground flex-shrink-0" />}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button 
+                                  size="lg" 
+                                  className="gap-2 text-base px-6 py-6 w-full min-h-[60px]"
+                                >
+                                  Frivillig
+                                  <ChevronDown className="h-5 w-5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="w-56">
+                                <DropdownMenuItem onClick={() => setIsFormOpen(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
+                                  <UserPlus className="h-4 w-4" />
+                                  Opret
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setIsExitFormOpen(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
+                                  <DoorOpen className="h-4 w-4" />
+                                  Exit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setShowCloudFiles(true)} className="gap-2 py-3 cursor-pointer min-h-[44px]">
+                                  <Cloud className="h-4 w-4" />
+                                  Cloud Filer
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Referater section
+                    if (sectionId === 'referater' && hasReferaterAccess) {
+                      return (
+                        <div 
+                          key={sectionId} 
+                          className={`flex-1 ${isDraggable ? 'cursor-move' : ''} ${draggedSectionIndex === index ? 'opacity-50' : ''}`}
+                          {...dragProps}
+                        >
+                          <div className="flex items-center gap-1">
+                            {isDraggable && <GripVertical className="h-5 w-5 text-muted-foreground flex-shrink-0" />}
+                            <Button 
+                              size="lg" 
+                              className="gap-2 text-base px-6 py-6 w-full min-h-[60px]"
+                              onClick={() => setShowReferaterViewer(true)}
+                            >
+                              <FileText className="h-5 w-5" />
+                              Referater fra Bestyrelsesmøder
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Frivilligfest section
+                    if (sectionId === 'frivilligfest' && hasFrivilligfestAccess) {
+                      return (
+                        <div 
+                          key={sectionId} 
+                          className={`flex-1 ${isDraggable ? 'cursor-move' : ''} ${draggedSectionIndex === index ? 'opacity-50' : ''}`}
+                          {...dragProps}
+                        >
+                          <div className="flex items-center gap-1">
+                            {isDraggable && <GripVertical className="h-5 w-5 text-muted-foreground flex-shrink-0" />}
+                            <Button 
+                              size="lg" 
+                              className="gap-2 text-base px-6 py-6 w-full min-h-[60px]"
+                              onClick={() => {
+                                window.open('https://docs.google.com/spreadsheets/d/15QhvIYCNhci2N-oBbEGIpRgeevWe42L0kjhNyfTjkjQ/edit?usp=sharing_eil&ts=67288c42', '_blank');
+                              }}
+                            >
+                              <UserPlus className="h-5 w-5" />
+                              Frivilligfest 2026
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Årshjul section
+                    if (sectionId === 'aarshjul' && (currentUser === 'admin' || currentUser === 'Brian' || userPermissions.includes('aarshjul'))) {
+                      return (
+                        <div 
+                          key={sectionId} 
+                          className={`flex-1 ${isDraggable ? 'cursor-move' : ''} ${draggedSectionIndex === index ? 'opacity-50' : ''}`}
+                          {...dragProps}
+                        >
+                          <div className="flex items-center gap-1">
+                            {isDraggable && <GripVertical className="h-5 w-5 text-muted-foreground flex-shrink-0" />}
+                            <Button 
+                              size="lg" 
+                              className="gap-2 text-base px-6 py-6 w-full min-h-[60px]"
+                              onClick={() => setShowAarshjul(true)}
+                            >
+                              <CircleDot className="h-5 w-5" />
+                              Årshjul
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return null;
+                  })}
                 </div>
 
               {!isBrianUser && trainers.length > 0 ? (
