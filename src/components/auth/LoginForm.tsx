@@ -199,11 +199,8 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
             <div className="bg-red-50 border border-red-300 rounded-lg p-4 flex items-start gap-3">
               <AlertCircle className="h-6 w-6 text-red-500 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-red-700">
-                <p className="font-semibold text-red-800">Kan ikke logge ind</p>
-                <p className="mt-1">{sessionError}</p>
-                <p className="mt-2 text-xs text-red-600 border-t border-red-200 pt-2">
-                  Log ud fra den anden fane/browser først for at kunne logge ind her.
-                </p>
+                <p className="font-semibold text-red-800">Adgang nægtet</p>
+                <p className="mt-1">Log ud fra den anden fane/browser først for at kunne logge ind her.</p>
               </div>
             </div>
           )}
