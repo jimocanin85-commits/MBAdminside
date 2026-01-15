@@ -196,11 +196,14 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
       <CardContent className="p-6 sm:p-8 pt-0 sm:pt-0">
         <form onSubmit={handleSubmit} className="space-y-5">
           {sessionError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+            <div className="bg-red-50 border border-red-300 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle className="h-6 w-6 text-red-500 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-red-700">
-                <p className="font-medium">Session aktiv</p>
+                <p className="font-semibold text-red-800">Kan ikke logge ind</p>
                 <p className="mt-1">{sessionError}</p>
+                <p className="mt-2 text-xs text-red-600 border-t border-red-200 pt-2">
+                  Du skal lukke den anden fane/browser først, eller vente til sessionen udløber (30 min).
+                </p>
               </div>
             </div>
           )}

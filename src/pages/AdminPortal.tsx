@@ -72,48 +72,55 @@ const AdminPortal = () => {
         if (user && sessionId) {
           // Check if this is the same browser/tab that created the session
           // sessionStorage browserId is unique per tab, so a new tab will have a different ID
-          if (storedBrowserId !== currentBrowserId) {
-            // Different browser/tab - need to validate or re-login
-            console.log('Different browser/tab detected, validating session...');
+          if (storedBrowserId && storedBrowserId !== currentBrowserId) {
+            // DIFFERENT TAB DETECTED - Block auto-login immediately
+            // This is a new tab trying to use the same session - NOT allowed
+            console.log('Different tab detected - blocking auto-login');
+            console.log('Stored browserId:', storedBrowserId);
+            console.log('Current browserId:', currentBrowserId);
             
-            try {
-              const response = await fetch('/api/sessions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  action: 'validate',
-                  sessionId,
-                  browserId: storedBrowserId,
-                  username: user
-                })
-              });
-              
-              const result = await response.json();
-              
-              if (!result.valid) {
-                // Session is not valid for this browser
-                console.log('Session validation failed:', result.message);
-                setSessionValidationError(result.message || 'Du er allerede logget ind i en anden fane eller browser.');
-                // Clear local storage since session is invalid
-                localStorage.removeItem('currentUser');
-                localStorage.removeItem('sessionId');
-                localStorage.removeItem('browserId');
-                setIsLoading(false);
-                return;
-              }
-            } catch (error) {
-              console.error('Error validating session:', error);
-              // On error, be strict and require re-login for security
-              setSessionValidationError('Kunne ikke validere session. Log venligst ind igen.');
+            setSessionValidationError('Du er allerede logget ind i en anden fane. Du kan kun være logget ind i én fane ad gangen.');
+            // DON'T clear localStorage - the original tab still needs it
+            // Just don't allow this tab to auto-login
+            setIsLoading(false);
+            return;
+          }
+          
+          // Same tab (browserIds match) or first time (no stored browserId)
+          // Validate session with server to make sure it's still active
+          try {
+            const response = await fetch('/api/sessions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'validate',
+                sessionId,
+                browserId: currentBrowserId,
+                username: user
+              })
+            });
+            
+            const result = await response.json();
+            
+            if (!result.valid) {
+              // Session is not valid on server (expired or deleted)
+              console.log('Session validation failed:', result.message);
+              setSessionValidationError(result.message || 'Din session er udløbet. Log venligst ind igen.');
+              // Clear local storage since session is invalid
               localStorage.removeItem('currentUser');
               localStorage.removeItem('sessionId');
               localStorage.removeItem('browserId');
               setIsLoading(false);
               return;
             }
+          } catch (error) {
+            console.error('Error validating session:', error);
+            // On network error, allow login but warn user
+            // This prevents blocking users when API is down
+            console.log('Could not validate session, allowing login with warning');
           }
           
-          // Session is valid or same browser - allow auto-login
+          // Session is valid - allow auto-login
           setCurrentUser(user);
           setCurrentSessionId(sessionId);
           setIsAuthenticated(true);
@@ -572,15 +579,17 @@ const AdminPortal = () => {
       <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-muted px-2 py-8">
         <div className="w-full max-w-md mx-4">
           {sessionValidationError && (
-            <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+            <div className="mb-4 bg-red-50 border border-red-300 rounded-lg p-4 text-center shadow-sm">
               <div className="flex items-center justify-center gap-2 mb-2">
-                <svg className="h-5 w-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-6 w-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
-                <span className="font-medium text-amber-800">Session Problem</span>
+                <span className="font-semibold text-red-800">Adgang nægtet</span>
               </div>
-              <p className="text-sm text-amber-700">{sessionValidationError}</p>
-              <p className="text-xs text-amber-600 mt-2">Du kan kun være logget ind på én enhed eller fane ad gangen.</p>
+              <p className="text-sm text-red-700 font-medium">{sessionValidationError}</p>
+              <div className="mt-3 pt-3 border-t border-red-200">
+                <p className="text-xs text-red-600">Luk den anden fane/browser først, eller vent til sessionen udløber.</p>
+              </div>
             </div>
           )}
           <LoginForm onLogin={handleLogin} />
