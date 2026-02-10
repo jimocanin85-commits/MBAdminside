@@ -153,7 +153,7 @@ const AdminPortal = () => {
         
         // Check if session was invalidated (e.g., user logged in from another location)
         const result = await response.json();
-        if (!result.success && result.error === 'SESSION_NOT_FOUND') {
+        if (!result.success && (result.error === 'SESSION_NOT_FOUND' || result.error === 'Session not found')) {
           // Session was invalidated, force logout
           console.log('Session invalidated, logging out...');
           setSessionValidationError('Din session er blevet afsluttet. Muligvis har du logget ind et andet sted.');
@@ -424,42 +424,34 @@ const AdminPortal = () => {
     }
   }, [currentUser]);
 
-  // Logout when browser tab/window is closed
+  // Session cleanup on browser tab/window close
+  // IMPORTANT: We do NOT clear localStorage here because beforeunload fires on
+  // page refresh too, which would force the user to re-login every refresh.
+  // Instead we rely on:
+  // - sendBeacon to try to delete the session from the server on tab close
+  // - Server-side session timeout (30 min) as a safety net
+  // - Session validation on page load to detect stale sessions
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Clear session from server using sendBeacon for reliability on page close
+      // Try to clean up server session using sendBeacon with proper Content-Type
       const sessionId = localStorage.getItem('sessionId');
       if (sessionId) {
-        // Use sendBeacon for reliable cleanup on page close
-        navigator.sendBeacon('/api/sessions', JSON.stringify({
+        const data = JSON.stringify({
           _method: 'DELETE', // Since sendBeacon is POST-only
           sessionId: sessionId
-        }));
+        });
+        // Use Blob with application/json Content-Type so the server can parse it
+        const blob = new Blob([data], { type: 'application/json' });
+        navigator.sendBeacon('/api/sessions', blob);
       }
-      
-      // Clear authentication on page unload
-      localStorage.removeItem('currentUser');
-      localStorage.removeItem('sessionId');
-      localStorage.removeItem('browserId');
-      setIsAuthenticated(false);
-      setCurrentUser(null);
-      setCurrentSessionId(null);
-      setIsAdminMode(false);
-    };
-
-    const handleVisibilityChange = () => {
-      // Also handle when tab becomes hidden (optional - more aggressive)
-      if (document.hidden) {
-        // Don't logout on tab switch, only on close
-      }
+      // Do NOT clear localStorage here - it fires on refresh too!
+      // Session persistence across refreshes is handled by validateAndLoadSession on mount
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 

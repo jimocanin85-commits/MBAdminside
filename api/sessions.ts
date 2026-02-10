@@ -177,22 +177,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Check if user already has an active session
       const existingSession = await getActiveSession(username);
       
-      if (existingSession && !forceLogin) {
-        // Check if it's the same browser trying to reconnect
-        if (existingSession.browser_id === browserId) {
-          // Same browser - allow reconnection, update the session
+      if (existingSession) {
+        if (forceLogin || ADMIN_USERS.includes(username)) {
+          // Admin users or forceLogin: clear ALL existing sessions and create new one
+          await deleteAllSessionsForUser(username);
+        } else if (existingSession.browser_id === browserId) {
+          // Same browser trying to reconnect - allow reconnection, update the session
           await updateSessionActivity(existingSession.session_id);
           return res.status(200).json({ 
             success: true, 
             data: existingSession,
             message: 'Session genoprettet'
           });
-        }
-        
-        // Admin and Brian can always log in (force login)
-        if (ADMIN_USERS.includes(username)) {
-          // Clear existing session and create new one
-          await deleteSession(existingSession.session_id);
         } else {
           return res.status(409).json({ 
             error: 'SESSION_EXISTS',
@@ -289,7 +285,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               inMemorySessions[idx].last_activity = new Date().toISOString();
               return res.status(200).json({ success: true, data: inMemorySessions[idx] });
             }
-            return res.status(404).json({ error: 'Session not found' });
+            return res.status(404).json({ success: false, error: 'Session not found' });
+          }
+
+          if (!data) {
+            return res.status(404).json({ success: false, error: 'Session not found' });
           }
 
           return res.status(200).json({ success: true, data });
@@ -299,7 +299,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             inMemorySessions[idx].last_activity = new Date().toISOString();
             return res.status(200).json({ success: true, data: inMemorySessions[idx] });
           }
-          return res.status(404).json({ error: 'Session not found' });
+          return res.status(404).json({ success: false, error: 'Session not found' });
         }
       }
 
@@ -345,23 +345,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 // Helper function to get active session for a user
+// Uses .limit(1) instead of .single() to avoid errors when multiple sessions exist
 async function getActiveSession(username: string): Promise<Session | null> {
   if (supabase) {
     const { data, error } = await supabase
       .from('user_sessions')
       .select('*')
       .eq('username', username)
-      .single();
+      .order('last_activity', { ascending: false })
+      .limit(1);
 
-    if (error || !data) {
+    if (error || !data || data.length === 0) {
       // Check in-memory as fallback
       return inMemorySessions.find(s => s.username === username) || null;
     }
 
-    return data as Session;
+    return data[0] as Session;
   } else {
     return inMemorySessions.find(s => s.username === username) || null;
   }
+}
+
+// Helper function to delete ALL sessions for a user (used for forceLogin/admin cleanup)
+async function deleteAllSessionsForUser(username: string) {
+  if (supabase) {
+    const { error } = await supabase
+      .from('user_sessions')
+      .delete()
+      .eq('username', username);
+
+    if (error) {
+      console.error('Error deleting sessions for user:', error);
+    }
+  }
+  // Also clean in-memory
+  removeSessionsWhere(inMemorySessions, s => s.username === username);
 }
 
 // Helper function to get session by ID and browser ID
