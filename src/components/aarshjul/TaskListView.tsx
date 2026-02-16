@@ -390,7 +390,7 @@ const TaskListView = ({
                       <>
                         <span 
                           className={cn(
-                            "text-xs flex-1 cursor-pointer hover:text-primary",
+                            "text-xs break-words flex-1 min-w-0 cursor-pointer hover:text-primary",
                             subtask.completed && "line-through text-muted-foreground"
                           )}
                           onClick={() => startEditingSubtask(subtask)}

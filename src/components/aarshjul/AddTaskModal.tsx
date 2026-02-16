@@ -357,12 +357,12 @@ const AddTaskModal = ({
             {subtasks.length > 0 && (
               <div className="space-y-2 mt-2 max-h-40 overflow-y-auto">
                 {subtasks.map((subtask) => (
-                  <div 
+                    <div 
                     key={subtask.id} 
-                    className="flex items-center justify-between p-2 bg-muted rounded-md gap-1"
+                    className="flex items-start justify-between p-2 bg-muted rounded-md gap-1"
                   >
                     {editingSubtaskId === subtask.id ? (
-                      <div className="flex items-center gap-1 flex-1">
+                      <div className="flex items-center gap-1 flex-1 min-w-0">
                         <Input
                           ref={editSubtaskRef}
                           value={editingSubtaskTitle}
@@ -398,7 +398,7 @@ const AddTaskModal = ({
                     ) : (
                       <>
                         <span 
-                          className="text-sm truncate flex-1 cursor-pointer hover:text-primary"
+                          className="text-sm break-words flex-1 min-w-0 cursor-pointer hover:text-primary"
                           onClick={() => startEditingSubtask(subtask)}
                           title="Klik for at redigere"
                         >

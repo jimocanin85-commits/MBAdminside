@@ -347,7 +347,7 @@ const TaskDetailsPanel = ({
                         <>
                           <span 
                             className={cn(
-                              "text-sm flex-1 cursor-pointer hover:text-primary",
+                              "text-sm break-words flex-1 min-w-0 cursor-pointer hover:text-primary",
                               subtask.completed && "line-through text-muted-foreground"
                             )}
                             onClick={() => startEditingSubtask(subtask)}
