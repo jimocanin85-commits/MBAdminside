@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2, Pencil, Check, X } from "lucide-react";
 import { User } from "@/components/admin/CreateUserDialog";
 
 interface Subtask {
@@ -62,6 +62,35 @@ const AddTaskModal = ({
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [systemUserEmails, setSystemUserEmails] = useState<SystemUserEmails>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
+  const [editingSubtaskTitle, setEditingSubtaskTitle] = useState("");
+  const editSubtaskRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingSubtaskId && editSubtaskRef.current) {
+      editSubtaskRef.current.focus();
+    }
+  }, [editingSubtaskId]);
+
+  const startEditingSubtask = (subtask: Subtask) => {
+    setEditingSubtaskId(subtask.id);
+    setEditingSubtaskTitle(subtask.title);
+  };
+
+  const saveSubtaskEdit = (subtaskId: string) => {
+    if (editingSubtaskTitle.trim()) {
+      setSubtasks(subtasks.map(s => 
+        s.id === subtaskId ? { ...s, title: editingSubtaskTitle.trim() } : s
+      ));
+    }
+    setEditingSubtaskId(null);
+    setEditingSubtaskTitle("");
+  };
+
+  const cancelSubtaskEdit = () => {
+    setEditingSubtaskId(null);
+    setEditingSubtaskTitle("");
+  };
 
   // Load available users
   useEffect(() => {
@@ -326,23 +355,79 @@ const AddTaskModal = ({
               </Button>
             </div>
             {subtasks.length > 0 && (
-              <div className="space-y-2 mt-2 max-h-32 overflow-y-auto">
+              <div className="space-y-2 mt-2 max-h-40 overflow-y-auto">
                 {subtasks.map((subtask) => (
                   <div 
                     key={subtask.id} 
-                    className="flex items-center justify-between p-2 bg-muted rounded-md"
+                    className="flex items-center justify-between p-2 bg-muted rounded-md gap-1"
                   >
-                    <span className="text-sm truncate flex-1">{subtask.title}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 shrink-0"
-                      onClick={() => handleRemoveSubtask(subtask.id)}
-                      disabled={isSubmitting}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
+                    {editingSubtaskId === subtask.id ? (
+                      <div className="flex items-center gap-1 flex-1">
+                        <Input
+                          ref={editSubtaskRef}
+                          value={editingSubtaskTitle}
+                          onChange={(e) => setEditingSubtaskTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') { e.preventDefault(); saveSubtaskEdit(subtask.id); }
+                            if (e.key === 'Escape') cancelSubtaskEdit();
+                          }}
+                          className="h-7 text-sm"
+                          disabled={isSubmitting}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 shrink-0 text-green-600 hover:text-green-700"
+                          onClick={() => saveSubtaskEdit(subtask.id)}
+                          disabled={isSubmitting}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
+                          onClick={cancelSubtaskEdit}
+                          disabled={isSubmitting}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <span 
+                          className="text-sm truncate flex-1 cursor-pointer hover:text-primary"
+                          onClick={() => startEditingSubtask(subtask)}
+                          title="Klik for at redigere"
+                        >
+                          {subtask.title}
+                        </span>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => startEditingSubtask(subtask)}
+                            disabled={isSubmitting}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-destructive hover:text-destructive"
+                            onClick={() => handleRemoveSubtask(subtask.id)}
+                            disabled={isSubmitting}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>

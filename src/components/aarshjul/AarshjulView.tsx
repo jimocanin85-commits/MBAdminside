@@ -177,6 +177,48 @@ const AarshjulView = ({ open, onOpenChange, currentUser }: AarshjulViewProps) =>
     saveTasks(newTasks);
   };
 
+  const handleEditSubtask = (taskId: string, subtaskId: string, newTitle: string) => {
+    const newTasks = tasks.map(t => {
+      if (t.id === taskId) {
+        const newSubtasks = t.subtasks.map(s => {
+          if (s.id === subtaskId) {
+            return { ...s, title: newTitle };
+          }
+          return s;
+        });
+        return { ...t, subtasks: newSubtasks, updatedAt: new Date().toISOString() };
+      }
+      return t;
+    });
+    saveTasks(newTasks);
+  };
+
+  const handleDeleteSubtask = (taskId: string, subtaskId: string) => {
+    const newTasks = tasks.map(t => {
+      if (t.id === taskId) {
+        const newSubtasks = t.subtasks.filter(s => s.id !== subtaskId);
+        return { ...t, subtasks: newSubtasks, updatedAt: new Date().toISOString() };
+      }
+      return t;
+    });
+    saveTasks(newTasks);
+  };
+
+  const handleAddSubtask = (taskId: string, title: string) => {
+    const newTasks = tasks.map(t => {
+      if (t.id === taskId) {
+        const newSubtask: Subtask = {
+          id: `subtask_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          title,
+          completed: false,
+        };
+        return { ...t, subtasks: [...t.subtasks, newSubtask], updatedAt: new Date().toISOString() };
+      }
+      return t;
+    });
+    saveTasks(newTasks);
+  };
+
   const handleMonthSelect = (month: number) => {
     setSelectedMonth(month);
   };
@@ -292,6 +334,9 @@ const AarshjulView = ({ open, onOpenChange, currentUser }: AarshjulViewProps) =>
                 onDeleteTask={handleDeleteTask}
                 onToggleTask={handleToggleTask}
                 onToggleSubtask={handleToggleSubtask}
+                onEditSubtask={handleEditSubtask}
+                onDeleteSubtask={handleDeleteSubtask}
+                onAddSubtask={handleAddSubtask}
                 showTimestamps={canSeeTimestamps}
               />
             ) : selectedMonth === null ? (
@@ -313,6 +358,9 @@ const AarshjulView = ({ open, onOpenChange, currentUser }: AarshjulViewProps) =>
                 onDeleteTask={handleDeleteTask}
                 onToggleTask={handleToggleTask}
                 onToggleSubtask={handleToggleSubtask}
+                onEditSubtask={handleEditSubtask}
+                onDeleteSubtask={handleDeleteSubtask}
+                onAddSubtask={handleAddSubtask}
                 showTimestamps={canSeeTimestamps}
               />
             )}

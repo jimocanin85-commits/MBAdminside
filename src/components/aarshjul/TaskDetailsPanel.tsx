@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { 
   Plus, 
   Edit, 
@@ -12,7 +13,10 @@ import {
   CheckCircle2,
   Circle,
   Clock,
-  CalendarPlus
+  CalendarPlus,
+  Pencil,
+  Check,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -52,6 +56,9 @@ interface TaskDetailsPanelProps {
   onDeleteTask: (taskId: string) => void;
   onToggleTask: (taskId: string) => void;
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
+  onEditSubtask: (taskId: string, subtaskId: string, newTitle: string) => void;
+  onDeleteSubtask: (taskId: string, subtaskId: string) => void;
+  onAddSubtask: (taskId: string, title: string) => void;
   showTimestamps?: boolean;
 }
 
@@ -97,10 +104,67 @@ const TaskDetailsPanel = ({
   onDeleteTask,
   onToggleTask,
   onToggleSubtask,
+  onEditSubtask,
+  onDeleteSubtask,
+  onAddSubtask,
   showTimestamps = false
 }: TaskDetailsPanelProps) => {
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
+  const [editingSubtaskTitle, setEditingSubtaskTitle] = useState("");
+  const [addingSubtaskForTask, setAddingSubtaskForTask] = useState<string | null>(null);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const editInputRef = useRef<HTMLInputElement>(null);
+  const addInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingSubtaskId && editInputRef.current) {
+      editInputRef.current.focus();
+    }
+  }, [editingSubtaskId]);
+
+  useEffect(() => {
+    if (addingSubtaskForTask && addInputRef.current) {
+      addInputRef.current.focus();
+    }
+  }, [addingSubtaskForTask]);
+
+  const startEditingSubtask = (subtask: Subtask) => {
+    setEditingSubtaskId(subtask.id);
+    setEditingSubtaskTitle(subtask.title);
+  };
+
+  const saveSubtaskEdit = (taskId: string, subtaskId: string) => {
+    if (editingSubtaskTitle.trim()) {
+      onEditSubtask(taskId, subtaskId, editingSubtaskTitle.trim());
+    }
+    setEditingSubtaskId(null);
+    setEditingSubtaskTitle("");
+  };
+
+  const cancelSubtaskEdit = () => {
+    setEditingSubtaskId(null);
+    setEditingSubtaskTitle("");
+  };
+
+  const startAddingSubtask = (taskId: string) => {
+    setAddingSubtaskForTask(taskId);
+    setNewSubtaskTitle("");
+  };
+
+  const saveNewSubtask = (taskId: string) => {
+    if (newSubtaskTitle.trim()) {
+      onAddSubtask(taskId, newSubtaskTitle.trim());
+    }
+    setAddingSubtaskForTask(null);
+    setNewSubtaskTitle("");
+  };
+
+  const cancelAddingSubtask = () => {
+    setAddingSubtaskForTask(null);
+    setNewSubtaskTitle("");
+  };
 
   const monthTasks = tasks.filter(t => t.month === month);
   const completedTasks = monthTasks.filter(t => t.completed);
@@ -205,20 +269,19 @@ const TaskDetailsPanel = ({
 
                 {/* Actions */}
                 <div className="flex items-center gap-1 shrink-0">
-                  {totalSubtasks > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => toggleExpanded(task.id)}
-                    >
-                      {isExpanded ? (
-                        <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      )}
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => toggleExpanded(task.id)}
+                    title={isExpanded ? "Skjul underopgaver" : "Vis underopgaver"}
+                  >
+                    {isExpanded ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -239,26 +302,125 @@ const TaskDetailsPanel = ({
               </div>
 
               {/* Expanded subtasks */}
-              {isExpanded && task.subtasks.length > 0 && (
+              {isExpanded && (
                 <div className="mt-3 ml-2 space-y-2 border-l-2 border-muted pl-3">
                   {task.subtasks.map(subtask => (
                     <div 
                       key={subtask.id}
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 group"
                     >
                       <Checkbox
                         checked={subtask.completed}
                         onCheckedChange={() => onToggleSubtask(task.id, subtask.id)}
                         className="shrink-0"
                       />
-                      <span className={cn(
-                        "text-sm",
-                        subtask.completed && "line-through text-muted-foreground"
-                      )}>
-                        {subtask.title}
-                      </span>
+                      {editingSubtaskId === subtask.id ? (
+                        <div className="flex items-center gap-1 flex-1">
+                          <Input
+                            ref={editInputRef}
+                            value={editingSubtaskTitle}
+                            onChange={(e) => setEditingSubtaskTitle(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') saveSubtaskEdit(task.id, subtask.id);
+                              if (e.key === 'Escape') cancelSubtaskEdit();
+                            }}
+                            className="h-7 text-sm"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 shrink-0 text-green-600 hover:text-green-700"
+                            onClick={() => saveSubtaskEdit(task.id, subtask.id)}
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
+                            onClick={cancelSubtaskEdit}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <span 
+                            className={cn(
+                              "text-sm flex-1 cursor-pointer hover:text-primary",
+                              subtask.completed && "line-through text-muted-foreground"
+                            )}
+                            onClick={() => startEditingSubtask(subtask)}
+                            title="Klik for at redigere"
+                          >
+                            {subtask.title}
+                          </span>
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 shrink-0"
+                              onClick={() => startEditingSubtask(subtask)}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 shrink-0 text-destructive hover:text-destructive"
+                              onClick={() => onDeleteSubtask(task.id, subtask.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ))}
+
+                  {/* Add new subtask inline */}
+                  {addingSubtaskForTask === task.id ? (
+                    <div className="flex items-center gap-1">
+                      <Input
+                        ref={addInputRef}
+                        value={newSubtaskTitle}
+                        onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveNewSubtask(task.id);
+                          if (e.key === 'Escape') cancelAddingSubtask();
+                        }}
+                        placeholder="Ny underopgave..."
+                        className="h-7 text-sm"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 shrink-0 text-green-600 hover:text-green-700"
+                        onClick={() => saveNewSubtask(task.id)}
+                        disabled={!newSubtaskTitle.trim()}
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
+                        onClick={cancelAddingSubtask}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                      onClick={() => startAddingSubtask(task.id)}
+                    >
+                      <Plus className="h-3 w-3" />
+                      Tilføj underopgave
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
