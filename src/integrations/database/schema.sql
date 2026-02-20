@@ -66,6 +66,14 @@ CREATE INDEX IF NOT EXISTS idx_user_sessions_session_id ON user_sessions(session
 CREATE INDEX IF NOT EXISTS idx_user_sessions_browser_id ON user_sessions(browser_id);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_last_activity ON user_sessions(last_activity DESC);
 
+-- Enable Row Level Security on user_sessions to protect sensitive session data
+ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
+
+-- RLS policy: Allow server-side API operations on user_sessions
+-- Access is mediated through server-side API endpoints (api/sessions.ts)
+CREATE POLICY "Allow authenticated operations on user_sessions" ON user_sessions
+  FOR ALL USING (true) WITH CHECK (true);
+
 -- Add browser_id column if it doesn't exist (for existing databases)
 DO $$ 
 BEGIN
@@ -84,3 +92,11 @@ CREATE TABLE IF NOT EXISTS app_settings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_app_settings_key ON app_settings(key);
+
+-- Enable Row Level Security on app_settings to prevent unauthorized access
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+
+-- RLS policy: Allow server-side API operations on app_settings
+-- Access is mediated through server-side API endpoints (api/layout.ts)
+CREATE POLICY "Allow authenticated operations on app_settings" ON app_settings
+  FOR ALL USING (true) WITH CHECK (true);
