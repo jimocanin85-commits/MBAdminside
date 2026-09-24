@@ -67,7 +67,9 @@ const AarshjulView = ({ open, onOpenChange, currentUser }: AarshjulViewProps) =>
     try {
       if (useCloud) {
         // Try to load from API
-        const response = await fetch('/api/tasks');
+        const response = await fetch('/api/tasks', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('sessionId')}` }
+        });
         const result = await response.json();
         
         if (response.ok && result.success) {
@@ -111,7 +113,10 @@ const AarshjulView = ({ open, onOpenChange, currentUser }: AarshjulViewProps) =>
       try {
         const response = await fetch('/api/tasks', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('sessionId')}`
+          },
           body: JSON.stringify({ tasks: newTasks })
         });
         

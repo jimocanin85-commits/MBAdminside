@@ -7,14 +7,19 @@ import {
   deleteTrainer,
   type Trainer
 } from '../src/integrations/database/client.js';
+import { applyCors, requireAuth } from './_lib/auth';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  applyCors(req, res);
+
   if (req.method === 'OPTIONS') {
-    return res.status(200).setHeader('Access-Control-Allow-Origin', '*')
-      .setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-      .setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-      .end();
+    return res.status(200).end();
   }
+
+  // Trainer records include personal data (birthdate, phone, email) - require
+  // a logged-in session for every operation, not just the destructive ones.
+  const session = await requireAuth(req, res);
+  if (!session) return;
 
   try {
     // GET /api/trainers - Get all trainers

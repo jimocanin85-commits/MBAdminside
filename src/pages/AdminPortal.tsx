@@ -338,7 +338,8 @@ const AdminPortal = () => {
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
-            'Expires': '0'
+            'Expires': '0',
+            'Authorization': `Bearer ${localStorage.getItem('sessionId')}`
           }
         });
         const result = await response.json();
@@ -663,7 +664,10 @@ const AdminPortal = () => {
       // Save to API
       const response = await fetch('/api/layout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('sessionId')}`
+        },
         body: JSON.stringify(layoutData)
       });
 

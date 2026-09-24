@@ -11,25 +11,8 @@ interface LoginFormProps {
   onLogin: (username: string, sessionId: string) => void;
 }
 
-const USERS = {
-  admin: "Monne1935",
-  Brian: "Monne1935"
-  // Karina is now handled as a custom user
-};
-
-// Admin users who can always log in
+// Admin users who can always log in / force login (kept in sync with api/_lib/auth.ts)
 const ADMIN_USERS = ['admin', 'Brian'];
-
-interface CustomUser {
-  id: string;
-  firstName: string;
-  lastName: string;
-  username: string;
-  password: string;
-  permissions: string[];
-  createdAt: Date;
-  isActive?: boolean;
-}
 
 // Generate a unique session ID
 const generateSessionId = () => {
@@ -61,92 +44,48 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
 
     const trimmedUsername = username.trim();
     const trimmedPassword = password.trim();
-    
-    // First validate credentials
-    let isValidUser = false;
-    
-    // Check hardcoded users first
-    if (USERS[trimmedUsername as keyof typeof USERS] === trimmedPassword) {
-      isValidUser = true;
-    } else {
-      // Check custom users from localStorage or API
-      try {
-        // Try API first
-        const response = await fetch('/api/users');
-        const result = await response.json();
-        
-        if (result.success && result.data) {
-          const cloudUser = result.data.find(
-            (u: CustomUser) => u.username === trimmedUsername && u.password === trimmedPassword
-          );
-          
-          if (cloudUser) {
-            if (cloudUser.isActive === false) {
-              toast.error("Denne bruger er deaktiveret");
-              setIsLoading(false);
-              return;
-            }
-            isValidUser = true;
-          }
-        }
-        
-        // Fallback to localStorage
-        if (!isValidUser) {
-          const customUsersJson = localStorage.getItem('customUsers');
-          if (customUsersJson) {
-            const customUsers: CustomUser[] = JSON.parse(customUsersJson);
-            const customUser = customUsers.find(
-              u => u.username === trimmedUsername && u.password === trimmedPassword
-            );
-            
-            if (customUser) {
-              if (customUser.isActive === false) {
-                toast.error("Denne bruger er deaktiveret");
-                setIsLoading(false);
-                return;
-              }
-              isValidUser = true;
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error checking users:', error);
-        // Fallback to localStorage only
-        try {
-          const customUsersJson = localStorage.getItem('customUsers');
-          if (customUsersJson) {
-            const customUsers: CustomUser[] = JSON.parse(customUsersJson);
-            const customUser = customUsers.find(
-              u => u.username === trimmedUsername && u.password === trimmedPassword
-            );
-            
-            if (customUser && customUser.isActive !== false) {
-              isValidUser = true;
-            }
-          }
-        } catch (e) {
-          console.error('Error reading localStorage:', e);
-        }
-      }
-    }
 
-    if (!isValidUser) {
-      toast.error("Forkert brugernavn eller adgangskode");
+    // Credentials are now checked entirely server-side in /api/login.
+    // The browser never sees the password list or the hardcoded admin
+    // password, and never fetches the full user list just to compare
+    // passwords locally.
+    let loginResult: { success: boolean; isAdmin?: boolean; error?: string; message?: string };
+    try {
+      const loginResponse = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: trimmedUsername, password: trimmedPassword })
+      });
+      loginResult = await loginResponse.json();
+
+      if (!loginResponse.ok || !loginResult.success) {
+        if (loginResult.error === 'USER_DISABLED') {
+          toast.error(loginResult.message || "Denne bruger er deaktiveret");
+        } else {
+          toast.error("Forkert brugernavn eller adgangskode");
+        }
+        setIsLoading(false);
+        return;
+      }
+    } catch (error) {
+      console.error('Login request failed:', error);
+      toast.error("Kunne ikke forbinde til serveren. Prøv igen.");
       setIsLoading(false);
       return;
     }
 
-    // User is valid, now check for existing session
+    // Credentials are valid, now check for existing session
     const sessionId = generateSessionId();
     const browserId = getBrowserId();
     const isAdmin = ADMIN_USERS.includes(trimmedUsername);
-    
+
     try {
       const sessionResponse = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: trimmedUsername,
+          password: trimmedPassword,
           sessionId,
           browserId,
           userAgent: navigator.userAgent,
@@ -179,7 +118,7 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
       toast.success("Login successful!");
       onLogin(trimmedUsername, sessionId);
     }
-    
+
     setIsLoading(false);
   };
 

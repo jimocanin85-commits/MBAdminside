@@ -204,7 +204,10 @@ const AddTaskModal = ({
     try {
       const response = await fetch('/api/send-notification', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('sessionId')}`
+        },
         body: JSON.stringify({
           type: 'task_assigned',
           recipients,

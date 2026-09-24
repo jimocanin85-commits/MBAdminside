@@ -1,18 +1,16 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { applyCors, requireAuth } from './_lib/auth';
 import { getChecklistData, saveChecklistData } from '../src/integrations/database/client.js';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  applyCors(req, res);
+
   if (req.method === 'OPTIONS') {
-    return res.status(200).setHeader('Access-Control-Allow-Origin', '*')
-      .setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-      .setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-      .end();
+    return res.status(200).end();
   }
+
+  const session = await requireAuth(req, res);
+  if (!session) return;
 
   try {
     if (req.method === 'GET') {
