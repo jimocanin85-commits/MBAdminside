@@ -13,8 +13,8 @@
  * to mint a session without a valid password either.
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { applyCors } from './_lib/auth';
-import { verifyCredentials } from './_lib/credentials';
+import { applyCors } from './_lib/auth.js';
+import { verifyCredentials } from './_lib/credentials.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res);

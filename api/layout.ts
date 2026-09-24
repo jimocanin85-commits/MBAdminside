@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabaseAdmin as supabase } from './_lib/supabaseAdmin';
-import { applyCors, requireAuth } from './_lib/auth';
+import { supabaseAdmin as supabase } from './_lib/supabaseAdmin.js';
+import { applyCors, requireAuth } from './_lib/auth.js';
 
 // Default section order, position, and custom sections
 const DEFAULT_SECTION_ORDER = ['frivillig', 'referater', 'frivilligfest', 'aarshjul'];

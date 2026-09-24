@@ -15,7 +15,7 @@
  *  - An "admin" check for the two hardcoded admin accounts
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabaseAdmin as supabase } from './supabaseAdmin';
+import { supabaseAdmin as supabase } from './supabaseAdmin.js';
 
 // Users who are always treated as admins (matches LoginForm / sessions.ts)
 export const ADMIN_USERS = ['admin', 'Brian'];

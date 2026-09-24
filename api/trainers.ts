@@ -7,7 +7,7 @@ import {
   deleteTrainer,
   type Trainer
 } from '../src/integrations/database/client.js';
-import { applyCors, requireAuth } from './_lib/auth';
+import { applyCors, requireAuth } from './_lib/auth.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res);
