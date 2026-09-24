@@ -78,7 +78,7 @@ class ApiClient {
       };
       
       // Only add body if method allows it
-      if (body && method !== 'GET' && method !== 'HEAD') {
+      if (body && method !== 'GET') {
         requestOptions.body = JSON.stringify(body);
       }
       
