@@ -145,7 +145,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
       if (useCloud && !cloudError) {
         const response = await fetch(`${API_BASE}/users`, {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('sessionId')}` },
           body: JSON.stringify({ id: user.id })
         });
         
@@ -178,7 +178,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
       if (useCloud && !cloudError) {
         const response = await fetch(`${API_BASE}/users`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('sessionId')}` },
           body: JSON.stringify({ id: user.id, isActive: false })
         });
         
@@ -213,7 +213,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
       if (useCloud && !cloudError) {
         const response = await fetch(`${API_BASE}/users`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('sessionId')}` },
           body: JSON.stringify({ id: user.id, isActive: true })
         });
         
@@ -264,7 +264,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
         try {
           const response = await fetch(`${API_BASE}/users`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('sessionId')}` },
             body: JSON.stringify({
               firstName: user.firstName,
               lastName: user.lastName,
@@ -328,10 +328,13 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
     try {
       const response = await fetch(`${API_BASE}/sessions`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('sessionId')}` },
         body: JSON.stringify({
           action: 'unlock',
-          targetUsername: session.username
+          targetUsername: session.username,
+          // The server verifies THIS is an admin's own active session
+          // before allowing it to unlock someone else's session.
+          sessionId: localStorage.getItem('sessionId')
         })
       });
 

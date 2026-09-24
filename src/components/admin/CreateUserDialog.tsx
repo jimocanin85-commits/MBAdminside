@@ -85,7 +85,10 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated, useCloud =
         // Create via API (Supabase)
         const response = await fetch(`${API_BASE}/users`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('sessionId')}`
+          },
           body: JSON.stringify({
             firstName: firstName.trim(),
             lastName: lastName.trim(),

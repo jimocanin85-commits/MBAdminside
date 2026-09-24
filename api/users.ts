@@ -1,46 +1,47 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { applyCors, requireAdmin } from './_lib/auth';
+import { hashPassword } from './_lib/passwords';
 
 // Initialize Supabase client for serverless
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
 
-const supabase = supabaseUrl && supabaseKey 
+const supabase = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey)
   : null;
 
-// User interface matching the frontend
-interface CustomUser {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  username: string;
-  password: string;
-  permissions: string[];
-  is_active: boolean;
-  created_at: string;
+// Public-safe shape returned to the client. `password`/hash is NEVER
+// included - previously this leaked every user's plaintext password.
+function toPublicUser(user: any) {
+  return {
+    id: user.id,
+    firstName: user.first_name,
+    lastName: user.last_name,
+    email: user.email || '',
+    username: user.username,
+    permissions: user.permissions || [],
+    isActive: user.is_active,
+    createdAt: user.created_at,
+  };
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  applyCors(req, res);
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
   if (!supabase) {
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Supabase not configured',
       message: 'Set SUPABASE_URL and SUPABASE_ANON_KEY environment variables'
     });
   }
 
   try {
-    // GET /api/users - Get all users
+    // GET /api/users - list users (no password/hash ever included)
     if (req.method === 'GET') {
       const { data, error } = await supabase
         .from('custom_users')
@@ -52,21 +53,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(500).json({ error: error.message });
       }
 
-      // Transform to frontend format
-      const users = (data || []).map(user => ({
-        id: user.id,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        email: user.email || '',
-        username: user.username,
-        password: user.password,
-        permissions: user.permissions || [],
-        isActive: user.is_active,
-        createdAt: user.created_at
-      }));
-
-      return res.status(200).json({ success: true, data: users });
+      return res.status(200).json({ success: true, data: (data || []).map(toPublicUser) });
     }
+
+    // Everything below creates/modifies/deletes accounts - admin only.
+    const admin = await requireAdmin(req, res);
+    if (!admin) return; // requireAdmin already sent the 401/403 response
 
     // POST /api/users - Create new user
     if (req.method === 'POST') {
@@ -76,7 +68,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
-      // Check if username exists
       const { data: existing } = await supabase
         .from('custom_users')
         .select('id')
@@ -87,13 +78,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Username already exists' });
       }
 
+      const passwordHash = await hashPassword(password);
+
       const newUser = {
         id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         first_name: firstName,
         last_name: lastName,
         email,
         username,
-        password,
+        password: passwordHash, // column name kept for compat; value is now a bcrypt hash
         permissions: permissions || [],
         is_active: isActive,
         created_at: new Date().toISOString()
@@ -110,21 +103,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(500).json({ error: error.message });
       }
 
-      // Return in frontend format
-      return res.status(201).json({
-        success: true,
-        data: {
-          id: data.id,
-          firstName: data.first_name,
-          lastName: data.last_name,
-          email: data.email || '',
-          username: data.username,
-          password: data.password,
-          permissions: data.permissions || [],
-          isActive: data.is_active,
-          createdAt: data.created_at
-        }
-      });
+      return res.status(201).json({ success: true, data: toPublicUser(data) });
     }
 
     // PUT /api/users - Update user
@@ -140,7 +119,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (lastName !== undefined) updates.last_name = lastName;
       if (email !== undefined) updates.email = email;
       if (username !== undefined) updates.username = username;
-      if (password !== undefined) updates.password = password;
+      if (password) updates.password = await hashPassword(password); // only rehash if a new password was actually given
       if (permissions !== undefined) updates.permissions = permissions;
       if (isActive !== undefined) updates.is_active = isActive;
 
@@ -160,20 +139,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(404).json({ error: 'User not found' });
       }
 
-      return res.status(200).json({
-        success: true,
-        data: {
-          id: data.id,
-          firstName: data.first_name,
-          lastName: data.last_name,
-          email: data.email || '',
-          username: data.username,
-          password: data.password,
-          permissions: data.permissions || [],
-          isActive: data.is_active,
-          createdAt: data.created_at
-        }
-      });
+      return res.status(200).json({ success: true, data: toPublicUser(data) });
     }
 
     // DELETE /api/users - Delete user

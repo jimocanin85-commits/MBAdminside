@@ -11,6 +11,8 @@
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { applyCors, requireAdmin } from './_lib/auth';
+import { verifyCredentials } from './_lib/credentials';
 
 // Initialize Supabase client for serverless
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
@@ -56,10 +58,7 @@ function removeSessionsWhere(sessions: Session[], predicate: (s: Session) => boo
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  applyCors(req, res);
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -168,11 +167,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
       
-      const { username, sessionId, browserId, userAgent, forceLogin } = req.body;
+      const { username, password, sessionId, browserId, userAgent, forceLogin } = req.body;
 
       if (!username || !sessionId || !browserId) {
         return res.status(400).json({ error: 'Username, sessionId, and browserId are required' });
       }
+
+      // Re-verify credentials here too (not just in /api/login). Without
+      // this, anyone could skip /api/login and POST straight here with an
+      // arbitrary username to mint themselves a valid session.
+      if (!password) {
+        return res.status(400).json({ error: 'Password is required' });
+      }
+      const credCheck = await verifyCredentials(String(username), String(password));
+      if (!credCheck.ok) {
+        if (credCheck.reason === 'USER_DISABLED') {
+          return res.status(403).json({ error: 'USER_DISABLED', message: credCheck.message });
+        }
+        if (credCheck.reason === 'SERVER_MISCONFIGURED') {
+          return res.status(500).json({ error: 'Server misconfigured' });
+        }
+        return res.status(401).json({ error: 'INVALID_CREDENTIALS' });
+      }
+
 
       // Check if user already has an active session
       const existingSession = await getActiveSession(username);
@@ -252,8 +269,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'PUT') {
       const { sessionId, action, targetUsername } = req.body;
 
-      // Handle unlock action (admin only)
+      // Handle unlock action (admin only) - this used to be admin-only in
+      // name only; nothing actually checked who was calling it.
       if (action === 'unlock' && targetUsername) {
+        const admin = await requireAdmin(req, res);
+        if (!admin) return;
+
         if (supabase) {
           const { error } = await supabase
             .from('user_sessions')

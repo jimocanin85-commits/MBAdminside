@@ -62,7 +62,10 @@ export const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated, useClo
         // Update via API (Supabase)
         const response = await fetch(`${API_BASE}/users`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('sessionId')}`
+          },
           body: JSON.stringify({
             id: user.id,
             email: email.trim(),

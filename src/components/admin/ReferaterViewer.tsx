@@ -89,6 +89,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('sessionId')}`,
             },
             body: JSON.stringify(requestBody)
           });
@@ -197,6 +198,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('sessionId')}`,
         },
         body: JSON.stringify({
           fileId: file.fileId,

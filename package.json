@@ -9,7 +9,8 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "db:init": "tsx scripts/init-database.ts"
+    "db:init": "tsx scripts/init-database.ts",
+    "migrate:hash-passwords": "tsx scripts/hash-existing-passwords.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -43,6 +44,7 @@
     "@radix-ui/react-tooltip": "^1.2.7",
     "@supabase/supabase-js": "^2.80.0",
     "@tanstack/react-query": "^5.83.0",
+    "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -72,6 +74,7 @@
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^22.16.5",
     "@types/nodemailer": "^7.0.4",
+    "@types/bcryptjs": "^2.4.6",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
     "@vercel/node": "^5.5.8",

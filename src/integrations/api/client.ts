@@ -28,12 +28,18 @@ class ApiClient {
     // Extract method and body from options
     const { method = 'GET', body, headers, ...restOptions } = options;
     
+    // Attach the caller's session token automatically so every route that
+    // requires auth (see api/_lib/auth.ts) works without every call site
+    // having to remember to add the header itself.
+    const sessionId = typeof window !== 'undefined' ? localStorage.getItem('sessionId') : null;
+
     // Only include body if method is not GET/HEAD
     const requestOptions: RequestInit = {
       method,
       ...restOptions,
       headers: {
         'Content-Type': 'application/json',
+        ...(sessionId ? { 'Authorization': `Bearer ${sessionId}` } : {}),
         ...headers,
       },
     };

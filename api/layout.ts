@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { applyCors, requireAuth } from './_lib/auth';
 
 // Initialize Supabase client for serverless
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
@@ -15,11 +16,8 @@ const DEFAULT_POSITION = { x: 0, y: 0 }; // Relative position (0,0 = default loc
 const DEFAULT_CUSTOM_SECTIONS: any[] = [];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  
+  applyCors(req, res);
+
   // Prevent caching on all browsers (especially mobile)
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
@@ -28,6 +26,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
+
+  const session = await requireAuth(req, res);
+  if (!session) return;
 
   // GET /api/layout - Get section layout
   if (req.method === 'GET') {

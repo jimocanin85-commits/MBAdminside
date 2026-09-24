@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import nodemailer from 'nodemailer';
+import { applyCors, requireAuth } from './_lib/auth';
 
 // Maileroo SMTP Configuration
 // Get these from Maileroo: Sending Domains → SMTP Credentials
@@ -40,10 +41,7 @@ interface NotificationRequest {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  applyCors(req, res);
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -52,6 +50,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Sending email costs real SMTP quota and could be abused for spam if
+  // left open - require a logged-in session.
+  const session = await requireAuth(req, res);
+  if (!session) return;
 
   if (!transporter) {
     console.warn('SMTP not configured - email notifications disabled');
