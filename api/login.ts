@@ -35,7 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const result = await verifyCredentials(String(username), String(password));
 
-  if (!result.ok) {
+  if (result.ok === false) {
     if (result.reason === 'SERVER_MISCONFIGURED') {
       return res.status(500).json({ error: 'Server misconfigured' });
     }
