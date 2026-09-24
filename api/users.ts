@@ -1,15 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient } from '@supabase/supabase-js';
-import { applyCors, requireAdmin } from './_lib/auth';
+import { supabaseAdmin as supabase } from './_lib/supabaseAdmin';
+import { applyCors, requireAuth, requireAdmin } from './_lib/auth';
 import { hashPassword } from './_lib/passwords';
-
-// Initialize Supabase client for serverless
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
-
-const supabase = supabaseUrl && supabaseKey
-  ? createClient(supabaseUrl, supabaseKey)
-  : null;
 
 // Public-safe shape returned to the client. `password`/hash is NEVER
 // included - previously this leaked every user's plaintext password.
@@ -32,6 +24,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
+
+  // Every operation below needs a logged-in session, including GET - the
+  // user list (names/emails/usernames/permissions) is not public data.
+  const session = await requireAuth(req, res);
+  if (!session) return;
 
   if (!supabase) {
     return res.status(500).json({

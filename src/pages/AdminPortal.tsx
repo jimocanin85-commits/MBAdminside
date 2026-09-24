@@ -47,7 +47,7 @@ type Trainer = {
 const getBrowserId = () => {
   let browserId = sessionStorage.getItem('browserId');
   if (!browserId) {
-    browserId = `browser_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`;
+    browserId = `browser_${crypto.randomUUID()}`;
     sessionStorage.setItem('browserId', browserId);
   }
   return browserId;

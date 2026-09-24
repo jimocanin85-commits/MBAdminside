@@ -10,17 +10,9 @@
  * - Admin users can force login (which terminates other sessions)
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin as supabase } from './_lib/supabaseAdmin';
 import { applyCors, requireAdmin } from './_lib/auth';
 import { verifyCredentials } from './_lib/credentials';
-
-// Initialize Supabase client for serverless
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
-
-const supabase = supabaseUrl && supabaseKey 
-  ? createClient(supabaseUrl, supabaseKey)
-  : null;
 
 // Session timeout in milliseconds (30 minutes of inactivity)
 const SESSION_TIMEOUT = 30 * 60 * 1000;
@@ -68,57 +60,69 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   await cleanupExpiredSessions();
 
   try {
-    // GET /api/sessions - Get all active sessions (for admin)
+    // GET /api/sessions - Get all active sessions (admin only). Never
+    // returns session_id/browser_id - those are bearer tokens, and leaking
+    // them here would let anyone impersonate the session they belong to
+    // regardless of any auth check on this route.
     if (req.method === 'GET') {
+      const admin = await requireAdmin(req, res);
+      if (!admin) return;
+
       const { username } = req.query;
-      
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const toPublicSession = (s: any) => ({
+        id: s.id,
+        username: s.username,
+        createdAt: s.created_at,
+        lastActivity: s.last_activity,
+        userAgent: s.user_agent,
+        isLocked: s.is_locked,
+      });
+
       if (supabase) {
         let query = supabase.from('user_sessions').select('*');
-        
+
         if (username) {
           query = query.eq('username', username as string);
         }
-        
+
         const { data, error } = await query.order('last_activity', { ascending: false });
-        
+
         if (error) {
           console.error('Error fetching sessions:', error);
           // Fallback to in-memory
-          const sessions = username 
+          const sessions = username
             ? inMemorySessions.filter(s => s.username === username)
             : inMemorySessions;
-          return res.status(200).json({ success: true, data: sessions });
+          return res.status(200).json({ success: true, data: sessions.map(toPublicSession) });
         }
-        
-        return res.status(200).json({ success: true, data: data || [] });
+
+        return res.status(200).json({ success: true, data: (data || []).map(toPublicSession) });
       } else {
         // In-memory fallback
-        const sessions = username 
+        const sessions = username
           ? inMemorySessions.filter(s => s.username === username as string)
           : inMemorySessions;
-        return res.status(200).json({ success: true, data: sessions });
+        return res.status(200).json({ success: true, data: sessions.map(toPublicSession) });
       }
     }
 
     // POST /api/sessions - Create a new session (login), validate session, or handle sendBeacon DELETE
     if (req.method === 'POST') {
-      // Handle sendBeacon DELETE requests (from beforeunload)
+      // Handle sendBeacon DELETE requests (from beforeunload). sendBeacon
+      // can't send an Authorization header, so this can only be trusted to
+      // delete the one session whose ID the caller already knows (the
+      // session_id itself acts as the proof) - never by username, which
+      // would let anyone log out an arbitrary user with no auth at all.
       if (req.body._method === 'DELETE') {
-        const { sessionId, username } = req.body;
-        
+        const { sessionId } = req.body;
+
         if (sessionId) {
           await deleteSession(sessionId);
           return res.status(200).json({ success: true, message: 'Session deleted via beacon' });
         }
-        
-        if (username) {
-          if (supabase) {
-            await supabase.from('user_sessions').delete().eq('username', username);
-          }
-          removeSessionsWhere(inMemorySessions, s => s.username === username);
-          return res.status(200).json({ success: true, message: 'Sessions deleted for user via beacon' });
-        }
-        
+
         return res.status(200).end();
       }
 
@@ -331,12 +335,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'DELETE') {
       const { sessionId, username } = req.body;
 
+      // Deleting your own session by its ID needs no further auth - the
+      // session_id is itself the proof of ownership.
       if (sessionId) {
         await deleteSession(sessionId);
         return res.status(200).json({ success: true, message: 'Session deleted' });
       }
 
+      // Deleting someone else's session(s) by username is an admin action.
       if (username) {
+        const admin = await requireAdmin(req, res);
+        if (!admin) return;
+
         if (supabase) {
           const { error } = await supabase
             .from('user_sessions')

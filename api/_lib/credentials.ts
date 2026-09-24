@@ -5,15 +5,8 @@
  * itself - otherwise a client could skip /api/login entirely and POST
  * straight to /api/sessions with any username to mint a valid session).
  */
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin as supabase } from './supabaseAdmin';
 import { verifyPassword } from './passwords';
-
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
-
-const supabase = supabaseUrl && supabaseKey
-  ? createClient(supabaseUrl, supabaseKey)
-  : null;
 
 const ADMIN_USERS = ['admin', 'Brian'];
 
