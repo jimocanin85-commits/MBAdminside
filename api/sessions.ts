@@ -184,7 +184,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Password is required' });
       }
       const credCheck = await verifyCredentials(String(username), String(password));
-      if (!credCheck.ok) {
+      if (credCheck.ok === false) {
         if (credCheck.reason === 'USER_DISABLED') {
           return res.status(403).json({ error: 'USER_DISABLED', message: credCheck.message });
         }
