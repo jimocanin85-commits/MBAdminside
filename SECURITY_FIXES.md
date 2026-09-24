@@ -3,6 +3,12 @@
 This documents the auth/security fixes applied on top of the original
 codebase. Read this before deploying.
 
+> **Update (same day, follow-up pass):** a review of this first pass found
+> that `GET /api/sessions` was still completely unauthenticated and leaked
+> every active `session_id` — the exact bearer token every other route
+> trusts — which undid the rest of this fix for anyone who found it. See
+> "Follow-up fixes" below for that and three related issues.
+
 ## What was wrong
 
 1. `GET /api/users` returned every user's **plaintext password** to anyone
@@ -73,6 +79,49 @@ codebase. Read this before deploying.
 
 5. **Deploy**, then test login with each account type (admin, Brian, and at
    least one custom user) before considering this done.
+
+## Follow-up fixes
+
+1. **`GET /api/sessions` had no auth check at all.** It returned every
+   active session row, including `session_id` — the same value sent as
+   `Authorization: Bearer <sessionId>` and accepted by `verifySession()` in
+   `api/_lib/auth.ts`. Anyone could call it, grab an admin's `session_id`,
+   and impersonate them on every other route regardless of the fixes
+   above. Now requires `requireAdmin`, and the response never includes
+   `session_id`/`browser_id` at all (admins don't need them - "unlock"
+   works by username, not session ID). The unauthenticated `DELETE
+   /api/sessions` / sendBeacon-by-username paths (log out an arbitrary
+   user with no auth) were closed the same way - deleting by `sessionId`
+   still needs no extra auth (the ID itself is the proof), deleting by
+   `username` now requires admin.
+2. **`GET /api/users` had no auth check.** Listing every user's
+   name/email/username/permissions required no login. Now requires
+   `requireAuth` (any logged-in user - `AddTaskModal.tsx` and
+   `AdminPortal.tsx` both need this list while assigning tasks, so it's
+   not admin-only).
+3. **Session/browser IDs were generated with `Math.random()`**
+   (`LoginForm.tsx`, `AdminPortal.tsx`), which isn't a CSPRNG and is
+   predictable. Since these IDs double as bearer tokens, switched to
+   `crypto.randomUUID()`.
+4. **Every `api/*.ts` route now uses `SUPABASE_SERVICE_ROLE_KEY`** via the
+   new `api/_lib/supabaseAdmin.ts`, instead of the public anon key. This
+   app has its own session system rather than Supabase Auth, so there's no
+   Supabase JWT to write RLS policies against - meaning the anon key
+   (which ships in client bundles and was previously exposed when this
+   repo was public) could otherwise read/write `custom_users`,
+   `user_sessions`, `aarshjul_tasks`, and `app_settings` directly through
+   Supabase's REST API, bypassing every check in this file entirely. See
+   `supabase/migrations/0001_enable_rls.sql`.
+
+### Extra deploy step for the follow-up fixes
+
+5. **Run `supabase/migrations/0001_enable_rls.sql`** in the Supabase SQL
+   editor for this project.
+6. **Set `SUPABASE_SERVICE_ROLE_KEY`** in Vercel → Settings → Environment
+   Variables (value from Supabase → Settings → API → `service_role`).
+   **Do this before or immediately after step 5** — once RLS is enabled,
+   requests still using the anon key will start failing (fails closed, not
+   open) until this is set.
 
 ## Known remaining gaps (not fixed in this pass)
 

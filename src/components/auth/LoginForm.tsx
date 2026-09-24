@@ -14,9 +14,12 @@ interface LoginFormProps {
 // Admin users who can always log in / force login (kept in sync with api/_lib/auth.ts)
 const ADMIN_USERS = ['admin', 'Brian'];
 
-// Generate a unique session ID
+// Generate a unique session ID. This doubles as the bearer token sent as
+// `Authorization: Bearer <sessionId>` (see api/_lib/auth.ts), so it must be
+// unguessable - crypto.randomUUID() (CSPRNG-backed), not Math.random()
+// (not cryptographically secure, and predictable).
 const generateSessionId = () => {
-  return `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`;
+  return `sess_${crypto.randomUUID()}`;
 };
 
 // Generate or get unique browser/tab ID
@@ -25,7 +28,7 @@ const generateSessionId = () => {
 const getBrowserId = () => {
   let browserId = sessionStorage.getItem('browserId');
   if (!browserId) {
-    browserId = `browser_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`;
+    browserId = `browser_${crypto.randomUUID()}`;
     sessionStorage.setItem('browserId', browserId);
   }
   return browserId;

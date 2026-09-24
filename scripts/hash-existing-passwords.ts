@@ -14,20 +14,23 @@
  *   - Hashes anything else and writes it back
  *
  * Usage:
- *   SUPABASE_URL=... SUPABASE_ANON_KEY=... npx tsx scripts/hash-existing-passwords.ts
+ *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npx tsx scripts/hash-existing-passwords.ts
  *
- * (Uses the same env vars as the rest of the app - see .env.example.
- * If you only have VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY set,
- * those are picked up too.)
+ * Needs SUPABASE_SERVICE_ROLE_KEY, not the anon key - once Row Level
+ * Security is enabled (see supabase/migrations/0001_enable_rls.sql), the
+ * anon key can no longer read or write custom_users at all.
  */
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  || process.env.SUPABASE_ANON_KEY
+  || process.env.VITE_SUPABASE_PUBLISHABLE_KEY
+  || '';
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Missing SUPABASE_URL / SUPABASE_ANON_KEY (or VITE_ equivalents) in the environment.');
+  console.error('❌ Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY in the environment.');
   process.exit(1);
 }
 
