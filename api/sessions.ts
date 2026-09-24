@@ -10,9 +10,9 @@
  * - Admin users can force login (which terminates other sessions)
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabaseAdmin as supabase } from './_lib/supabaseAdmin';
-import { applyCors, requireAdmin } from './_lib/auth';
-import { verifyCredentials } from './_lib/credentials';
+import { supabaseAdmin as supabase } from './_lib/supabaseAdmin.js';
+import { applyCors, requireAdmin } from './_lib/auth.js';
+import { verifyCredentials } from './_lib/credentials.js';
 
 // Session timeout in milliseconds (30 minutes of inactivity)
 const SESSION_TIMEOUT = 30 * 60 * 1000;

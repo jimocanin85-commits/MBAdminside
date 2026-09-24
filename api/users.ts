@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabaseAdmin as supabase } from './_lib/supabaseAdmin';
-import { applyCors, requireAuth, requireAdmin } from './_lib/auth';
-import { hashPassword } from './_lib/passwords';
+import { supabaseAdmin as supabase } from './_lib/supabaseAdmin.js';
+import { applyCors, requireAuth, requireAdmin } from './_lib/auth.js';
+import { hashPassword } from './_lib/passwords.js';
 
 // Public-safe shape returned to the client. `password`/hash is NEVER
 // included - previously this leaked every user's plaintext password.

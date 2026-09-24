@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import nodemailer from 'nodemailer';
-import { applyCors, requireAuth } from './_lib/auth';
+import { applyCors, requireAuth } from './_lib/auth.js';
 
 // Maileroo SMTP Configuration
 // Get these from Maileroo: Sending Domains → SMTP Credentials

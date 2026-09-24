@@ -5,8 +5,8 @@
  * itself - otherwise a client could skip /api/login entirely and POST
  * straight to /api/sessions with any username to mint a valid session).
  */
-import { supabaseAdmin as supabase } from './supabaseAdmin';
-import { verifyPassword } from './passwords';
+import { supabaseAdmin as supabase } from './supabaseAdmin.js';
+import { verifyPassword } from './passwords.js';
 
 const ADMIN_USERS = ['admin', 'Brian'];
 
