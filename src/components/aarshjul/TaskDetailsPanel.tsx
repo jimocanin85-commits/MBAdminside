@@ -60,6 +60,8 @@ interface TaskDetailsPanelProps {
   onDeleteSubtask: (taskId: string, subtaskId: string) => void;
   onAddSubtask: (taskId: string, title: string) => void;
   showTimestamps?: boolean;
+  /** Hide the panel's own "Ny opgave" button when the page already has one. */
+  showAddButton?: boolean;
 }
 
 const MONTHS = [
@@ -107,7 +109,8 @@ const TaskDetailsPanel = ({
   onEditSubtask,
   onDeleteSubtask,
   onAddSubtask,
-  showTimestamps = false
+  showTimestamps = false,
+  showAddButton = true
 }: TaskDetailsPanelProps) => {
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
@@ -203,9 +206,10 @@ const TaskDetailsPanel = ({
             <button
               onClick={() => onToggleTask(task.id)}
               className="mt-1 shrink-0"
+              aria-label={task.completed ? `Markér "${task.title}" som ikke færdig` : `Markér "${task.title}" som færdig`}
             >
               {task.completed ? (
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-success" />
               ) : (
                 <Circle className="h-5 w-5 text-muted-foreground hover:text-primary" />
               )}
@@ -216,7 +220,7 @@ const TaskDetailsPanel = ({
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <h4 className={cn(
-                    "font-medium truncate",
+                    "font-semibold break-words",
                     task.completed && "line-through text-muted-foreground"
                   )}>
                     {task.title}
@@ -241,7 +245,7 @@ const TaskDetailsPanel = ({
                       {task.assignedUsers.map(user => (
                         <span 
                           key={user}
-                          className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full"
+                          className="inline-flex items-center gap-1 text-xs bg-accent text-accent-foreground px-2 py-0.5 rounded-full"
                         >
                           <User className="h-3 w-3" />
                           {user}
@@ -329,7 +333,7 @@ const TaskDetailsPanel = ({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 shrink-0 text-green-600 hover:text-green-700"
+                            className="h-6 w-6 shrink-0 text-success hover:text-success"
                             onClick={() => saveSubtaskEdit(task.id, subtask.id)}
                           >
                             <Check className="h-3.5 w-3.5" />
@@ -395,7 +399,7 @@ const TaskDetailsPanel = ({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 shrink-0 text-green-600 hover:text-green-700"
+                        className="h-6 w-6 shrink-0 text-success hover:text-success"
                         onClick={() => saveNewSubtask(task.id)}
                         disabled={!newSubtaskTitle.trim()}
                       >
@@ -435,16 +439,18 @@ const TaskDetailsPanel = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">{MONTHS[month]}</h2>
+          <h2 className="heading-display text-3xl">{MONTHS[month]}</h2>
           <p className="text-sm text-muted-foreground">
             {monthTasks.length} {monthTasks.length === 1 ? 'opgave' : 'opgaver'}
             {completedTasks.length > 0 && ` • ${completedTasks.length} færdig`}
           </p>
         </div>
-        <Button onClick={onAddTask} className="gap-2">
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Ny opgave</span>
-        </Button>
+        {showAddButton && (
+          <Button onClick={onAddTask} className="gap-2">
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Ny opgave</span>
+          </Button>
+        )}
       </div>
 
       {/* Task lists */}
@@ -453,7 +459,7 @@ const TaskDetailsPanel = ({
           <CardContent className="p-8 text-center">
             <p className="text-muted-foreground">Ingen opgaver for {MONTHS[month]}</p>
             <p className="text-sm text-muted-foreground mt-2">
-              Klik på "Ny opgave" for at tilføje en opgave
+              Brug "Ny opgave" for at tilføje en opgave
             </p>
           </CardContent>
         </Card>

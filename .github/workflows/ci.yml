@@ -1,0 +1,57 @@
+# Runs on every pull request and on every change to main.
+# A red result here means the site would not build or deploy - fix it before merging.
+name: Tjek
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    # "bash" (rather than the default) makes a step fail when the command
+    # before "| tee" fails.
+    shell: bash
+
+jobs:
+  build:
+    name: Byg og typetjek
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      # Same command Vercel uses (see vercel.json). `npm ci` would be stricter,
+      # but package-lock.json is missing bcryptjs and @types/bcryptjs; switch
+      # to `npm ci` once someone has run `npm install` and committed the lock.
+      - name: Installér pakker
+        run: npm install --legacy-peer-deps --no-audit --no-fund 2>&1 | tee step.log
+
+      - name: Højst 12 serverfunktioner
+        run: npm run check:functions 2>&1 | tee step.log
+
+      - name: Typetjek
+        run: npm run typecheck 2>&1 | tee step.log
+
+      - name: Byg
+        run: npm run build 2>&1 | tee step.log
+
+      # Puts the end of the failing step's output at the top of the run
+      # summary, so the reason is visible without opening the full log.
+      - name: Vis fejlen
+        if: failure()
+        run: |
+          message=$(tail -n 60 step.log | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')
+          echo "::error title=Automatisk tjek fejlede::${message}"

@@ -65,6 +65,75 @@ The application will be available at `http://localhost:8080`
 └── ...
 ```
 
+## How the app is organised
+
+- `src/pages/` - one file per page (Forside, Frivillige, Filer, Årshjul, Referater, admin pages)
+- `src/components/layout/` - the frame around every page: sidebar, bottom bar on phones, page header
+- `src/context/AuthContext.tsx` - login, session and admin mode
+- `src/context/PortalContext.tsx` - which sections are shown, and the club's own links
+- `src/lib/api.ts` - `apiFetch()`, which adds the login token to every request
+- `src/index.css` - the colour theme (light and dark). Change a colour there and it changes everywhere
+- `api/` - serverless functions (Vercel)
+
+## Admin mode
+
+Admin mode unlocks "Tilpas portal" (choose which sections everyone sees, their order, and custom links),
+deleting files, logs and - for the admin accounts - user management.
+
+- The admin accounts (`admin`, `Brian`) switch it on from the user menu without a code.
+- Other users need the admin code. It is verified on the server against `ADMIN_CODE_HASH`
+  (see `.env.example`); if that variable is not set, only the admin accounts can use admin mode.
+- The server enforces it: saving the layout and deleting files are rejected without admin mode.
+
+## Who may do what
+
+Access is checked on the server, not just hidden in the menu:
+
+| Section (ticked off per user under "Brugere") | Server routes it opens |
+|---|---|
+| `frivillig` | volunteers' spreadsheets in `Frivillige/`: list, open, upload |
+| `referater` | minutes in `Referater/<year>/`: list, open, upload |
+| `aarshjul` | tasks and task notifications |
+
+Deleting a file also needs admin mode. Uploads are only accepted into those two folders.
+The rules live in `api/_lib/auth.ts` (`requirePermission`) and `api/_lib/files.ts`.
+
+## Logging in
+
+- A login belongs to one browser tab and survives a reload. Closing the tab forgets it; the server
+  ends a session after 30 minutes without activity.
+- One session per user. Logging in somewhere else asks "continue here?" and then ends the other
+  session (the admin accounts skip the question). The tab that lost its session is returned to the
+  login page the next time it talks to the server.
+- Wrong passwords are counted (`api/_lib/loginGuard.ts`): 8 for the same user from the same address,
+  or 40 for the same user from anywhere, within 15 minutes, and further attempts are refused until
+  the 15 minutes have passed. The counts are kept in the `app_settings` table.
+- Task notifications are addressed by username; the server looks up the address
+  (`api/send-notification.ts`). The admin accounts' addresses are set under "Brugere" and stored on
+  the server.
+
+## File storage (Backblaze B2)
+
+- All Backblaze calls live in `api/_lib/backblaze.ts`; the file routes only decide who may do what.
+- "Fillager" in admin mode runs `POST /api/storage-check`: it saves, fetches and removes a test file
+  with that same code and reports each step. Run it after changing a key. See `BACKBLAZE_SETUP.md`.
+- A save is only reported as done when Backblaze has confirmed it. Uploads carry a checksum, lists
+  follow paging, deleting removes every stored version, and every call has a time limit.
+- Files pass through the server, and Vercel caps a request at 4.5 MB, so the practical limit is
+  about 3 MB per file.
+
+## Checks before every deployment
+
+- `npm run check:functions` fails when `api/` holds more serverless functions than Vercel's plan
+  allows (12). It runs automatically before `npm run build`. Shared code belongs in `api/_lib/`,
+  which does not count.
+- `npm run typecheck` type-checks the app and the API.
+- `.github/workflows/ci.yml` runs both, plus the build, on every pull request and on every change
+  to `main`. A red result means the site would not deploy.
+
+Never write keys or passwords into a file in this repository, not even in a guide or a test
+script. They go in Vercel → Settings → Environment Variables (see `.env.example` for the names).
+
 ## Deployment
 
 Build the project for production:

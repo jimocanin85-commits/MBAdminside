@@ -3,6 +3,8 @@
  * Uses Vercel Serverless Functions
  */
 
+import { authHeaders, reportUnauthorized } from '@/lib/api';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 interface ApiResponse<T = any> {
@@ -28,10 +30,11 @@ class ApiClient {
     // Extract method and body from options
     const { method = 'GET', body, headers, ...restOptions } = options;
     
-    // Attach the caller's session token automatically so every route that
-    // requires auth (see api/_lib/auth.ts) works without every call site
-    // having to remember to add the header itself.
-    const sessionId = typeof window !== 'undefined' ? localStorage.getItem('sessionId') : null;
+    // Attach the caller's session token (and admin-mode token, when admin
+    // mode is on) automatically so every route that requires auth (see
+    // api/_lib/auth.ts) works without every call site having to remember
+    // to add the headers itself.
+    const identity: Record<string, string> = typeof window !== 'undefined' ? authHeaders() : {};
 
     // Only include body if method is not GET/HEAD
     const requestOptions: RequestInit = {
@@ -39,7 +42,7 @@ class ApiClient {
       ...restOptions,
       headers: {
         'Content-Type': 'application/json',
-        ...(sessionId ? { 'Authorization': `Bearer ${sessionId}` } : {}),
+        ...identity,
         ...headers,
       },
     };
@@ -52,8 +55,11 @@ class ApiClient {
     const response = await fetch(url, requestOptions);
 
     if (!response.ok) {
+      // A 401 on a request that carried a session means the session has ended.
+      if (response.status === 401 && identity['Authorization']) reportUnauthorized();
       const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(error.error || `HTTP ${response.status}`);
+      // Prefer the server's explanation (written for people) over its error code.
+      throw new Error(error.message || error.error || `HTTP ${response.status}`);
     }
 
     return response.json();
@@ -89,7 +95,7 @@ class ApiClient {
         return { 
           data: null, 
           error: typeof response.error === 'string' 
-            ? { message: response.error } 
+            ? { message: typeof response.message === 'string' ? response.message : response.error } 
             : response.error 
         };
       }

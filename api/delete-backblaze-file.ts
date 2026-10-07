@@ -1,6 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { applyCors, requireAuth } from './_lib/auth.js';
+import { requireAdminMode } from './_lib/adminMode.js';
+import { deleteFile, fileNameById, storageErrorBody } from './_lib/backblaze.js';
+import { canAccessFile, isValidFileId } from './_lib/files.js';
 
+/**
+ * POST /api/delete-backblaze-file  { fileId, fileName }
+ * Removes a file for good, every stored version of it. Needs admin mode
+ * and access to the section the file belongs to.
+ */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res);
 
@@ -15,68 +23,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const { fileName, fileId } = req.body || {};
+  if (!fileName || !isValidFileId(fileId)) {
+    return res.status(400).json({ error: 'fileName and fileId are required' });
+  }
+
   try {
-    const { fileName, fileId } = req.body;
-
-    if (!fileName || !fileId) {
-      return res.status(400).json({ error: 'fileName and fileId are required' });
+    // The browser only knows the short display name ("Navn.xlsx"), while
+    // Backblaze needs the full stored name ("Frivillige/Navn.xlsx"). Look
+    // the real name up from the id, and use it for the access check too.
+    const storedName = await fileNameById(fileId);
+    if (!storedName) {
+      return res.status(404).json({ success: false, error: 'NOT_FOUND', message: 'Filen findes ikke.' });
     }
-
-    const keyId = process.env.BACKBLAZE_KEY_ID;
-    const applicationKey = process.env.BACKBLAZE_APPLICATION_KEY;
-
-    if (!keyId || !applicationKey) {
-      return res.status(500).json({ error: 'Backblaze credentials not configured' });
-    }
-
-    // Authorize
-    const authString = Buffer.from(`${keyId}:${applicationKey}`).toString('base64');
-    const authResponse = await fetch('https://api.backblazeb2.com/b2api/v2/b2_authorize_account', {
-      method: 'GET',
-      headers: { 'Authorization': `Basic ${authString}` }
-    });
-
-    if (!authResponse.ok) {
-      return res.status(authResponse.status).json({ error: 'Backblaze authorization failed' });
-    }
-
-    const authData = await authResponse.json();
-    const { authorizationToken, apiUrl } = authData;
-
-    // Delete file
-    const deleteResponse = await fetch(`${apiUrl}/b2api/v2/b2_delete_file_version`, {
-      method: 'POST',
-      headers: {
-        'Authorization': authorizationToken,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        fileName: fileName,
-        fileId: fileId
-      })
-    });
-
-    if (!deleteResponse.ok) {
-      const errorText = await deleteResponse.text();
-      return res.status(deleteResponse.status).json({ 
-        error: 'Delete failed', 
-        details: errorText 
+    if (!(await canAccessFile(session, storedName))) {
+      return res.status(403).json({
+        success: false,
+        error: 'FORBIDDEN',
+        message: 'Du har ikke adgang til denne fil.'
       });
     }
 
-    const deleteResult = await deleteResponse.json();
+    // Deleting a stored file is permanent, so it needs admin mode. The
+    // confirmation code for this used to be checked only in the browser.
+    if (!requireAdminMode(req, res, session)) return;
+
+    // Every save adds a version. Removing only the newest one made the
+    // previous version show up again, so remove them all.
+    const removedVersions = await deleteFile(storedName);
 
     return res.status(200).json({
       success: true,
       message: 'File deleted successfully',
-      fileId: deleteResult.fileId,
-      fileName: deleteResult.fileName
+      fileId,
+      fileName: storedName,
+      removedVersions
     });
-
   } catch (error) {
-    console.error('Error deleting file:', error);
-    return res.status(500).json({ 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    });
+    const { status, body } = storageErrorBody(error);
+    return res.status(status).json(body);
   }
 }

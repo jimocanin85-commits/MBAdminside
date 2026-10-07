@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 
 export interface User {
@@ -83,12 +84,8 @@ export const CreateUserDialog = ({ open, onOpenChange, onUserCreated, useCloud =
 
       if (useCloud) {
         // Create via API (Supabase)
-        const response = await fetch(`${API_BASE}/users`, {
+        const response = await apiFetch(`${API_BASE}/users`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('sessionId')}`
-          },
           body: JSON.stringify({
             firstName: firstName.trim(),
             lastName: lastName.trim(),

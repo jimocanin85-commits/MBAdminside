@@ -13,12 +13,12 @@ For your production deployment to work, you MUST add these environment variables
 
 ### Variable 1:
 - **Name:** `BACKBLAZE_KEY_ID`
-- **Value:** `fcf60303e564`
+- **Value:** your key ID from Backblaze → Application Keys (never write it in this file)
 - **Environments:** ✅ Production ✅ Preview ✅ Development
 
 ### Variable 2:
 - **Name:** `BACKBLAZE_APPLICATION_KEY`
-- **Value:** `0032cce8f9a80a34e1a4dfb6293880a86c20112d58`
+- **Value:** your application key from Backblaze → Application Keys (never write it in this file)
 - **Environments:** ✅ Production ✅ Preview ✅ Development
 
 ### Variable 3:

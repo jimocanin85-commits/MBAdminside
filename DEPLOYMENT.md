@@ -1,144 +1,45 @@
-# Deployment Guide for MBAdminside
+# Deployment
 
-This guide covers multiple ways to deploy your project so it can be accessed externally.
+The portal runs on **Vercel**. Nothing else is used.
 
-## Quick Deploy Options
+It has to be Vercel (or another host that can run the functions in `api/`): login, users, the
+årshjul and the file storage all go through those functions. A plain static host - Netlify,
+Cloudflare Pages, GitHub Pages, an FTP upload of `dist/` - would show the login page and nothing
+would work behind it.
 
-### Option 1: Vercel (Recommended - Easiest)
+## How a change goes live
 
-**Steps:**
-1. Go to [vercel.com](https://vercel.com) and sign up/login with GitHub
-2. Click "Add New Project"
-3. Import your repository: `jimocanin85-commits/MBAdminside`
-4. Vercel will auto-detect Vite settings
-5. Add environment variables (if needed):
-   - `BACKBLAZE_KEY_ID` - Backblaze B2 Key ID (required for file storage)
-   - `BACKBLAZE_APPLICATION_KEY` - Backblaze B2 Application Key (required for file storage)
-   - `BACKBLAZE_BUCKET_NAME` - Backblaze B2 Bucket Name (required for file storage)
-   - `DATABASE_URL` - Neon PostgreSQL connection string (optional, for database features)
-6. Click "Deploy"
+1. A pull request gets its own preview address from Vercel, and GitHub runs the checks in
+   `.github/workflows/ci.yml` (function count, type check, build).
+2. Merging to `main` deploys to production.
 
-**Note:** See [BACKBLAZE_SETUP.md](./BACKBLAZE_SETUP.md) for detailed Backblaze setup instructions.
+A red check means the site would not deploy. See "Checks before every deployment" in `README.md`.
 
-**Result:** Your site will be live at `https://mbadminside.vercel.app` (or your custom domain)
+## Settings in Vercel
 
----
+Set under **Settings → Environment Variables**, for **Production and Preview**. `.env.example`
+lists every one with an explanation.
 
-### Option 2: Netlify
+| Needed for | Variables |
+|---|---|
+| Login and data | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_PASSWORD_HASH`, `BRIAN_PASSWORD_HASH`, `ALLOWED_ORIGIN` |
+| File storage | `BACKBLAZE_KEY_ID`, `BACKBLAZE_APPLICATION_KEY`, `BACKBLAZE_BUCKET_NAME` |
+| Admin code for ordinary users (optional) | `ADMIN_CODE_HASH` |
+| Task mails (optional) | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME` |
 
-**Steps:**
-1. Go to [netlify.com](https://netlify.com) and sign up/login with GitHub
-2. Click "Add new site" → "Import an existing project"
-3. Select your repository: `jimocanin85-commits/MBAdminside`
-4. Build settings (auto-detected):
-   - Build command: `npm run build`
-   - Publish directory: `dist`
-5. Add environment variables in Site settings → Environment variables
-6. Click "Deploy site"
+A changed variable only takes effect after a new deployment (Deployments → Redeploy).
 
-**Result:** Your site will be live at `https://random-name.netlify.app`
+- First-time setup and the security checklist: `SECURITY_FIXES.md`
+- File storage, and how to check that it works: `BACKBLAZE_SETUP.md`
 
----
+## Limits to know about
 
-### Option 3: Cloudflare Pages
+- Vercel's Hobby plan allows 12 serverless functions per deployment. `npm run check:functions`
+  guards this; shared code goes in `api/_lib/`, which does not count.
+- A request to a function may be at most 4.5 MB, so files up to about 3 MB can be stored.
 
-**Steps:**
-1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) → Pages
-2. Click "Create a project" → "Connect to Git"
-3. Select GitHub and authorize
-4. Select repository: `jimocanin85-commits/MBAdminside`
-5. Build settings:
-   - Framework preset: Vite
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-6. Add environment variables
-7. Click "Save and Deploy"
+## Netlify
 
-**Result:** Your site will be live at `https://mbadminside.pages.dev`
-
----
-
-### Option 4: GitHub Pages
-
-**Steps:**
-1. Build the project:
-   ```bash
-   npm run build
-   ```
-
-2. Install gh-pages:
-   ```bash
-   npm install --save-dev gh-pages
-   ```
-
-3. Add to `package.json` scripts:
-   ```json
-   "deploy": "npm run build && gh-pages -d dist"
-   ```
-
-4. Deploy:
-   ```bash
-   npm run deploy
-   ```
-
-5. Enable GitHub Pages in repository settings:
-   - Go to Settings → Pages
-   - Source: Deploy from a branch → `gh-pages` branch
-
-**Result:** Your site will be live at `https://jimocanin85-commits.github.io/MBAdminside`
-
----
-
-## Manual Build & Deploy
-
-If you want to deploy manually to any hosting service:
-
-1. **Build the project:**
-   ```bash
-   npm run build
-   ```
-   This creates a `dist` folder with production-ready files.
-
-2. **Upload the `dist` folder** to your hosting service:
-   - Shared hosting: Upload via FTP
-   - VPS: Copy files to web server directory (nginx/apache)
-   - Any static hosting: Upload the `dist` folder contents
-
----
-
-## Environment Variables
-
-Make sure to set these environment variables in your hosting platform:
-
-### Required for File Storage (Backblaze B2)
-- `BACKBLAZE_KEY_ID` - Your Backblaze B2 Key ID
-- `BACKBLAZE_APPLICATION_KEY` - Your Backblaze B2 Application Key  
-- `BACKBLAZE_BUCKET_NAME` - Your Backblaze B2 Bucket Name
-
-### Optional (for database features)
-- `DATABASE_URL` - Neon PostgreSQL connection string
-
-**See [BACKBLAZE_SETUP.md](./BACKBLAZE_SETUP.md) for detailed setup instructions.**
-
----
-
-## Custom Domain
-
-All platforms above support custom domains:
-- Vercel: Settings → Domains
-- Netlify: Domain settings → Add custom domain
-- Cloudflare: Custom domains → Add domain
-- GitHub Pages: Settings → Pages → Custom domain
-
----
-
-## Recommended: Vercel
-
-Vercel is recommended because:
-- ✅ Free tier with generous limits
-- ✅ Automatic deployments on git push
-- ✅ Fast global CDN
-- ✅ Easy environment variable management
-- ✅ Custom domains included
-- ✅ SSL certificates automatic
-
+Netlify is not used. If a Netlify site is still connected to the repository it will keep building
+a preview for every pull request; those previews cannot log in (no `api/`). To stop them, delete
+the site in Netlify, or remove Netlify under GitHub → Settings → Applications.

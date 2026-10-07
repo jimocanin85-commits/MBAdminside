@@ -1,5 +1,5 @@
 /**
- * Password hashing helpers (bcrypt). Used by api/login.ts and api/users.ts
+ * Password hashing helpers (bcrypt). Used by api/sessions.ts (login) and api/users.ts
  * so passwords are never stored or compared as plaintext.
  */
 import bcrypt from 'bcryptjs';

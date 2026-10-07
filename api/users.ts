@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { supabaseAdmin as supabase } from './_lib/supabaseAdmin.js';
-import { applyCors, requireAuth, requireAdmin } from './_lib/auth.js';
+import { ADMIN_USERS, applyCors, requireAuth, requireAdmin } from './_lib/auth.js';
 import { hashPassword } from './_lib/passwords.js';
+import { SYSTEM_EMAILS_KEY, getSetting, setSetting } from './_lib/settings.js';
 
 // Public-safe shape returned to the client. `password`/hash is NEVER
 // included - previously this leaked every user's plaintext password.
@@ -50,7 +51,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(500).json({ error: error.message });
       }
 
-      return res.status(200).json({ success: true, data: (data || []).map(toPublicUser) });
+      // The admin accounts are not rows in custom_users, so the addresses
+      // their task notifications go to are kept separately. Only admins see
+      // them. (They used to live in one browser's localStorage, so mails
+      // only went out when the task was created on that same device.)
+      const systemEmails = session.isAdmin
+        ? (await getSetting<Record<string, string>>(SYSTEM_EMAILS_KEY)) || {}
+        : undefined;
+
+      return res.status(200).json({ success: true, data: (data || []).map(toPublicUser), systemEmails });
     }
 
     // Everything below creates/modifies/deletes accounts - admin only.
@@ -106,6 +115,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // PUT /api/users - Update user
     if (req.method === 'PUT') {
       const { id, firstName, lastName, email, username, password, permissions, isActive } = req.body;
+
+      // PUT { systemUser, email } - set the notification address of an admin account
+      if (req.body.systemUser !== undefined) {
+        const systemUser = String(req.body.systemUser);
+        const address = typeof email === 'string' ? email.trim() : '';
+        if (!ADMIN_USERS.includes(systemUser)) {
+          return res.status(400).json({ error: 'Unknown system user' });
+        }
+        if (address && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
+          return res.status(400).json({ error: 'Invalid email address' });
+        }
+        const current = (await getSetting<Record<string, string>>(SYSTEM_EMAILS_KEY)) || {};
+        const next = { ...current, [systemUser]: address };
+        if (!(await setSetting(SYSTEM_EMAILS_KEY, next))) {
+          return res.status(500).json({ error: 'Could not save the address' });
+        }
+        return res.status(200).json({ success: true, systemEmails: next });
+      }
 
       if (!id) {
         return res.status(400).json({ error: 'User ID required' });

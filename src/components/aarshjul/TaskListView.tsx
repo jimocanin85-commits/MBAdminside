@@ -248,7 +248,7 @@ const TaskListView = ({
             className="mt-0.5 shrink-0"
           >
             {task.completed ? (
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <CheckCircle2 className="h-5 w-5 text-success" />
             ) : (
               <Circle className="h-5 w-5 text-muted-foreground hover:text-primary" />
             )}
@@ -277,7 +277,7 @@ const TaskListView = ({
                     {task.assignedUsers.map(user => (
                       <span 
                         key={user}
-                        className="inline-flex items-center gap-0.5 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full"
+                        className="inline-flex items-center gap-0.5 text-xs bg-accent text-accent-foreground px-1.5 py-0.5 rounded-full"
                       >
                         <User className="h-2.5 w-2.5" />
                         {user}
@@ -372,7 +372,7 @@ const TaskListView = ({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-5 w-5 shrink-0 text-green-600 hover:text-green-700"
+                          className="h-5 w-5 shrink-0 text-success hover:text-success"
                           onClick={() => saveSubtaskEdit(task.id, subtask.id)}
                         >
                           <Check className="h-3 w-3" />
@@ -438,7 +438,7 @@ const TaskListView = ({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-5 w-5 shrink-0 text-green-600 hover:text-green-700"
+                      className="h-5 w-5 shrink-0 text-success hover:text-success"
                       onClick={() => saveNewSubtask(task.id)}
                       disabled={!newSubtaskTitle.trim()}
                     >
@@ -483,11 +483,11 @@ const TaskListView = ({
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-orange-500" />
+              <div className="w-2 h-2 rounded-full bg-warning" />
               {pendingTasks} igangværende
             </span>
             <span className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-green-500" />
+              <div className="w-2 h-2 rounded-full bg-success" />
               {completedTasks} færdige
             </span>
           </div>
@@ -537,7 +537,7 @@ const TaskListView = ({
                           {monthName}
                         </span>
                         {isCurrentMonth && (
-                          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                          <span className="text-xs bg-accent text-accent-foreground px-2 py-0.5 rounded-full">
                             Nu
                           </span>
                         )}
@@ -548,8 +548,8 @@ const TaskListView = ({
                             <span className={cn(
                               "text-xs font-medium px-2 py-0.5 rounded-full",
                               stats.completed === stats.total
-                                ? "bg-green-100 text-green-700"
-                                : "bg-orange-100 text-orange-700"
+                                ? "bg-success/15 text-success"
+                                : "bg-warning/15 text-warning"
                             )}>
                               {stats.completed}/{stats.total}
                             </span>

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/api";
 import { User } from "./CreateUserDialog";
 import { Loader2 } from "lucide-react";
 
@@ -60,12 +61,8 @@ export const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated, useClo
     try {
       if (useCloud) {
         // Update via API (Supabase)
-        const response = await fetch(`${API_BASE}/users`, {
+        const response = await apiFetch(`${API_BASE}/users`, {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('sessionId')}`
-          },
           body: JSON.stringify({
             id: user.id,
             email: email.trim(),

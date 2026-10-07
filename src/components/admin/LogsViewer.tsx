@@ -76,9 +76,9 @@ const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
       case 'error':
         return 'bg-destructive/10 border-destructive/20';
       case 'warn':
-        return 'bg-yellow-500/10 border-yellow-500/20';
+        return 'bg-warning/10 border-warning/25';
       case 'info':
-        return 'bg-blue-500/10 border-blue-500/20';
+        return 'bg-muted border-border';
       default:
         return 'bg-muted/50 border-border';
     }
@@ -247,7 +247,6 @@ const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
                         <details className="mt-3 group">
                           <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors list-none">
                             <span className="inline-flex items-center gap-1">
-                              <span>📦</span>
                               <span>Vis data ({Array.isArray(log.data) ? log.data.length : 1} elementer)</span>
                             </span>
                           </summary>
@@ -262,7 +261,6 @@ const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
                         <details className="mt-3 group">
                           <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors list-none">
                             <span className="inline-flex items-center gap-1">
-                              <span>🔍</span>
                               <span>Vis stack trace</span>
                             </span>
                           </summary>
@@ -294,8 +292,8 @@ const LogsViewer = ({ open, onOpenChange }: LogsViewerProps) => {
                         key={event.id}
                         className={`border rounded-lg p-4 transition-all hover:shadow-md ${
                           event.action === 'login' 
-                            ? 'bg-green-500/10 border-green-500/20' 
-                            : 'bg-orange-500/10 border-orange-500/20'
+                            ? 'bg-success/10 border-success/25' 
+                            : 'bg-warning/10 border-warning/25'
                         }`}
                       >
                         <div className="flex items-start gap-3">

@@ -46,7 +46,7 @@ export function applyCors(req: VercelRequest, res: VercelResponse) {
 
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Admin-Token');
 }
 
 export interface VerifiedSession {
@@ -120,4 +120,54 @@ export async function requireAdmin(req: VercelRequest, res: VercelResponse): Pro
     return null;
   }
   return session;
+}
+
+// ---------------------------------------------------------------------------
+// Section permissions
+// ---------------------------------------------------------------------------
+
+export const ALL_PERMISSIONS = ['frivillig', 'referater', 'frivilligfest', 'aarshjul'] as const;
+export type Permission = (typeof ALL_PERMISSIONS)[number];
+
+/**
+ * The sections this session's user may use. Admin accounts have all of
+ * them; everyone else gets what an admin ticked off for them under
+ * "Brugere". A deactivated user has none, even if their session is still
+ * alive.
+ */
+export async function getPermissions(session: VerifiedSession): Promise<string[]> {
+  if (session.isAdmin) return [...ALL_PERMISSIONS];
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('custom_users')
+    .select('permissions, is_active')
+    .eq('username', session.username)
+    .single();
+
+  if (error || !data || data.is_active === false) return [];
+  return Array.isArray(data.permissions) ? data.permissions : [];
+}
+
+/**
+ * Require access to one section. Until now the sections were only hidden
+ * in the browser: any logged-in user could call every route directly, so
+ * someone with access to "Referater" alone could still download every
+ * volunteer's spreadsheet. Writes a 403 and returns false when access is
+ * missing, so callers can `if (!(await requirePermission(...))) return;`.
+ */
+export async function requirePermission(
+  res: VercelResponse,
+  session: VerifiedSession,
+  permission: Permission
+): Promise<boolean> {
+  const permissions = await getPermissions(session);
+  if (permissions.includes(permission)) return true;
+
+  res.status(403).json({
+    success: false,
+    error: 'FORBIDDEN',
+    message: 'Du har ikke adgang til denne sektion.'
+  });
+  return false;
 }

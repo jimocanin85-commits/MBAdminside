@@ -5,16 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/check-function-count.mjs && vite build",
     "build:dev": "vite build --mode development",
+    "check:functions": "node scripts/check-function-count.mjs",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.api.json",
     "lint": "eslint .",
     "preview": "vite preview",
-    "db:init": "tsx scripts/init-database.ts",
     "migrate:hash-passwords": "tsx scripts/hash-existing-passwords.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
-    "@neondatabase/serverless": "^1.0.2",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-aspect-ratio": "^1.1.7",

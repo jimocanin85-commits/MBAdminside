@@ -3,15 +3,21 @@
  * Handles single-session login limits - only one active session per user allowed
  * Admin and Brian can bypass limits and unlock other users' sessions
  * 
- * UNIQUE SESSION ENFORCEMENT:
+ * ONE SESSION PER USER:
  * - Each user can only have ONE active session at a time
  * - Sessions are tied to a specific browser/tab via browser_id
- * - When a user tries to login from another browser/tab, they get an error
- * - Admin users can force login (which terminates other sessions)
+ * - Logging in from another tab or device ends the other session: at once
+ *   for the admin accounts, and after the user confirms it for everyone else
+ * - Wrong passwords are counted and further attempts refused for a while
+ *   (_lib/loginGuard.ts)
+ *
+ * This route is also the login endpoint (POST with username + password).
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { supabaseAdmin as supabase } from './_lib/supabaseAdmin.js';
-import { applyCors, requireAdmin } from './_lib/auth.js';
+import { applyCors, requireAdmin, requireAuth } from './_lib/auth.js';
+import { checkAdminCode, issueAdminToken } from './_lib/adminMode.js';
+import { clearLoginFailures, loginLockedMinutes, recordLoginFailure } from './_lib/loginGuard.js';
 import { verifyCredentials } from './_lib/credentials.js';
 
 // Session timeout in milliseconds (30 minutes of inactivity)
@@ -110,13 +116,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // POST /api/sessions - Create a new session (login), validate session, or handle sendBeacon DELETE
     if (req.method === 'POST') {
+      // sendBeacon bodies can arrive as a plain string rather than parsed
+      // JSON; parse them here so the checks below see an object.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let body: any = req.body;
+      if (typeof body === 'string') {
+        try {
+          body = JSON.parse(body);
+        } catch {
+          return res.status(400).json({ error: 'Invalid JSON body' });
+        }
+      }
+      if (!body || typeof body !== 'object') {
+        return res.status(400).json({ error: 'Request body required' });
+      }
+
       // Handle sendBeacon DELETE requests (from beforeunload). sendBeacon
       // can't send an Authorization header, so this can only be trusted to
       // delete the one session whose ID the caller already knows (the
       // session_id itself acts as the proof) - never by username, which
       // would let anyone log out an arbitrary user with no auth at all.
-      if (req.body._method === 'DELETE') {
-        const { sessionId } = req.body;
+      if (body._method === 'DELETE') {
+        const { sessionId } = body;
 
         if (sessionId) {
           await deleteSession(sessionId);
@@ -126,9 +147,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).end();
       }
 
+      // Switch admin mode on. The code is verified here on the server (it
+      // used to be a string compared in the browser) and the caller gets a
+      // short-lived signed token back - see _lib/adminMode.ts.
+      if (body.action === 'admin-unlock') {
+        const session = await requireAuth(req, res);
+        if (!session) return;
+
+        const check = await checkAdminCode(session, body.code);
+        if (check.ok === false) {
+          if (check.reason === 'NOT_CONFIGURED') {
+            return res.status(503).json({
+              success: false,
+              error: 'ADMIN_CODE_NOT_CONFIGURED',
+              message: 'Admin-koden er ikke sat op på serveren endnu (ADMIN_CODE_HASH).'
+            });
+          }
+          if (check.reason === 'TOO_MANY_ATTEMPTS') {
+            return res.status(429).json({
+              success: false,
+              error: 'TOO_MANY_ATTEMPTS',
+              message: 'For mange forkerte forsøg. Prøv igen om lidt.'
+            });
+          }
+          return res.status(401).json({
+            success: false,
+            error: 'INVALID_CODE',
+            message: 'Forkert adgangskode'
+          });
+        }
+
+        const issued = issueAdminToken(session);
+        if (!issued) {
+          return res.status(500).json({ success: false, error: 'Server misconfigured' });
+        }
+
+        return res.status(200).json({
+          success: true,
+          token: issued.token,
+          expiresAt: issued.expiresAt,
+          isAdmin: session.isAdmin
+        });
+      }
+
       // Handle session validation request
-      if (req.body.action === 'validate') {
-        const { sessionId, browserId, username } = req.body;
+      if (body.action === 'validate') {
+        const { sessionId, browserId, username } = body;
         
         if (!sessionId || !browserId || !username) {
           return res.status(400).json({ 
@@ -163,6 +227,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         return res.status(200).json({ 
           valid: true, 
+          isAdmin: ADMIN_USERS.includes(session.username),
           session: {
             username: session.username,
             createdAt: session.created_at,
@@ -171,19 +236,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
       
-      const { username, password, sessionId, browserId, userAgent, forceLogin } = req.body;
+      const { password, sessionId, browserId, userAgent, takeOver } = body;
+      const username = typeof body.username === 'string' ? body.username.trim() : '';
 
       if (!username || !sessionId || !browserId) {
         return res.status(400).json({ error: 'Username, sessionId, and browserId are required' });
       }
 
-      // Re-verify credentials here too (not just in /api/login). Without
-      // this, anyone could skip /api/login and POST straight here with an
-      // arbitrary username to mint themselves a valid session.
+      // This is the login endpoint: credentials are verified here, on the
+      // server, before any session is created. (There used to be a separate
+      // /api/login that checked the same credentials first; it was folded
+      // into this route so the project stays within Vercel's limit of 12
+      // serverless functions per deployment on the Hobby plan.)
       if (!password) {
         return res.status(400).json({ error: 'Password is required' });
       }
-      const credCheck = await verifyCredentials(String(username), String(password));
+
+      // Too many wrong passwords lately? Refuse before even checking this
+      // one, so guessing cannot continue. See _lib/loginGuard.ts.
+      const lockedMinutes = await loginLockedMinutes(req, username);
+      if (lockedMinutes > 0) {
+        return res.status(429).json({
+          error: 'TOO_MANY_ATTEMPTS',
+          message: `For mange forkerte forsøg. Prøv igen om ${lockedMinutes} ${lockedMinutes === 1 ? 'minut' : 'minutter'}.`
+        });
+      }
+
+      const credCheck = await verifyCredentials(username, String(password));
       if (credCheck.ok === false) {
         if (credCheck.reason === 'USER_DISABLED') {
           return res.status(403).json({ error: 'USER_DISABLED', message: credCheck.message });
@@ -191,33 +270,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (credCheck.reason === 'SERVER_MISCONFIGURED') {
           return res.status(500).json({ error: 'Server misconfigured' });
         }
+        await recordLoginFailure(req, username);
         return res.status(401).json({ error: 'INVALID_CREDENTIALS' });
       }
+      await clearLoginFailures(req, username);
 
+      const isAdmin = credCheck.isAdmin;
 
-      // Check if user already has an active session
+      // Only one session per user. If there already is one:
       const existingSession = await getActiveSession(username);
-      
-      if (existingSession && !forceLogin) {
-        // Check if it's the same browser trying to reconnect
+
+      if (existingSession) {
         if (existingSession.browser_id === browserId) {
-          // Same browser - allow reconnection, update the session
+          // Same tab coming back - hand it its session again.
           await updateSessionActivity(existingSession.session_id);
           return res.status(200).json({ 
             success: true, 
+            isAdmin,
             data: existingSession,
             message: 'Session genoprettet'
           });
         }
-        
-        // Admin and Brian can always log in (force login)
-        if (ADMIN_USERS.includes(username)) {
-          // Clear existing session and create new one
-          await deleteSession(existingSession.session_id);
+
+        // Another tab or device. The caller has just proven the password,
+        // so they may end their own other session and continue here: the
+        // admin accounts always do, everyone else after saying yes to it
+        // (takeOver). Without that, a closed phone tab locked the user out
+        // for up to 30 minutes, until an admin unlocked them.
+        if (isAdmin || takeOver === true) {
+          await deleteSessionsForUser(username);
         } else {
           return res.status(409).json({ 
             error: 'SESSION_EXISTS',
-            message: 'Log ud fra den anden fane/browser først for at kunne logge ind her.',
+            message: 'Du er allerede logget ind i en anden fane eller på en anden enhed.',
             existingSession: {
               createdAt: existingSession.created_at,
               lastActivity: existingSession.last_activity,
@@ -258,14 +343,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           console.error('Error creating session:', error);
           // Fallback to in-memory
           inMemorySessions.push(newSession);
-          return res.status(201).json({ success: true, data: newSession });
+          return res.status(201).json({ success: true, isAdmin, data: newSession });
         }
 
-        return res.status(201).json({ success: true, data });
+        return res.status(201).json({ success: true, isAdmin, data });
       } else {
         // In-memory fallback
         inMemorySessions.push(newSession);
-        return res.status(201).json({ success: true, data: newSession });
+        return res.status(201).json({ success: true, isAdmin, data: newSession });
       }
     }
 
@@ -375,24 +460,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-// Helper function to get active session for a user
+// Helper function to get active session for a user (the most recent one,
+// should older duplicates exist)
 async function getActiveSession(username: string): Promise<Session | null> {
   if (supabase) {
     const { data, error } = await supabase
       .from('user_sessions')
       .select('*')
       .eq('username', username)
-      .single();
+      .order('last_activity', { ascending: false })
+      .limit(1);
 
-    if (error || !data) {
+    if (error || !data || data.length === 0) {
       // Check in-memory as fallback
       return inMemorySessions.find(s => s.username === username) || null;
     }
 
-    return data as Session;
+    return data[0] as Session;
   } else {
     return inMemorySessions.find(s => s.username === username) || null;
   }
+}
+
+// Helper function to end every session a user has
+async function deleteSessionsForUser(username: string) {
+  if (supabase) {
+    const { error } = await supabase
+      .from('user_sessions')
+      .delete()
+      .eq('username', username);
+
+    if (error) {
+      console.error('Error deleting sessions for user:', error);
+    }
+  }
+  removeSessionsWhere(inMemorySessions, s => s.username === username);
 }
 
 // Helper function to get session by ID and browser ID
