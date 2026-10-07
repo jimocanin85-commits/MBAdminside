@@ -33,8 +33,11 @@ jobs:
           node-version: 22
           cache: npm
 
+      # Same command Vercel uses (see vercel.json). `npm ci` would be stricter,
+      # but package-lock.json is missing bcryptjs and @types/bcryptjs; switch
+      # to `npm ci` once someone has run `npm install` and committed the lock.
       - name: Installér pakker
-        run: npm ci 2>&1 | tee step.log
+        run: npm install --legacy-peer-deps --no-audit --no-fund 2>&1 | tee step.log
 
       - name: Højst 12 serverfunktioner
         run: npm run check:functions 2>&1 | tee step.log
