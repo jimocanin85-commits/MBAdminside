@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { applyCors, requireAuth } from './_lib/auth.js';
 import { requireAdminMode } from './_lib/adminMode.js';
+import { canAccessFile, getStoredFileName, isValidFileId } from './_lib/files.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res);
@@ -19,7 +20,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { fileName, fileId } = req.body;
 
-    if (!fileName || !fileId) {
+    if (!fileName || !isValidFileId(fileId)) {
       return res.status(400).json({ error: 'fileName and fileId are required' });
     }
 
@@ -48,6 +49,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const authData = await authResponse.json();
     const { authorizationToken, apiUrl } = authData;
 
+    // The browser only knows the short display name ("Navn.xlsx"), while
+    // Backblaze needs the full stored name ("Frivillige/Navn.xlsx") and
+    // rejects a delete where name and id do not match. Look the real name
+    // up from the id, and use it for the access check as well.
+    const storedName = await getStoredFileName(apiUrl, authorizationToken, fileId);
+    if (!storedName) {
+      return res.status(404).json({ success: false, error: 'File not found' });
+    }
+    if (!(await canAccessFile(session, storedName))) {
+      return res.status(403).json({
+        success: false,
+        error: 'FORBIDDEN',
+        message: 'Du har ikke adgang til denne fil.'
+      });
+    }
+
     // Delete file
     const deleteResponse = await fetch(`${apiUrl}/b2api/v2/b2_delete_file_version`, {
       method: 'POST',
@@ -56,7 +73,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        fileName: fileName,
+        fileName: storedName,
         fileId: fileId
       })
     });

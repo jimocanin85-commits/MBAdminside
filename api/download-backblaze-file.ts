@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { applyCors, requireAuth } from './_lib/auth.js';
+import { canAccessFile, isValidFileId } from './_lib/files.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res);
@@ -18,7 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { fileName, fileId } = req.body;
 
-    if (!fileId) {
+    if (!isValidFileId(fileId)) {
       return res.status(400).json({ error: 'fileId is required' });
     }
 
@@ -45,7 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { authorizationToken, downloadUrl } = authData;
 
     // Download file directly by ID (no need for download authorization)
-    const downloadResponse = await fetch(`${authData.downloadUrl}/b2api/v2/b2_download_file_by_id?fileId=${fileId}`, {
+    const downloadResponse = await fetch(`${authData.downloadUrl}/b2api/v2/b2_download_file_by_id?fileId=${encodeURIComponent(fileId)}`, {
       headers: {
         'Authorization': authorizationToken
       }
@@ -53,6 +54,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!downloadResponse.ok) {
       return res.status(downloadResponse.status).json({ error: 'Failed to download file' });
+    }
+
+    // Backblaze tells us which file this id really is. Only hand it over if
+    // the caller has access to the section that folder belongs to - until
+    // now any logged-in user could fetch any file by its id.
+    let storedName = '';
+    try {
+      storedName = decodeURIComponent(downloadResponse.headers.get('x-bz-file-name') || '');
+    } catch {
+      storedName = '';
+    }
+    if (!storedName || !(await canAccessFile(session, storedName))) {
+      return res.status(403).json({
+        success: false,
+        error: 'FORBIDDEN',
+        message: 'Du har ikke adgang til denne fil.'
+      });
     }
 
     const fileBuffer = await downloadResponse.arrayBuffer();

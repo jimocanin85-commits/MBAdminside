@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { applyCors, requireAuth } from './_lib/auth.js';
+import { applyCors, requireAuth, requirePermission } from './_lib/auth.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res);
@@ -10,6 +10,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const session = await requireAuth(req, res);
   if (!session) return;
+  // Volunteers' spreadsheets hold names, phone numbers and birth dates.
+  if (!(await requirePermission(res, session, 'frivillig'))) return;
 
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });

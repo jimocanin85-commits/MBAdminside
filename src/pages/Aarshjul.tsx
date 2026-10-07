@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { RefreshCw, CircleDot, List, Plus, AlertCircle } from "lucide-react";
@@ -31,6 +31,9 @@ interface Task {
 
 type ViewMode = 'wheel' | 'list';
 
+// Copy of the last list fetched from the server, shown (read-only) when it cannot be reached.
+const CACHE_KEY = 'aarshjul_tasks';
+
 const Aarshjul = () => {
   const { isAdmin } = useAuth();
   // Only the admin accounts can see timestamps and the list view
@@ -44,10 +47,11 @@ const Aarshjul = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [useCloud] = useState(true);
   const [cloudError, setCloudError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('wheel');
   const [addTaskMonth, setAddTaskMonth] = useState<number>(0); // Month for adding task in list view
+  // Saves run one after another, in the order the changes were made.
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
 
   // Load tasks when the page opens. Everyone starts on the wheel; the admin
   // accounts can switch to the list with the toggle in the header.
@@ -59,159 +63,157 @@ const Aarshjul = () => {
   const loadTasks = async () => {
     setIsLoading(true);
     try {
-      if (useCloud) {
-        // Try to load from API
-        const response = await apiFetch('/tasks');
-        const result = await response.json();
-        
-        if (response.ok && result.success) {
-          setTasks(result.data || []);
-          setCloudError(null);
-          // Sync to localStorage
-          localStorage.setItem('aarshjul_tasks', JSON.stringify(result.data || []));
-        } else {
-          throw new Error(result.error || 'Failed to load tasks');
-        }
+      const response = await apiFetch('/tasks');
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setTasks(result.data || []);
+        setCloudError(null);
+        // Keep a copy to show if the server cannot be reached next time.
+        localStorage.setItem(CACHE_KEY, JSON.stringify(result.data || []));
       } else {
-        loadFromLocalStorage();
+        throw new Error(result.error || 'Failed to load tasks');
       }
     } catch (error) {
       console.error('Error loading tasks:', error);
       setCloudError(error instanceof Error ? error.message : 'Unknown error');
-      // Fallback to localStorage
-      loadFromLocalStorage();
+      loadCachedCopy();
     } finally {
       setIsLoading(false);
     }
   };
 
-  const loadFromLocalStorage = () => {
+  const loadCachedCopy = () => {
     try {
-      const saved = localStorage.getItem('aarshjul_tasks');
+      const saved = localStorage.getItem(CACHE_KEY);
       if (saved) {
         setTasks(JSON.parse(saved));
       }
     } catch (e) {
-      console.error('Error loading from localStorage:', e);
+      console.error('Error loading cached tasks:', e);
     }
   };
 
-  const saveTasks = async (newTasks: Task[]) => {
-    // Always save to localStorage first
-    localStorage.setItem('aarshjul_tasks', JSON.stringify(newTasks));
-    setTasks(newTasks);
-
-    if (useCloud && !cloudError) {
-      try {
-        const response = await apiFetch('/tasks', {
-          method: 'PUT',
-          body: JSON.stringify({ tasks: newTasks })
-        });
-        
-        if (!response.ok) {
-          console.error('Failed to save to cloud');
-          toast.error("Ændringen kunne ikke gemmes for alle - den ligger kun på denne enhed");
-        }
-      } catch (error) {
-        console.error('Error saving to cloud:', error);
-        toast.error("Ændringen kunne ikke gemmes for alle - den ligger kun på denne enhed");
-      }
+  /**
+   * Apply one change: show it at once, then save exactly that change on the
+   * server.
+   *
+   * Every change used to be saved by sending the whole year's tasks, which
+   * the server stored by deleting everything and inserting the list again.
+   * Two people working at the same time overwrote each other, and a failed
+   * insert emptied the year. Now each change is one small request, sent in
+   * the order it was made. If one fails, the list is fetched again so the
+   * screen never shows something the server does not have.
+   */
+  const commit = (nextTasks: Task[], send: () => Promise<Response>) => {
+    if (cloudError) {
+      toast.error("Opgaverne kan ikke ændres, før forbindelsen til serveren virker igen");
+      return false;
     }
+
+    setTasks(nextTasks);
+    localStorage.setItem(CACHE_KEY, JSON.stringify(nextTasks));
+
+    saveQueue.current = saveQueue.current.then(async () => {
+      try {
+        const response = await send();
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      } catch (error) {
+        console.error('Error saving task change:', error);
+        toast.error("Ændringen blev ikke gemt. Årshjulet er hentet igen fra serveren.");
+        await loadTasks();
+      }
+    });
+    return true;
+  };
+
+  /** Change one task and save only the fields that changed. */
+  const updateTask = (taskId: string, change: (task: Task) => Task, changedFields: (task: Task) => object) => {
+    const current = tasks.find(t => t.id === taskId);
+    if (!current) return;
+
+    const updated = { ...change(current), updatedAt: new Date().toISOString() };
+    commit(
+      tasks.map(t => (t.id === taskId ? updated : t)),
+      () => apiFetch('/tasks', { method: 'PUT', body: JSON.stringify({ id: taskId, ...changedFields(updated) }) })
+    );
   };
 
   const handleTaskCreated = (task: Task) => {
-    const newTasks = [...tasks, task];
-    saveTasks(newTasks);
+    commit(
+      [...tasks, task],
+      () => apiFetch('/tasks', { method: 'POST', body: JSON.stringify(task) })
+    );
   };
 
   const handleTaskUpdated = (updatedTask: Task) => {
-    const taskWithTimestamp = { ...updatedTask, updatedAt: new Date().toISOString() };
-    const newTasks = tasks.map(t => t.id === updatedTask.id ? taskWithTimestamp : t);
-    saveTasks(newTasks);
+    updateTask(
+      updatedTask.id,
+      () => updatedTask,
+      (task) => ({
+        title: task.title,
+        // null (not undefined) so an emptied description is cleared on the server too
+        description: task.description ?? null,
+        subtasks: task.subtasks,
+        assignedUsers: task.assignedUsers,
+        completed: task.completed,
+        month: task.month,
+      })
+    );
     setEditingTask(null);
   };
 
   const handleDeleteTask = (taskId: string) => {
-    const newTasks = tasks.filter(t => t.id !== taskId);
-    saveTasks(newTasks);
-    toast.success("Opgave slettet");
+    const saved = commit(
+      tasks.filter(t => t.id !== taskId),
+      () => apiFetch('/tasks', { method: 'DELETE', body: JSON.stringify({ id: taskId }) })
+    );
+    if (saved) toast.success("Opgave slettet");
   };
 
   const handleToggleTask = (taskId: string) => {
-    const newTasks = tasks.map(t => {
-      if (t.id === taskId) {
-        return { ...t, completed: !t.completed, updatedAt: new Date().toISOString() };
-      }
-      return t;
-    });
-    saveTasks(newTasks);
+    updateTask(
+      taskId,
+      (task) => ({ ...task, completed: !task.completed }),
+      (task) => ({ completed: task.completed })
+    );
+  };
+
+  /** Change a task's subtasks and save them (plus `completed`, which can follow). */
+  const updateSubtasks = (taskId: string, change: (task: Task) => Task) => {
+    updateTask(taskId, change, (task) => ({ subtasks: task.subtasks, completed: task.completed }));
   };
 
   const handleToggleSubtask = (taskId: string, subtaskId: string) => {
-    const newTasks = tasks.map(t => {
-      if (t.id === taskId) {
-        const newSubtasks = t.subtasks.map(s => {
-          if (s.id === subtaskId) {
-            return { ...s, completed: !s.completed };
-          }
-          return s;
-        });
-        
-        // Auto-complete task if all subtasks are done
-        const allSubtasksComplete = newSubtasks.every(s => s.completed);
-        
-        return { 
-          ...t, 
-          subtasks: newSubtasks,
-          completed: allSubtasksComplete && newSubtasks.length > 0 ? true : t.completed,
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return t;
+    updateSubtasks(taskId, (task) => {
+      const subtasks = task.subtasks.map(s => (s.id === subtaskId ? { ...s, completed: !s.completed } : s));
+      // Auto-complete task if all subtasks are done
+      const allDone = subtasks.length > 0 && subtasks.every(s => s.completed);
+      return { ...task, subtasks, completed: allDone ? true : task.completed };
     });
-    saveTasks(newTasks);
   };
 
   const handleEditSubtask = (taskId: string, subtaskId: string, newTitle: string) => {
-    const newTasks = tasks.map(t => {
-      if (t.id === taskId) {
-        const newSubtasks = t.subtasks.map(s => {
-          if (s.id === subtaskId) {
-            return { ...s, title: newTitle };
-          }
-          return s;
-        });
-        return { ...t, subtasks: newSubtasks, updatedAt: new Date().toISOString() };
-      }
-      return t;
-    });
-    saveTasks(newTasks);
+    updateSubtasks(taskId, (task) => ({
+      ...task,
+      subtasks: task.subtasks.map(s => (s.id === subtaskId ? { ...s, title: newTitle } : s)),
+    }));
   };
 
   const handleDeleteSubtask = (taskId: string, subtaskId: string) => {
-    const newTasks = tasks.map(t => {
-      if (t.id === taskId) {
-        const newSubtasks = t.subtasks.filter(s => s.id !== subtaskId);
-        return { ...t, subtasks: newSubtasks, updatedAt: new Date().toISOString() };
-      }
-      return t;
-    });
-    saveTasks(newTasks);
+    updateSubtasks(taskId, (task) => ({
+      ...task,
+      subtasks: task.subtasks.filter(s => s.id !== subtaskId),
+    }));
   };
 
   const handleAddSubtask = (taskId: string, title: string) => {
-    const newTasks = tasks.map(t => {
-      if (t.id === taskId) {
-        const newSubtask: Subtask = {
-          id: `subtask_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          title,
-          completed: false,
-        };
-        return { ...t, subtasks: [...t.subtasks, newSubtask], updatedAt: new Date().toISOString() };
-      }
-      return t;
-    });
-    saveTasks(newTasks);
+    const newSubtask: Subtask = {
+      id: `subtask_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      title,
+      completed: false,
+    };
+    updateSubtasks(taskId, (task) => ({ ...task, subtasks: [...task.subtasks, newSubtask] }));
   };
 
   const handleMonthSelect = (month: number) => {
@@ -299,12 +301,15 @@ const Aarshjul = () => {
 
       <PageBody>
         {cloudError && (
-          <div role="status" className="flex items-start gap-3 rounded-xl border border-warning/40 bg-card p-4 text-sm">
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
-            <p>
-              <strong>Opgaverne kunne ikke hentes fra serveren.</strong> Du ser den kopi, der ligger på denne enhed, og
-              ændringer deles ikke med andre, før forbindelsen virker igen.
+          <div role="status" className="flex flex-wrap items-center gap-3 rounded-xl border border-warning/40 bg-card p-4 text-sm">
+            <AlertCircle className="h-5 w-5 shrink-0 text-warning" />
+            <p className="min-w-0 flex-1">
+              <strong>Opgaverne kunne ikke hentes fra serveren.</strong> Du ser den seneste kopi fra denne enhed, og
+              den kan ikke ændres, før forbindelsen virker igen.
             </p>
+            <Button variant="outline" onClick={loadTasks} disabled={isLoading}>
+              Prøv igen
+            </Button>
           </div>
         )}
 

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { applyCors, requireAuth } from './_lib/auth.js';
+import { applyCors, requireAuth, requirePermission } from './_lib/auth.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res);
@@ -10,6 +10,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const session = await requireAuth(req, res);
   if (!session) return;
+  if (!(await requirePermission(res, session, 'referater'))) return;
 
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -17,8 +18,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Handle POST for listing files by year
   if (req.method === 'POST') {
-    const { year } = req.body;
-    if (!year) {
+    const year = String((req.body && req.body.year) || '');
+    if (!/^\d{4}$/.test(year)) {
       return res.status(400).json({ error: 'Year is required' });
     }
     

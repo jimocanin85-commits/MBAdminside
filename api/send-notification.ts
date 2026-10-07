@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import nodemailer from 'nodemailer';
-import { applyCors, requireAuth } from './_lib/auth.js';
+import { applyCors, requireAuth, requirePermission } from './_lib/auth.js';
 
 // Maileroo SMTP Configuration
 // Get these from Maileroo: Sending Domains → SMTP Credentials
@@ -55,6 +55,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // left open - require a logged-in session.
   const session = await requireAuth(req, res);
   if (!session) return;
+  // Notifications belong to the årshjul (they announce an assigned task).
+  if (!(await requirePermission(res, session, 'aarshjul'))) return;
 
   if (!transporter) {
     console.warn('SMTP not configured - email notifications disabled');

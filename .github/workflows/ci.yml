@@ -14,27 +14,41 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    # "bash" (rather than the default) makes a step fail when the command
+    # before "| tee" fails.
+    shell: bash
+
 jobs:
   build:
     name: Byg og typetjek
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Installér pakker
-        run: npm ci
+        run: npm ci 2>&1 | tee step.log
 
       - name: Højst 12 serverfunktioner
-        run: npm run check:functions
+        run: npm run check:functions 2>&1 | tee step.log
 
       - name: Typetjek
-        run: npm run typecheck
+        run: npm run typecheck 2>&1 | tee step.log
 
       - name: Byg
-        run: npm run build
+        run: npm run build 2>&1 | tee step.log
+
+      # Puts the end of the failing step's output at the top of the run
+      # summary, so the reason is visible without opening the full log.
+      - name: Vis fejlen
+        if: failure()
+        run: |
+          message=$(tail -n 60 step.log | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\r//g;s/\n/%0A/g')
+          echo "::error title=Automatisk tjek fejlede::${message}"

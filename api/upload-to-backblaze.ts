@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { applyCors, requireAuth } from './_lib/auth.js';
+import { applyCors, requireAuth, requirePermission } from './_lib/auth.js';
+import { MAX_UPLOAD_BYTES, VOLUNTEER_FOLDER, resolveUploadTarget } from './_lib/files.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res);
@@ -69,49 +70,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Log request details (but truncate fileData for logging)
-    const fileDataPreview = body?.fileData ? 
-      (typeof body.fileData === 'string' ? body.fileData.substring(0, 100) + '...' : 'not-string') : 
-      'missing';
-    
-    console.log('Upload request received:', {
-      method: req.method,
-      hasBody: !!body,
-      bodyType: typeof body,
-      bodyKeys: body ? Object.keys(body) : [],
-      fileName: body?.fileName,
-      hasFileData: !!body?.fileData,
-      fileDataType: typeof body?.fileData,
-      fileDataLength: body?.fileData ? (typeof body.fileData === 'string' ? body.fileData.length : 'not-string') : 0,
-      fileDataPreview,
-      folder: body?.folder
-    });
-
     const { fileName, fileData, folder } = body;
 
     if (!fileName || !fileData) {
-      const errorDetails = { 
-        fileName: !!fileName, 
-        fileData: !!fileData,
-        fileNameValue: fileName,
-        fileDataType: typeof fileData,
-        fileDataPreview: typeof fileData === 'string' ? fileData.substring(0, 100) : fileData,
-        bodyKeys: Object.keys(body || {}),
-        folder: folder
-      };
-      console.error('Missing required fields:', errorDetails);
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'fileName and fileData are required',
-        received: {
-          hasFileName: !!fileName,
-          hasFileData: !!fileData,
-          hasFolder: !!folder,
-          fileNameValue: fileName,
-          fileDataType: typeof fileData,
-          bodyKeys: Object.keys(body || {})
-        }
+        received: { hasFileName: !!fileName, hasFileData: !!fileData }
       });
     }
+
+    // Only the two known areas of the bucket may be written to, and only by
+    // users with access to the section that area belongs to. The folder used
+    // to be taken from the request unchecked.
+    const target = resolveUploadTarget(folder, fileName);
+    if (target.ok === false) {
+      return res.status(400).json({ success: false, error: target.message });
+    }
+    if (!(await requirePermission(res, session, target.section))) return;
 
     const keyId = process.env.BACKBLAZE_KEY_ID;
     const applicationKey = process.env.BACKBLAZE_APPLICATION_KEY;
@@ -187,10 +162,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Validate base64Data
     if (!base64Data || typeof base64Data !== 'string') {
-      console.error('Invalid fileData format:', { 
-        fileDataType: typeof fileData,
-        fileDataPreview: typeof fileData === 'string' ? fileData.substring(0, 100) : fileData
-      });
       return res.status(400).json({ error: 'Invalid fileData format' });
     }
 
@@ -200,6 +171,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       fileBuffer = Buffer.from(base64Data, 'base64');
       if (fileBuffer.length === 0) {
         return res.status(400).json({ error: 'Empty file buffer after base64 decode' });
+      }
+      if (fileBuffer.length > MAX_UPLOAD_BYTES) {
+        return res.status(413).json({ success: false, error: 'Filen er for stor.' });
       }
     } catch (error) {
       console.error('Failed to decode base64:', error);
@@ -213,20 +187,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // This ensures spaces and special characters are encoded while folder structure is preserved
     const encodedFileName = encodeURIComponent(fileName);
     // Encode folder path segments if folder contains special characters
-    const encodedFolder = folder ? folder.split('/').map(seg => encodeURIComponent(seg)).join('/') : 'Frivillige';
-    const fullPath = folder ? `${encodedFolder}/${encodedFileName}` : `${encodedFolder}/${encodedFileName}`;
-    
-    console.log('File path encoding:', {
-      originalFileName: fileName,
-      encodedFileName,
-      folder,
-      encodedFolder,
-      fullPath
-    });
+    const encodedFolder = target.folder.split('/').map(seg => encodeURIComponent(seg)).join('/');
+    const fullPath = `${encodedFolder}/${encodedFileName}`;
     
     // Before uploading, check if there's a file with the same name in root and delete all versions
     // This only applies to Frivillige/ folder uploads, not Referater/ folder uploads
-    if (!folder || folder === 'Frivillige') {
+    if (target.folder === VOLUNTEER_FOLDER) {
       try {
         const listFilesResponse = await fetch(`${apiUrl}/b2api/v2/b2_list_file_versions`, {
           method: 'POST',
