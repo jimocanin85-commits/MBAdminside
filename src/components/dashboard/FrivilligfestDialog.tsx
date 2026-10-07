@@ -488,7 +488,7 @@ const FrivilligfestDialog = ({ open, onOpenChange }: FrivilligfestDialogProps) =
                     <div className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${
                       refreshMessage.includes("Fejl") || refreshMessage.includes("Ingen")
                         ? "bg-destructive/10 text-destructive"
-                        : "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+                        : "bg-success/15 dark:bg-green-900 text-success dark:text-success"
                     }`}>
                       {refreshMessage.includes("Fejl") || refreshMessage.includes("Ingen") ? (
                         <AlertCircle className="h-3 w-3" />

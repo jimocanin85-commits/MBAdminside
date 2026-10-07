@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus, Trash2, Loader2, Pencil, Check, X } from "lucide-react";
 import { User } from "@/components/admin/CreateUserDialog";
+import { apiFetch } from "@/lib/api";
 
 interface Subtask {
   id: string;
@@ -116,7 +117,7 @@ const AddTaskModal = ({
   const loadUsers = async () => {
     try {
       // First try to load from API
-      const response = await fetch('/api/users');
+      const response = await apiFetch('/users');
       const result = await response.json();
       
       if (result.success && result.data) {
@@ -381,7 +382,7 @@ const AddTaskModal = ({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 shrink-0 text-green-600 hover:text-green-700"
+                          className="h-6 w-6 shrink-0 text-success hover:text-success"
                           onClick={() => saveSubtaskEdit(subtask.id)}
                           disabled={isSubmitting}
                         >

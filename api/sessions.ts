@@ -11,7 +11,8 @@
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { supabaseAdmin as supabase } from './_lib/supabaseAdmin.js';
-import { applyCors, requireAdmin } from './_lib/auth.js';
+import { applyCors, requireAdmin, requireAuth } from './_lib/auth.js';
+import { checkAdminCode, issueAdminToken } from './_lib/adminMode.js';
 import { verifyCredentials } from './_lib/credentials.js';
 
 // Session timeout in milliseconds (30 minutes of inactivity)
@@ -110,13 +111,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // POST /api/sessions - Create a new session (login), validate session, or handle sendBeacon DELETE
     if (req.method === 'POST') {
+      // sendBeacon bodies can arrive as a plain string rather than parsed
+      // JSON; parse them here so the checks below see an object.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let body: any = req.body;
+      if (typeof body === 'string') {
+        try {
+          body = JSON.parse(body);
+        } catch {
+          return res.status(400).json({ error: 'Invalid JSON body' });
+        }
+      }
+      if (!body || typeof body !== 'object') {
+        return res.status(400).json({ error: 'Request body required' });
+      }
+
       // Handle sendBeacon DELETE requests (from beforeunload). sendBeacon
       // can't send an Authorization header, so this can only be trusted to
       // delete the one session whose ID the caller already knows (the
       // session_id itself acts as the proof) - never by username, which
       // would let anyone log out an arbitrary user with no auth at all.
-      if (req.body._method === 'DELETE') {
-        const { sessionId } = req.body;
+      if (body._method === 'DELETE') {
+        const { sessionId } = body;
 
         if (sessionId) {
           await deleteSession(sessionId);
@@ -126,9 +142,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).end();
       }
 
+      // Switch admin mode on. The code is verified here on the server (it
+      // used to be a string compared in the browser) and the caller gets a
+      // short-lived signed token back - see _lib/adminMode.ts.
+      if (body.action === 'admin-unlock') {
+        const session = await requireAuth(req, res);
+        if (!session) return;
+
+        const check = await checkAdminCode(session, body.code);
+        if (check.ok === false) {
+          if (check.reason === 'NOT_CONFIGURED') {
+            return res.status(503).json({
+              success: false,
+              error: 'ADMIN_CODE_NOT_CONFIGURED',
+              message: 'Admin-koden er ikke sat op på serveren endnu (ADMIN_CODE_HASH).'
+            });
+          }
+          if (check.reason === 'TOO_MANY_ATTEMPTS') {
+            return res.status(429).json({
+              success: false,
+              error: 'TOO_MANY_ATTEMPTS',
+              message: 'For mange forkerte forsøg. Prøv igen om lidt.'
+            });
+          }
+          return res.status(401).json({
+            success: false,
+            error: 'INVALID_CODE',
+            message: 'Forkert adgangskode'
+          });
+        }
+
+        const issued = issueAdminToken(session);
+        if (!issued) {
+          return res.status(500).json({ success: false, error: 'Server misconfigured' });
+        }
+
+        return res.status(200).json({
+          success: true,
+          token: issued.token,
+          expiresAt: issued.expiresAt,
+          isAdmin: session.isAdmin
+        });
+      }
+
       // Handle session validation request
-      if (req.body.action === 'validate') {
-        const { sessionId, browserId, username } = req.body;
+      if (body.action === 'validate') {
+        const { sessionId, browserId, username } = body;
         
         if (!sessionId || !browserId || !username) {
           return res.status(400).json({ 
@@ -163,6 +222,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         return res.status(200).json({ 
           valid: true, 
+          isAdmin: ADMIN_USERS.includes(session.username),
           session: {
             username: session.username,
             createdAt: session.created_at,
@@ -171,7 +231,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
       
-      const { username, password, sessionId, browserId, userAgent, forceLogin } = req.body;
+      const { username, password, sessionId, browserId, userAgent, forceLogin } = body;
 
       if (!username || !sessionId || !browserId) {
         return res.status(400).json({ error: 'Username, sessionId, and browserId are required' });

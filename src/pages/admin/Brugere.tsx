@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { User, CreateUserDialog } from "./CreateUserDialog";
-import { EditUserDialog } from "./EditUserDialog";
-import { Trash2, UserX, UserCheck, Plus, Edit, RefreshCw, Cloud, Database, Mail, Unlock, Monitor, Clock } from "lucide-react";
+import { User, CreateUserDialog } from "@/components/admin/CreateUserDialog";
+import { EditUserDialog } from "@/components/admin/EditUserDialog";
+import { PageBody, PageHeader, Panel } from "@/components/layout/PageHeader";
+import { apiFetch } from "@/lib/api";
+import { Trash2, UserX, UserCheck, Plus, Edit, RefreshCw, Cloud, Mail, Unlock, Monitor, Clock, AlertCircle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,23 +22,18 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-interface UserManagementProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
 interface SystemUserEmails {
   [username: string]: string;
 }
 
+// Shape returned by GET /api/sessions (it never includes the session token).
 interface ActiveSession {
   id: string;
   username: string;
-  session_id: string;
-  created_at: string;
-  last_activity: string;
-  user_agent?: string;
-  is_locked: boolean;
+  createdAt: string;
+  lastActivity: string;
+  userAgent?: string;
+  isLocked: boolean;
 }
 
 const HARDCODED_USERS = ['admin', 'Brian']; // Admin and Brian are system users
@@ -45,7 +42,7 @@ const SYSTEM_EMAILS_KEY = 'systemUserEmails';
 // API base URL
 const API_BASE = '/api';
 
-export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
+const Brugere = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
@@ -53,7 +50,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
   const [userToActivate, setUserToActivate] = useState<User | null>(null);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [useCloud, setUseCloud] = useState(true); // Default to cloud/Supabase
+  const [useCloud] = useState(true); // Default to cloud/Supabase
   const [cloudError, setCloudError] = useState<string | null>(null);
   
   // System user email editing
@@ -73,7 +70,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
       setIsLoading(true);
       setCloudError(null);
       
-      const response = await fetch(`${API_BASE}/users`);
+      const response = await apiFetch(`${API_BASE}/users`);
       const result = await response.json();
       
       if (!response.ok) {
@@ -143,7 +140,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
   const handleDeleteUser = async (user: User) => {
     try {
       if (useCloud && !cloudError) {
-        const response = await fetch(`${API_BASE}/users`, {
+        const response = await apiFetch(`${API_BASE}/users`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('sessionId')}` },
           body: JSON.stringify({ id: user.id })
@@ -176,7 +173,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
   const handleDeactivateUser = async (user: User) => {
     try {
       if (useCloud && !cloudError) {
-        const response = await fetch(`${API_BASE}/users`, {
+        const response = await apiFetch(`${API_BASE}/users`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('sessionId')}` },
           body: JSON.stringify({ id: user.id, isActive: false })
@@ -211,7 +208,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
   const handleActivateUser = async (user: User) => {
     try {
       if (useCloud && !cloudError) {
-        const response = await fetch(`${API_BASE}/users`, {
+        const response = await apiFetch(`${API_BASE}/users`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('sessionId')}` },
           body: JSON.stringify({ id: user.id, isActive: true })
@@ -262,7 +259,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
       
       for (const user of localUsers) {
         try {
-          const response = await fetch(`${API_BASE}/users`, {
+          const response = await apiFetch(`${API_BASE}/users`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('sessionId')}` },
             body: JSON.stringify({
@@ -309,7 +306,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
   const loadActiveSessions = async () => {
     try {
       setSessionsLoading(true);
-      const response = await fetch(`${API_BASE}/sessions`);
+      const response = await apiFetch(`${API_BASE}/sessions`);
       const result = await response.json();
       
       if (result.success && result.data) {
@@ -326,7 +323,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
   // Unlock (end) a session
   const handleUnlockSession = async (session: ActiveSession) => {
     try {
-      const response = await fetch(`${API_BASE}/sessions`, {
+      const response = await apiFetch(`${API_BASE}/sessions`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('sessionId')}` },
         body: JSON.stringify({
@@ -400,73 +397,62 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
     setEditingSystemEmail("");
   };
 
-  // Load users and sessions when dialog opens
+  // Load users and sessions when the page opens
   useEffect(() => {
-    if (open) {
-      loadUsers();
-      loadSystemUserEmails();
-      loadActiveSessions();
-    }
-  }, [open, useCloud]);
+    loadUsers();
+    loadSystemUserEmails();
+    loadActiveSessions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [useCloud]);
   
   // Refresh sessions when tab changes to sessions
   useEffect(() => {
-    if (open && activeTab === 'sessions') {
+    if (activeTab === 'sessions') {
       loadActiveSessions();
     }
-  }, [activeTab, open]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] sm:max-w-4xl h-[85vh] sm:h-auto max-h-[85vh] flex flex-col p-4 sm:p-6">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2">
-              Brugerstyring
-              {useCloud && !cloudError && (
-                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded flex items-center gap-1">
-                  <Cloud className="h-3 w-3" /> Cloud
-                </span>
-              )}
-              {cloudError && (
-                <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded flex items-center gap-1">
-                  <Database className="h-3 w-3" /> Lokal
-                </span>
-              )}
-            </DialogTitle>
-            <DialogDescription>
-              Administrer brugere i portalen - opret, rediger, deaktiver eller slet brugere
-              {cloudError && (
-                <span className="block text-yellow-600 text-xs mt-1">
-                  ⚠️ Cloud ikke tilgængelig - bruger lokal lagring
-                </span>
-              )}
-            </DialogDescription>
-          </DialogHeader>
+      <PageHeader
+        eyebrow="Opret, rediger, deaktiver eller slet brugere"
+        title="Brugere"
+        actions={
+          <Button variant="inverse" size="lg" onClick={() => setShowCreateDialog(true)}>
+            <Plus />
+            Opret ny bruger
+          </Button>
+        }
+      />
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-            <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
+      <PageBody>
+        {cloudError && (
+          <div role="status" className="flex items-start gap-3 rounded-xl border border-warning/40 bg-card p-4 text-sm">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+            <p>
+              <strong>Brugerne kunne ikke hentes fra serveren.</strong> Du ser den kopi, der ligger på denne enhed.
+            </p>
+          </div>
+        )}
+
+        <Panel>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:inline-grid">
               <TabsTrigger value="users">Brugere</TabsTrigger>
               <TabsTrigger value="sessions">
                 Aktive Sessioner
                 {activeSessions.length > 0 && (
-                  <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
+                  <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
                     {activeSessions.length}
                   </span>
                 )}
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="users" className="flex-1 overflow-y-auto space-y-4 min-h-0 py-2 -mx-4 px-4 sm:-mx-6 sm:px-6 mt-4">
+            <TabsContent value="users" className="mt-5 space-y-4">
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-2 justify-between">
-                <Button 
-                  onClick={() => setShowCreateDialog(true)} 
-                  className="gap-2 w-full sm:w-auto"
-                >
-                  <Plus className="h-4 w-4" />
-                  Opret ny bruger
-                </Button>
+              <div className="flex flex-col sm:flex-row gap-2 justify-end">
                 <div className="flex gap-2">
                   <Button 
                     variant="outline" 
@@ -539,7 +525,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
                                 {systemUserEmails[username] ? 'Rediger email' : 'Tilføj email'}
                               </span>
                             </Button>
-                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                            <span className="text-xs bg-success/15 text-success px-2 py-1 rounded">
                               Aktiv
                             </span>
                           </div>
@@ -552,7 +538,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
 
               {/* Custom Users Section */}
               <div className="mt-6 pb-8 sm:pb-4">
-                <h3 className="text-sm font-semibold text-muted-foreground mb-3 sticky top-0 bg-background py-2 -mt-2">
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3">
                   Almindelige brugere ({users.length})
                 </h3>
                 
@@ -581,7 +567,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
                                     {user.firstName} {user.lastName}
                                   </p>
                                   {!active && (
-                                    <span className="text-xs text-muted-foreground bg-gray-100 text-gray-800 px-2 py-1 rounded shrink-0">
+                                    <span className="text-xs text-muted-foreground bg-muted text-muted-foreground px-2 py-1 rounded shrink-0">
                                       Deaktiveret
                                     </span>
                                   )}
@@ -601,7 +587,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
                                       user.permissions.map((perm) => (
                                         <span
                                           key={perm}
-                                          className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded"
+                                          className="text-xs bg-muted text-foreground px-2 py-1 rounded"
                                         >
                                           {perm === 'frivillig' && 'Frivillig'}
                                           {perm === 'referater' && 'Referater'}
@@ -670,7 +656,7 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
               </div>
             </TabsContent>
             
-            <TabsContent value="sessions" className="flex-1 overflow-y-auto space-y-4 min-h-0 py-2 -mx-4 px-4 sm:-mx-6 sm:px-6 mt-4">
+            <TabsContent value="sessions" className="mt-5 space-y-4">
               {/* Sessions Header */}
               <div className="flex flex-col sm:flex-row gap-2 justify-between items-start sm:items-center">
                 <div>
@@ -714,29 +700,29 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
               {activeSessions.length > 0 && (
                 <div className="space-y-3 pb-4">
                   {activeSessions.map((session) => (
-                    <Card key={session.session_id}>
+                    <Card key={session.id}>
                       <CardContent className="p-4">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-medium">{session.username}</p>
-                              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                              <span className="text-xs bg-success/15 text-success px-2 py-1 rounded">
                                 Aktiv
                               </span>
                             </div>
                             <div className="mt-2 space-y-1">
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <Clock className="h-3 w-3" />
-                                <span>Logget ind: {new Date(session.created_at).toLocaleString('da-DK')}</span>
+                                <span>Logget ind: {new Date(session.createdAt).toLocaleString('da-DK')}</span>
                               </div>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <RefreshCw className="h-3 w-3" />
-                                <span>Sidste aktivitet: {formatRelativeTime(session.last_activity)}</span>
+                                <span>Sidste aktivitet: {formatRelativeTime(session.lastActivity)}</span>
                               </div>
-                              {session.user_agent && (
+                              {session.userAgent && (
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                   <Monitor className="h-3 w-3" />
-                                  <span className="truncate max-w-[300px]">{session.user_agent}</span>
+                                  <span className="truncate max-w-[300px]">{session.userAgent}</span>
                                 </div>
                               )}
                             </div>
@@ -760,8 +746,8 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
               )}
             </TabsContent>
           </Tabs>
-        </DialogContent>
-      </Dialog>
+        </Panel>
+      </PageBody>
 
       {/* Create User Dialog */}
       <CreateUserDialog
@@ -912,3 +898,5 @@ export const UserManagement = ({ open, onOpenChange }: UserManagementProps) => {
     </>
   );
 };
+
+export default Brugere;

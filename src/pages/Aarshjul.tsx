@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { RefreshCw, ArrowLeft, Cloud, Database, CircleDot, List } from "lucide-react";
-import YearWheel from "./YearWheel";
-import TaskDetailsPanel from "./TaskDetailsPanel";
-import TaskListView from "./TaskListView";
-import AddTaskModal from "./AddTaskModal";
+import { RefreshCw, CircleDot, List, Plus, AlertCircle } from "lucide-react";
+import YearWheel from "@/components/aarshjul/YearWheel";
+import TaskDetailsPanel from "@/components/aarshjul/TaskDetailsPanel";
+import TaskListView from "@/components/aarshjul/TaskListView";
+import AddTaskModal from "@/components/aarshjul/AddTaskModal";
+import { PageBody, PageHeader, Panel } from "@/components/layout/PageHeader";
+import { useAuth } from "@/context/AuthContext";
+import { apiFetch } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 interface Subtask {
   id: string;
@@ -26,50 +29,39 @@ interface Task {
   updatedAt?: string;
 }
 
-interface AarshjulViewProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  currentUser?: string | null;
-}
-
 type ViewMode = 'wheel' | 'list';
 
-const AarshjulView = ({ open, onOpenChange, currentUser }: AarshjulViewProps) => {
-  // Check if user is admin or Brian (for special features)
-  // Use case-insensitive comparison and handle null/undefined
-  const isAdmin = currentUser?.toLowerCase() === 'admin' || currentUser?.toLowerCase() === 'brian';
-  // Only admin and Brian can see timestamps and list view
+const Aarshjul = () => {
+  const { isAdmin } = useAuth();
+  // Only the admin accounts can see timestamps and the list view
   const canSeeTimestamps = isAdmin;
   const canSeeListView = isAdmin;
-  
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+
+  // The wheel and the month's tasks sit side by side, so a month is always
+  // selected - starting with the current one.
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => new Date().getMonth());
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [useCloud, setUseCloud] = useState(true);
+  const [useCloud] = useState(true);
   const [cloudError, setCloudError] = useState<string | null>(null);
-  // Default to list for admin/Brian, wheel for others
   const [viewMode, setViewMode] = useState<ViewMode>('wheel');
   const [addTaskMonth, setAddTaskMonth] = useState<number>(0); // Month for adding task in list view
 
-  // Load tasks when dialog opens
+  // Load tasks when the page opens. Everyone starts on the wheel; the admin
+  // accounts can switch to the list with the toggle in the header.
   useEffect(() => {
-    if (open) {
-      loadTasks();
-      // Set default view mode based on user role
-      setViewMode(canSeeListView ? 'list' : 'wheel');
-    }
-  }, [open, canSeeListView]);
+    loadTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadTasks = async () => {
     setIsLoading(true);
     try {
       if (useCloud) {
         // Try to load from API
-        const response = await fetch('/api/tasks', {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('sessionId')}` }
-        });
+        const response = await apiFetch('/tasks');
         const result = await response.json();
         
         if (response.ok && result.success) {
@@ -111,20 +103,18 @@ const AarshjulView = ({ open, onOpenChange, currentUser }: AarshjulViewProps) =>
 
     if (useCloud && !cloudError) {
       try {
-        const response = await fetch('/api/tasks', {
+        const response = await apiFetch('/tasks', {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('sessionId')}`
-          },
           body: JSON.stringify({ tasks: newTasks })
         });
         
         if (!response.ok) {
           console.error('Failed to save to cloud');
+          toast.error("Ændringen kunne ikke gemmes for alle - den ligger kun på denne enhed");
         }
       } catch (error) {
         console.error('Error saving to cloud:', error);
+        toast.error("Ændringen kunne ikke gemmes for alle - den ligger kun på denne enhed");
       }
     }
   };
@@ -228,10 +218,6 @@ const AarshjulView = ({ open, onOpenChange, currentUser }: AarshjulViewProps) =>
     setSelectedMonth(month);
   };
 
-  const handleBackToWheel = () => {
-    setSelectedMonth(null);
-  };
-
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
     setAddTaskMonth(task.month); // Set month for the modal
@@ -250,111 +236,105 @@ const AarshjulView = ({ open, onOpenChange, currentUser }: AarshjulViewProps) =>
     setShowAddTaskModal(true);
   };
 
+  const year = new Date().getFullYear();
+  const showList = viewMode === 'list' && canSeeListView;
+
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] sm:max-w-4xl h-[90vh] sm:h-[85vh] flex flex-col p-4 sm:p-6">
-          <DialogHeader className="flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {selectedMonth !== null && viewMode === 'wheel' && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleBackToWheel}
-                    className="h-8 w-8"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                )}
-                <DialogTitle className="flex items-center gap-2">
-                  Årshjul {new Date().getFullYear()}
-                  {useCloud && !cloudError && (
-                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded flex items-center gap-1">
-                      <Cloud className="h-3 w-3" /> Cloud
-                    </span>
+      <PageHeader
+        eyebrow="Opgavestyring"
+        title={`Årshjul ${year}`}
+        actions={
+          <>
+            {/* View toggle - only for the admin accounts */}
+            {canSeeListView && (
+              <div role="group" aria-label="Visning" className="flex rounded-xl bg-sidebar p-1">
+                <button
+                  type="button"
+                  aria-pressed={!showList}
+                  onClick={() => setViewMode('wheel')}
+                  className={cn(
+                    "flex h-10 items-center gap-2 rounded-lg px-4 text-[15px] font-semibold text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground",
+                    !showList && "bg-primary-foreground text-primary"
                   )}
-                  {cloudError && (
-                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded flex items-center gap-1">
-                      <Database className="h-3 w-3" /> Lokal
-                    </span>
-                  )}
-                </DialogTitle>
-              </div>
-              <div className="flex items-center gap-2">
-                {/* View toggle - only for admin and Brian */}
-                {canSeeListView && (
-                  <div className="flex items-center border rounded-lg p-0.5">
-                    <Button
-                      variant={viewMode === 'wheel' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => {
-                        setViewMode('wheel');
-                        setSelectedMonth(null);
-                      }}
-                      className="h-7 px-2 gap-1"
-                    >
-                      <CircleDot className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline text-xs">Hjul</span>
-                    </Button>
-                    <Button
-                      variant={viewMode === 'list' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setViewMode('list')}
-                      className="h-7 px-2 gap-1"
-                    >
-                      <List className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline text-xs">Liste</span>
-                    </Button>
-                  </div>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={loadTasks}
-                  disabled={isLoading}
-                  className="h-8 w-8"
                 >
-                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                </Button>
+                  <CircleDot className="h-4 w-4" />
+                  Hjul
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={showList}
+                  onClick={() => setViewMode('list')}
+                  className={cn(
+                    "flex h-10 items-center gap-2 rounded-lg px-4 text-[15px] font-semibold text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground",
+                    showList && "bg-primary-foreground text-primary"
+                  )}
+                >
+                  <List className="h-4 w-4" />
+                  Liste
+                </button>
               </div>
-            </div>
-            <DialogDescription>
-              {viewMode === 'list' && canSeeListView
-                ? "Oversigt over alle opgaver - klik på en måned for at se detaljer"
-                : selectedMonth === null 
-                  ? "Klik på en måned for at se og administrere opgaver"
-                  : "Administrer opgaver for den valgte måned"
-              }
-            </DialogDescription>
-          </DialogHeader>
+            )}
+            <Button
+              variant="inverseOutline"
+              size="icon"
+              className="h-12 w-12"
+              onClick={loadTasks}
+              disabled={isLoading}
+              aria-label="Genindlæs opgaver"
+            >
+              <RefreshCw className={isLoading ? 'animate-spin' : ''} />
+            </Button>
+            <Button
+              variant="inverse"
+              size="lg"
+              onClick={() => (showList ? handleAddTaskForMonth(new Date().getMonth()) : handleAddTask())}
+            >
+              <Plus />
+              Ny opgave
+            </Button>
+          </>
+        }
+      />
 
-          <div className="flex-1 overflow-y-auto py-4 min-h-0">
-            {viewMode === 'list' && canSeeListView ? (
-              // Show list view (admin and Brian only)
-              <TaskListView
+      <PageBody>
+        {cloudError && (
+          <div role="status" className="flex items-start gap-3 rounded-xl border border-warning/40 bg-card p-4 text-sm">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+            <p>
+              <strong>Opgaverne kunne ikke hentes fra serveren.</strong> Du ser den kopi, der ligger på denne enhed, og
+              ændringer deles ikke med andre, før forbindelsen virker igen.
+            </p>
+          </div>
+        )}
+
+        {showList ? (
+          // List view (admin accounts only)
+          <Panel>
+            <TaskListView
+              tasks={tasks}
+              onAddTask={handleAddTaskForMonth}
+              onEditTask={handleEditTask}
+              onDeleteTask={handleDeleteTask}
+              onToggleTask={handleToggleTask}
+              onToggleSubtask={handleToggleSubtask}
+              onEditSubtask={handleEditSubtask}
+              onDeleteSubtask={handleDeleteSubtask}
+              onAddSubtask={handleAddSubtask}
+              showTimestamps={canSeeTimestamps}
+            />
+          </Panel>
+        ) : (
+          // Wheel with the selected month's tasks next to it
+          <div className="grid items-start gap-6 lg:grid-cols-5">
+            <Panel title="Året rundt" className="lg:col-span-2">
+              <YearWheel
+                selectedMonth={selectedMonth}
+                onMonthSelect={handleMonthSelect}
                 tasks={tasks}
-                onAddTask={handleAddTaskForMonth}
-                onEditTask={handleEditTask}
-                onDeleteTask={handleDeleteTask}
-                onToggleTask={handleToggleTask}
-                onToggleSubtask={handleToggleSubtask}
-                onEditSubtask={handleEditSubtask}
-                onDeleteSubtask={handleDeleteSubtask}
-                onAddSubtask={handleAddSubtask}
-                showTimestamps={canSeeTimestamps}
               />
-            ) : selectedMonth === null ? (
-              // Show wheel
-              <div className="h-full flex items-center justify-center">
-                <YearWheel
-                  selectedMonth={selectedMonth}
-                  onMonthSelect={handleMonthSelect}
-                  tasks={tasks}
-                />
-              </div>
-            ) : (
-              // Show task details for selected month
+            </Panel>
+            <Panel className="lg:col-span-3">
               <TaskDetailsPanel
                 month={selectedMonth}
                 tasks={tasks}
@@ -367,17 +347,18 @@ const AarshjulView = ({ open, onOpenChange, currentUser }: AarshjulViewProps) =>
                 onDeleteSubtask={handleDeleteSubtask}
                 onAddSubtask={handleAddSubtask}
                 showTimestamps={canSeeTimestamps}
+                showAddButton={false}
               />
-            )}
+            </Panel>
           </div>
-        </DialogContent>
-      </Dialog>
+        )}
+      </PageBody>
 
       {/* Add/Edit Task Modal */}
       <AddTaskModal
         open={showAddTaskModal}
         onOpenChange={setShowAddTaskModal}
-        month={viewMode === 'list' ? addTaskMonth : (selectedMonth ?? 0)}
+        month={showList || editingTask ? addTaskMonth : selectedMonth}
         onTaskCreated={handleTaskCreated}
         editingTask={editingTask}
         onTaskUpdated={handleTaskUpdated}
@@ -386,4 +367,4 @@ const AarshjulView = ({ open, onOpenChange, currentUser }: AarshjulViewProps) =>
   );
 };
 
-export default AarshjulView;
+export default Aarshjul;

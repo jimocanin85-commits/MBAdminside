@@ -3,6 +3,8 @@
  * Uses Vercel Serverless Functions
  */
 
+import { authHeaders } from '@/lib/api';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 interface ApiResponse<T = any> {
@@ -28,10 +30,11 @@ class ApiClient {
     // Extract method and body from options
     const { method = 'GET', body, headers, ...restOptions } = options;
     
-    // Attach the caller's session token automatically so every route that
-    // requires auth (see api/_lib/auth.ts) works without every call site
-    // having to remember to add the header itself.
-    const sessionId = typeof window !== 'undefined' ? localStorage.getItem('sessionId') : null;
+    // Attach the caller's session token (and admin-mode token, when admin
+    // mode is on) automatically so every route that requires auth (see
+    // api/_lib/auth.ts) works without every call site having to remember
+    // to add the headers itself.
+    const identity = typeof window !== 'undefined' ? authHeaders() : {};
 
     // Only include body if method is not GET/HEAD
     const requestOptions: RequestInit = {
@@ -39,7 +42,7 @@ class ApiClient {
       ...restOptions,
       headers: {
         'Content-Type': 'application/json',
-        ...(sessionId ? { 'Authorization': `Bearer ${sessionId}` } : {}),
+        ...identity,
         ...headers,
       },
     };

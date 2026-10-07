@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { applyCors, requireAuth } from './_lib/auth.js';
+import { requireAdminMode } from './_lib/adminMode.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res);
@@ -21,6 +22,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!fileName || !fileId) {
       return res.status(400).json({ error: 'fileName and fileId are required' });
     }
+
+    // Deleting a stored file is permanent, so it needs admin mode. The
+    // confirmation code for this used to be checked only in the browser.
+    if (!requireAdminMode(req, res, session)) return;
 
     const keyId = process.env.BACKBLAZE_KEY_ID;
     const applicationKey = process.env.BACKBLAZE_APPLICATION_KEY;

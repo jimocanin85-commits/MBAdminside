@@ -65,6 +65,26 @@ The application will be available at `http://localhost:8080`
 └── ...
 ```
 
+## How the app is organised
+
+- `src/pages/` - one file per page (Forside, Frivillige, Filer, Årshjul, Referater, admin pages)
+- `src/components/layout/` - the frame around every page: sidebar, bottom bar on phones, page header
+- `src/context/AuthContext.tsx` - login, session and admin mode
+- `src/context/PortalContext.tsx` - which sections are shown, and the club's own links
+- `src/lib/api.ts` - `apiFetch()`, which adds the login token to every request
+- `src/index.css` - the colour theme (light and dark). Change a colour there and it changes everywhere
+- `api/` - serverless functions (Vercel)
+
+## Admin mode
+
+Admin mode unlocks "Tilpas portal" (choose which sections everyone sees, their order, and custom links),
+deleting files, logs and - for the admin accounts - user management.
+
+- The admin accounts (`admin`, `Brian`) switch it on from the user menu without a code.
+- Other users need the admin code. It is verified on the server against `ADMIN_CODE_HASH`
+  (see `.env.example`); if that variable is not set, only the admin accounts can use admin mode.
+- The server enforces it: saving the layout and deleting files are rejected without admin mode.
+
 ## Deployment
 
 Build the project for production:

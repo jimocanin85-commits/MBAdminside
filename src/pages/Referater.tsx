@@ -1,17 +1,15 @@
 import { useState, useEffect, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { FileText, Upload, Loader2, Eye } from "lucide-react";
+import { format } from "date-fns";
+import { da } from "date-fns/locale";
+import { EmptyState, PageBody, PageHeader, Panel } from "@/components/layout/PageHeader";
 import { functions } from "@/integrations/api/client";
+import { apiFetch, escapeHtml } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import mammoth from "mammoth";
 import * as XLSX from "xlsx";
-
-interface ReferaterViewerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
 
 interface ReferatFile {
   fileName: string;
@@ -22,8 +20,12 @@ interface ReferatFile {
   downloadUrl: string;
 }
 
-const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
-  const [selectedYear, setSelectedYear] = useState<string>('2026');
+// Minutes are filed per year, from the first year in the archive up to now.
+const FIRST_YEAR = 2024;
+const currentYear = () => Math.max(new Date().getFullYear(), FIRST_YEAR);
+
+const Referater = () => {
+  const [selectedYear, setSelectedYear] = useState<string>(() => String(currentYear()));
   const [files, setFiles] = useState<ReferatFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -32,10 +34,9 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (open) {
-      loadFiles();
-    }
-  }, [open, selectedYear]);
+    loadFiles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedYear]);
 
   const loadFiles = async () => {
     setIsLoading(true);
@@ -85,12 +86,8 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
             folder: `Referater/${selectedYear}`
           };
 
-          const response = await fetch('/api/upload-to-backblaze', {
+          const response = await apiFetch('/upload-to-backblaze', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('sessionId')}`,
-            },
             body: JSON.stringify(requestBody)
           });
 
@@ -194,12 +191,8 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
 
     try {
       // Use download-by-id API to get file data
-      const response = await fetch('/api/download-backblaze-file', {
+      const response = await apiFetch('/download-backblaze-file', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('sessionId')}`,
-        },
         body: JSON.stringify({
           fileId: file.fileId,
           fileName: file.fileName
@@ -214,6 +207,9 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
       }
 
       const { data: base64Data, fileName: downloadedFileName } = await response.json();
+      // The file name is placed inside generated HTML below, and that page
+      // runs on this site's own origin - so it must be escaped first.
+      const safeFileName = escapeHtml(String(downloadedFileName));
       
       // Determine file type from extension
       const fileExtension = downloadedFileName.split('.').pop()?.toLowerCase();
@@ -269,7 +265,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
             htmlContent = sheetNames.map(sheetName => {
               const worksheet = workbook.Sheets[sheetName];
               const html = XLSX.utils.sheet_to_html(worksheet);
-              return `<div class="sheet-container"><h2>${sheetName}</h2>${html}</div>`;
+              return `<div class="sheet-container"><h2>${escapeHtml(sheetName)}</h2>${html}</div>`;
             }).join('');
           } else {
             // PowerPoint files - not supported, show download option
@@ -281,7 +277,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
             <!DOCTYPE html>
             <html>
             <head>
-              <title>${downloadedFileName}</title>
+              <title>${safeFileName}</title>
               <meta charset="utf-8">
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
               <style>
@@ -309,7 +305,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
                 }
                 .download-btn {
                   padding: 8px 16px;
-                  background: #007bff;
+                  background: #C8141B;
                   color: white;
                   text-decoration: none;
                   border-radius: 5px;
@@ -317,7 +313,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
                   transition: background 0.2s;
                 }
                 .download-btn:hover {
-                  background: #0056b3;
+                  background: #9E0E14;
                 }
                 .viewer-container {
                   flex: 1;
@@ -369,7 +365,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
                   margin-bottom: 1em;
                   color: #333;
                   font-size: 1.5em;
-                  border-bottom: 2px solid #007bff;
+                  border-bottom: 2px solid #C8141B;
                   padding-bottom: 0.5em;
                 }
                 .sheet-container table {
@@ -379,8 +375,8 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
             </head>
             <body>
               <div class="header">
-                <h1>${downloadedFileName}</h1>
-                <a href="${blobUrl}" download="${downloadedFileName}" class="download-btn">
+                <h1>${safeFileName}</h1>
+                <a href="${blobUrl}" download="${safeFileName}" class="download-btn">
                   Download
                 </a>
               </div>
@@ -427,7 +423,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
             <!DOCTYPE html>
             <html>
             <head>
-              <title>${downloadedFileName}</title>
+              <title>${safeFileName}</title>
               <meta charset="utf-8">
               <style>
                 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -462,7 +458,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
                 .download-btn {
                   display: inline-block;
                   padding: 12px 24px;
-                  background: #007bff;
+                  background: #C8141B;
                   color: white;
                   text-decoration: none;
                   border-radius: 5px;
@@ -470,7 +466,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
                   transition: background 0.2s;
                 }
                 .download-btn:hover {
-                  background: #0056b3;
+                  background: #9E0E14;
                 }
               </style>
             </head>
@@ -479,7 +475,7 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
                 <h2>Kunne ikke vise dokumentet</h2>
                 <p>Dette dokument kan ikke vises direkte i browseren.</p>
                 <p>Klik på knappen nedenfor for at downloade filen.</p>
-                <a href="${blobUrl}" download="${downloadedFileName}" class="download-btn">
+                <a href="${blobUrl}" download="${safeFileName}" class="download-btn">
                   Download fil
                 </a>
               </div>
@@ -517,127 +513,127 @@ const ReferaterViewer = ({ open, onOpenChange }: ReferaterViewerProps) => {
     }
   };
 
-  // Available years for referater
-  const years = ['2024', '2025', '2026'];
+  // Available years for referater, newest first
+  const years: string[] = [];
+  for (let year = currentYear(); year >= FIRST_YEAR; year--) {
+    years.push(String(year));
+  }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[90vh] flex flex-col p-4 sm:p-6">
-        <DialogHeader>
-          <DialogTitle>Referater fra Bestyrelsesmøder</DialogTitle>
-          <DialogDescription>
-            Oversigt over alle referater fra bestyrelsesmøder
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <PageHeader
+        eyebrow="Fra bestyrelsesmøder"
+        title="Referater"
+        actions={
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              id="referat-upload"
+              className="hidden"
+              onChange={handleFileSelect}
+              disabled={isUploading}
+              accept="*/*"
+              multiple
+            />
+            <Button
+              variant="inverse"
+              size="lg"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  {uploadProgress ? `Uploader ${uploadProgress.current}/${uploadProgress.total}...` : 'Uploader...'}
+                </>
+              ) : (
+                <>
+                  <Upload />
+                  Upload filer
+                </>
+              )}
+            </Button>
+          </>
+        }
+      />
 
-        <div className="flex-1 overflow-y-auto py-4">
-          <div className="space-y-6">
-            {/* Year Selection */}
-            <div className="flex flex-wrap gap-2">
-              {years.map((year) => (
-                <Button
-                  key={year}
-                  variant={selectedYear === year ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedYear(year)}
-                >
-                  {year}
-                </Button>
-              ))}
+      <PageBody>
+        <Panel>
+          {/* Year selection */}
+          <div role="group" aria-label="Vælg år" className="mb-5 flex flex-wrap gap-2">
+            {years.map((year) => (
+              <button
+                key={year}
+                type="button"
+                aria-pressed={selectedYear === year}
+                onClick={() => setSelectedYear(year)}
+                className={cn(
+                  "min-h-[44px] rounded-full border px-5 font-display text-xl font-bold tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  selectedYear === year
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-input bg-card hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                {year}
+              </button>
+            ))}
+          </div>
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-10 text-muted-foreground" role="status">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="ml-2">Indlæser referater...</span>
             </div>
-
-            {/* Selected Year Section */}
-            <div>
-              <div className="flex justify-end mb-4">
-                <div className="flex items-center gap-2">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    id="referat-upload"
-                    className="hidden"
-                    onChange={handleFileSelect}
-                    disabled={isUploading}
-                    accept="*/*"
-                    multiple
-                  />
+          ) : files.length === 0 ? (
+            <EmptyState>
+              <p>Ingen referater fundet for {selectedYear}</p>
+              <p className="mt-1 text-sm">Brug "Upload filer" for at tilføje referater</p>
+            </EmptyState>
+          ) : (
+            <ul className="divide-y rounded-lg border">
+              {files.map((file) => (
+                <li
+                  key={file.fileId}
+                  className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:p-4"
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <FileText className="h-5 w-5 shrink-0 text-primary" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold">{file.fileName}</p>
+                      {file.uploadTimestamp > 0 && (
+                        <p className="text-sm text-muted-foreground">
+                          Uploadet {format(new Date(file.uploadTimestamp), "d. MMMM yyyy", { locale: da })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                   <Button
                     variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="gap-2 w-full sm:w-auto"
+                    onClick={() => handleViewFile(file)}
+                    disabled={viewingFileId === file.fileId}
+                    className="min-h-[44px] w-full shrink-0 gap-2 sm:w-auto"
                   >
-                    {isUploading ? (
+                    {viewingFileId === file.fileId ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        {uploadProgress ? (
-                          `Uploader ${uploadProgress.current}/${uploadProgress.total}...`
-                        ) : (
-                          'Uploader...'
-                        )}
+                        Henter...
                       </>
                     ) : (
                       <>
-                        <Upload className="h-4 w-4" />
-                        Upload filer
+                        <Eye className="h-4 w-4" />
+                        Vis
                       </>
                     )}
                   </Button>
-                </div>
-              </div>
-              
-              {isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  <span className="ml-2 text-muted-foreground">Indlæser referater...</span>
-                </div>
-              ) : files.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground border rounded-lg">
-                  <p>Ingen referater fundet for {selectedYear}</p>
-                  <p className="text-sm mt-2">Brug Upload knappen for at tilføje referater</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {files.map((file) => (
-                    <div
-                      key={file.fileId}
-                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{file.fileName}</p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewFile(file)}
-                        disabled={viewingFileId === file.fileId}
-                        className="gap-2 shrink-0 w-full sm:w-auto"
-                      >
-                        {viewingFileId === file.fileId ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Henter...
-                          </>
-                        ) : (
-                          <>
-                            <Eye className="h-4 w-4" />
-                            Vis
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      </PageBody>
+    </>
   );
 };
 
-export default ReferaterViewer;
+export default Referater;

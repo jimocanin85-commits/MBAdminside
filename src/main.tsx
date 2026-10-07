@@ -16,8 +16,8 @@ try {
   if (rootElement) {
     rootElement.innerHTML = `
       <div style="padding: 20px; text-align: center; font-family: Arial;">
-        <h1>Error loading application</h1>
-        <p>Please refresh the page or contact support.</p>
+        <h1>Siden kunne ikke indlæses</h1>
+        <p>Prøv at genindlæse siden, eller giv en administrator besked.</p>
         <p style="color: red; font-size: 12px;">${error instanceof Error ? error.message : String(error)}</p>
       </div>
     `;

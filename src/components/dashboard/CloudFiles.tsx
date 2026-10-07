@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { functions } from "@/integrations/api/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { FileText, Loader2, Eye, Trash2, ArrowLeft } from "lucide-react";
+import { FileText, Loader2, Eye, Trash2, ArrowLeft, RefreshCw } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ExcelViewer } from "./ExcelViewer";
@@ -33,22 +32,19 @@ interface CloudFilesProps {
 }
 
 export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) => {
+  const { isAdminMode } = useAuth();
   const [files, setFiles] = useState<CloudFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<{ name: string; data: string } | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<CloudFile | null>(null);
-  const [password, setPassword] = useState("");
 
   const loadFiles = async () => {
     try {
       setLoading(true);
-      console.log('CloudFiles: Loading files from Backblaze...');
       
       const { data, error } = await functions.invoke('list-backblaze-files');
-
-      console.log('CloudFiles: Response:', { data, error });
 
       if (error) {
         console.error('CloudFiles: Error loading files:', error);
@@ -61,7 +57,6 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
       }
 
       if (data?.success) {
-        console.log('CloudFiles: Setting files:', data.files);
         setFiles(data.files || []);
         
         // Show warning if Backblaze is not configured (but don't show toast - it's expected)
@@ -69,7 +64,6 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
           console.warn('CloudFiles:', data.message);
         }
       } else {
-        console.log('CloudFiles: No success flag or no files returned');
         setFiles([]);
       }
     } catch (error) {
@@ -139,30 +133,27 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
 
   const handleDeleteClick = (file: CloudFile) => {
     setFileToDelete(file);
-    setPassword("");
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
     if (!fileToDelete) return;
 
-    // Validate password
-    if (password !== "1523") {
-      toast.error("Forkert adgangskode");
+    // Deleting needs admin mode. The server enforces this too (see
+    // api/delete-backblaze-file.ts); this check just explains why.
+    if (!isAdminMode) {
+      toast.error("Slå admin-tilstand til for at slette filer");
       return;
     }
 
     const loadingToast = toast.loading("Sletter fil...");
     
     try {
-      console.log('Attempting to delete file:', fileToDelete.fileName);
       
       const { data, error } = await functions.invoke('delete-backblaze-file', {
         method: 'POST',
         body: { fileName: fileToDelete.fileName, fileId: fileToDelete.fileId }
       });
-
-      console.log('Delete response:', { data, error });
 
       if (error) {
         throw new Error(error.message);
@@ -195,7 +186,6 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
       // Close dialog first
       setDeleteDialogOpen(false);
       setFileToDelete(null);
-      setPassword("");
       
       // Then refresh the list
       await loadFiles();
@@ -221,100 +211,75 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
 
   if (loading) {
     return (
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Cloud Filer</CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-12" role="status" aria-label="Indlæser filer">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     );
   }
 
   return (
-    <Card className="shadow-lg">
-      <CardContent className="pt-6">
-        {files.length === 0 ? (
-          <>
-            {onBack && (
-              <div className="mb-4">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={onBack}
-                  className="gap-2"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Tilbage
-                </Button>
-              </div>
-            )}
-            <div className="text-center py-12 text-muted-foreground">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Ingen filer uploadet endnu</p>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="flex justify-between items-center mb-4">
-              {onBack && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={onBack}
-                  className="gap-2"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Tilbage
-                </Button>
-              )}
-              {!onBack && <div></div>}
-              <Button variant="outline" size="sm" onClick={loadFiles}>
-                Opdater
-              </Button>
-            </div>
-            <div className="space-y-3">
-             {files.map((file) => (
-              <div
-                key={file.fileId}
-                className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors gap-3"
-              >
-                <div className="flex items-center gap-3 flex-1 min-w-0 w-full sm:w-auto">
-                  <FileText className="h-5 w-5 text-primary flex-shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium truncate">{file.fileName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatFileSize(file.size)} • {formatDate(file.uploadTimestamp)}
-                    </p>
-                  </div>
+    <div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          {files.length === 1 ? "1 fil" : `${files.length} filer`}
+          {!isAdminMode && files.length > 0 && " · Sletning kræver admin-tilstand"}
+        </p>
+        <div className="flex gap-2">
+          {onBack && (
+            <Button variant="outline" size="sm" onClick={onBack} className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Tilbage
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={loadFiles} className="gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Opdater
+          </Button>
+        </div>
+      </div>
+
+      {files.length === 0 ? (
+        <div className="rounded-lg border border-dashed px-4 py-12 text-center text-muted-foreground">
+          <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
+          <p>Ingen filer uploadet endnu</p>
+        </div>
+      ) : (
+        <ul className="divide-y rounded-lg border">
+          {files.map((file) => (
+            <li key={file.fileId} className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:p-4">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <FileText className="h-5 w-5 shrink-0 text-primary" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold">{file.fileName}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {formatFileSize(file.size)} · {formatDate(file.uploadTimestamp)}
+                  </p>
                 </div>
-                <div className="flex gap-2 w-full sm:w-auto">
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="min-h-[44px] flex-1 gap-2 sm:flex-initial"
+                  onClick={() => handleEditFile(file)}
+                >
+                  <Eye className="h-4 w-4" />
+                  Åbn
+                </Button>
+                {isAdminMode && (
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="gap-2 flex-1 sm:flex-initial min-h-[44px]"
-                    onClick={() => handleEditFile(file)}
-                  >
-                    <Eye className="h-4 w-4" />
-                    Åbn
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2 text-destructive hover:text-destructive flex-1 sm:flex-initial min-h-[44px]"
+                    className="min-h-[44px] flex-1 gap-2 text-destructive hover:text-destructive sm:flex-initial"
                     onClick={() => handleDeleteClick(file)}
                   >
                     <Trash2 className="h-4 w-4" />
                     Slet
                   </Button>
-                </div>
+                )}
               </div>
-            ))}
-            </div>
-          </>
-        )}
-      </CardContent>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {selectedFile && (
         <ExcelViewer
@@ -327,37 +292,29 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
       )}
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="max-w-[95vw] sm:max-w-md p-4 sm:p-6">
+        <AlertDialogContent className="max-w-[95vw] p-5 sm:max-w-md sm:p-6">
           <AlertDialogHeader>
-            <AlertDialogTitle>Slet træner</AlertDialogTitle>
+            <AlertDialogTitle>Slet fil?</AlertDialogTitle>
             <AlertDialogDescription>
-              Er du sikker på, at du vil slette <strong>{fileToDelete?.fileName}</strong>?
-              Denne handling kan ikke fortrydes.
+              Er du sikker på, at du vil slette <strong>{fileToDelete?.fileName}</strong>? Filen og den frivilliges
+              oplysninger fjernes for alle, og det kan ikke fortrydes.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="py-4">
-            <label className="text-sm font-medium mb-2 block">Indtast adgangskode</label>
-            <Input
-              type="password"
-              inputMode="numeric"
-              maxLength={4}
-              value={password}
-              onChange={(e) => setPassword(e.target.value.replace(/\D/g, ''))}
-              placeholder="4-cifret kode"
-              className="max-w-[200px]"
-            />
-          </div>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
-            <AlertDialogCancel onClick={() => setPassword("")} className="w-full sm:w-auto">Annuller</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-row sm:gap-0">
+            <AlertDialogCancel className="w-full sm:w-auto">Annuller</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
+              onClick={(event) => {
+                // Keep the dialog open until the delete has finished or failed.
+                event.preventDefault();
+                handleDeleteConfirm();
+              }}
+              className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90 sm:w-auto"
             >
               Slet
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Card>
+    </div>
   );
 };

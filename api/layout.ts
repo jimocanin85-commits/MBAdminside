@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { supabaseAdmin as supabase } from './_lib/supabaseAdmin.js';
 import { applyCors, requireAuth } from './_lib/auth.js';
+import { requireAdminMode } from './_lib/adminMode.js';
 
 // Default section order, position, and custom sections
 const DEFAULT_SECTION_ORDER = ['frivillig', 'referater', 'frivilligfest', 'aarshjul'];
@@ -116,6 +117,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // POST /api/layout - Save section layout
   if (req.method === 'POST') {
+    // The layout is shared by every user, so changing it needs admin mode.
+    // This used to be gated only by a code checked in the browser.
+    if (!requireAdminMode(req, res, session)) return;
+
     try {
       const { sectionOrder, position, customSections, isLocked } = req.body;
 

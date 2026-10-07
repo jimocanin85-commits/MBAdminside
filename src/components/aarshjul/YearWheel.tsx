@@ -57,9 +57,14 @@ const YearWheel = ({ selectedMonth, onMonthSelect, tasks }: YearWheelProps) => {
   const currentMonth = new Date().getMonth();
 
   return (
-    <div className="relative w-full aspect-square max-w-[500px] mx-auto">
+    <div className="mx-auto w-full max-w-[520px]">
       {/* SVG Wheel */}
-      <svg viewBox="-160 -160 320 320" className="w-full h-full">
+      <svg
+        viewBox="-160 -160 320 320"
+        className="aspect-square w-full"
+        role="group"
+        aria-label="Årshjul - vælg en måned for at se dens opgaver"
+      >
         {/* Outer circle */}
         <circle
           cx="0"
@@ -76,19 +81,27 @@ const YearWheel = ({ selectedMonth, onMonthSelect, tasks }: YearWheelProps) => {
           cx="0"
           cy="0"
           r="60"
-          fill="currentColor"
-          className="text-primary/10"
+          className="fill-primary"
         />
 
         {/* Center text */}
         <text
           x="0"
-          y="0"
+          y="-4"
           textAnchor="middle"
           dominantBaseline="middle"
-          className="text-2xl font-bold fill-primary"
+          className="fill-primary-foreground font-display text-[34px] font-bold"
         >
           {new Date().getFullYear()}
+        </text>
+        <text
+          x="0"
+          y="20"
+          textAnchor="middle"
+          dominantBaseline="middle"
+          className="fill-primary-foreground text-[9px] font-medium"
+        >
+          {tasks.length} {tasks.length === 1 ? "opgave" : "opgaver"}
         </text>
 
         {/* Month segments */}
@@ -124,13 +137,13 @@ const YearWheel = ({ selectedMonth, onMonthSelect, tasks }: YearWheelProps) => {
           `;
 
           // Position for month label
-          const labelRadius = 105;
+          const labelRadius = 98;
           const labelAngle = ((index + 0.5) * 30 - 90) * (Math.PI / 180);
           const labelX = Math.cos(labelAngle) * labelRadius;
           const labelY = Math.sin(labelAngle) * labelRadius;
 
           // Position for task count badge
-          const badgeRadius = 130;
+          const badgeRadius = 129;
           const badgeX = Math.cos(labelAngle) * badgeRadius;
           const badgeY = Math.sin(labelAngle) * badgeRadius;
 
@@ -140,17 +153,27 @@ const YearWheel = ({ selectedMonth, onMonthSelect, tasks }: YearWheelProps) => {
               <path
                 d={path}
                 className={cn(
-                  "cursor-pointer transition-all duration-200",
+                  "cursor-pointer outline-none transition-colors duration-200 focus-visible:stroke-foreground focus-visible:[stroke-width:3]",
                   isSelected
-                    ? "fill-primary stroke-primary"
+                    ? "fill-foreground stroke-foreground"
                     : isHovered
-                    ? "fill-primary/30 stroke-primary/50"
+                    ? "fill-primary/25 stroke-primary/50"
                     : isCurrent
-                    ? "fill-primary/20 stroke-primary/30"
+                    ? "fill-primary/15 stroke-primary/40"
                     : "fill-muted stroke-border"
                 )}
                 strokeWidth="1"
+                role="button"
+                tabIndex={0}
+                aria-pressed={isSelected}
+                aria-label={`${month.fullName}: ${taskCount} ${taskCount === 1 ? "opgave" : "opgaver"}, ${completedCount} færdige`}
                 onClick={() => onMonthSelect(index)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onMonthSelect(index);
+                  }
+                }}
                 onMouseEnter={() => setHoveredMonth(index)}
                 onMouseLeave={() => setHoveredMonth(null)}
               />
@@ -162,8 +185,8 @@ const YearWheel = ({ selectedMonth, onMonthSelect, tasks }: YearWheelProps) => {
                 textAnchor="middle"
                 dominantBaseline="middle"
                 className={cn(
-                  "text-xs font-medium pointer-events-none select-none",
-                  isSelected ? "fill-primary-foreground" : "fill-foreground"
+                  "text-xs font-semibold uppercase pointer-events-none select-none",
+                  isSelected ? "fill-background" : "fill-foreground"
                 )}
               >
                 {month.name}
@@ -176,18 +199,23 @@ const YearWheel = ({ selectedMonth, onMonthSelect, tasks }: YearWheelProps) => {
                     cx={badgeX}
                     cy={badgeY}
                     r="10"
+                    strokeWidth="1.5"
                     className={cn(
+                      "pointer-events-none",
                       completedCount === taskCount
-                        ? "fill-green-500"
-                        : "fill-orange-500"
+                        ? "fill-success stroke-success"
+                        : "fill-card stroke-primary"
                     )}
                   />
                   <text
                     x={badgeX}
                     y={badgeY}
                     textAnchor="middle"
-                    dominantBaseline="middle"
-                    className="text-[10px] font-bold fill-white pointer-events-none"
+                    dominantBaseline="central"
+                    className={cn(
+                      "text-[10px] font-bold pointer-events-none",
+                      completedCount === taskCount ? "fill-success-foreground" : "fill-primary"
+                    )}
                   >
                     {taskCount}
                   </text>
@@ -221,14 +249,18 @@ const YearWheel = ({ selectedMonth, onMonthSelect, tasks }: YearWheelProps) => {
       </svg>
 
       {/* Legend */}
-      <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-4 text-xs text-muted-foreground">
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded-full bg-orange-500" />
-          <span>Igangværende</span>
+      <div className="mt-2 flex flex-wrap justify-center gap-x-5 gap-y-1 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <div className="h-3.5 w-3.5 rounded-full border-2 border-primary bg-card" />
+          <span>Åbne opgaver</span>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded-full bg-green-500" />
-          <span>Færdig</span>
+        <div className="flex items-center gap-2">
+          <div className="h-3.5 w-3.5 rounded-full bg-success" />
+          <span>Alle færdige</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-3.5 w-3.5 rounded-full bg-foreground" />
+          <span>Valgt måned</span>
         </div>
       </div>
     </div>
