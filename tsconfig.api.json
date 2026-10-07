@@ -1,0 +1,17 @@
+{
+  // Type-check for the serverless functions in api/ (used by `npm run typecheck`).
+  // Kept as loose as the settings Vercel compiles them with, so a pass here
+  // means the same as a pass there.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["api/**/*.ts"]
+}

@@ -1,0 +1,40 @@
+# Runs on every pull request and on every change to main.
+# A red result here means the site would not build or deploy - fix it before merging.
+name: Tjek
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Byg og typetjek
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Installér pakker
+        run: npm ci
+
+      - name: Højst 12 serverfunktioner
+        run: npm run check:functions
+
+      - name: Typetjek
+        run: npm run typecheck
+
+      - name: Byg
+        run: npm run build

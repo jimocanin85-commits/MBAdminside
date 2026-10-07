@@ -15,7 +15,6 @@ This guide covers multiple ways to deploy your project so it can be accessed ext
    - `BACKBLAZE_KEY_ID` - Backblaze B2 Key ID (required for file storage)
    - `BACKBLAZE_APPLICATION_KEY` - Backblaze B2 Application Key (required for file storage)
    - `BACKBLAZE_BUCKET_NAME` - Backblaze B2 Bucket Name (required for file storage)
-   - `DATABASE_URL` - Neon PostgreSQL connection string (optional, for database features)
 6. Click "Deploy"
 
 **Note:** See [BACKBLAZE_SETUP.md](./BACKBLAZE_SETUP.md) for detailed Backblaze setup instructions.
@@ -116,7 +115,6 @@ Make sure to set these environment variables in your hosting platform:
 - `BACKBLAZE_BUCKET_NAME` - Your Backblaze B2 Bucket Name
 
 ### Optional (for database features)
-- `DATABASE_URL` - Neon PostgreSQL connection string
 
 **See [BACKBLAZE_SETUP.md](./BACKBLAZE_SETUP.md) for detailed setup instructions.**
 
