@@ -528,7 +528,8 @@ const ExitForm = ({ open, onOpenChange, onSuccess }: ExitFormProps) => {
       onOpenChange(false);
     } catch (error) {
       console.error('Error processing exit:', error);
-      toast.error('Kunne ikke behandle exit', { id: loadingToast });
+      const reason = error && typeof error === 'object' && 'message' in error ? String((error as { message: unknown }).message) : '';
+      toast.error('Exit-tjeklisten blev ikke gemt', { id: loadingToast, description: reason || undefined });
     } finally {
       setIsLoading(false);
     }

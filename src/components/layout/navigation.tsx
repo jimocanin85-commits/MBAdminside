@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import {
   CircleDot,
+  Database,
   FileText,
   FolderOpen,
   Home,
@@ -72,6 +73,7 @@ export const useNavigation = (): Navigation => {
         admin.push({ id: "brugere", label: "Brugere", icon: ShieldCheck, to: "/admin/brugere" });
       }
       admin.push({ id: "tilpas", label: "Tilpas portal", icon: SlidersHorizontal, to: "/admin/tilpas" });
+      admin.push({ id: "fillager", label: "Fillager", icon: Database, to: "/admin/fillager" });
     }
 
     return { main, admin };

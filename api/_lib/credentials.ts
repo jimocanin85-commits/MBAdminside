@@ -46,12 +46,14 @@ export async function verifyCredentials(username: string, password: string): Pro
     return { ok: false, reason: 'INVALID_CREDENTIALS' };
   }
 
+  const valid = await verifyPassword(trimmedPassword, user.password);
+  if (!valid) return { ok: false, reason: 'INVALID_CREDENTIALS' };
+
+  // Only said to someone who knows the password - otherwise anyone could
+  // find out which accounts exist by trying names.
   if (user.is_active === false) {
     return { ok: false, reason: 'USER_DISABLED', message: 'Denne bruger er deaktiveret' };
   }
-
-  const valid = await verifyPassword(trimmedPassword, user.password);
-  if (!valid) return { ok: false, reason: 'INVALID_CREDENTIALS' };
 
   return { ok: true, isAdmin: false };
 }

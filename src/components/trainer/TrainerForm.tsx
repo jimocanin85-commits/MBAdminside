@@ -235,17 +235,8 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
   };
 
   const handleSubmit = async (data: TrainerFormData) => {
+    const loadingToast = toast.loading("Opretter frivillig og gemmer filen...");
     try {
-      // Show loading toast
-      const loadingToast = toast.loading("Opretter træner og uploader til cloud...");
-      
-      // Submit trainer data locally first
-      onSubmit({
-        ...data,
-        createdAt: new Date(),
-        excelData: { data, checklist }
-      } as any);
-      
       // Generate Excel file for upload
       const wb = XLSX.utils.book_new();
       
@@ -308,20 +299,34 @@ const TrainerForm = ({ open, onOpenChange, onSubmit }: TrainerFormProps) => {
       
       toast.dismiss(loadingToast);
       
-      if (uploadError) {
+      if (uploadError || !uploadData?.success) {
+        // Nothing was saved. Keep the form open with everything still
+        // filled in, so it can be tried again without typing it all twice.
         console.error("Upload error:", uploadError);
-        toast.error("Træner oprettet, men upload til cloud fejlede");
-      } else {
-        toast.success("Træner oprettet og uploadet til cloud!");
+        toast.error("Den frivillige blev ikke gemt", {
+          description: `${uploadError?.message || "Filen kunne ikke gemmes"}. Det, du har skrevet, står her stadig - prøv igen.`,
+        });
+        return;
       }
+
+      // The file is stored - now add the volunteer to the list on this device.
+      onSubmit({
+        ...data,
+        createdAt: new Date(),
+        excelData: { data, checklist }
+      } as any);
+      toast.success("Frivillig oprettet og filen er gemt");
       
       // Reset form
       form.reset();
       setChecklist({});
       onOpenChange(false);
     } catch (error) {
+      toast.dismiss(loadingToast);
       console.error("Error creating trainer:", error);
-      toast.error("Fejl ved oprettelse af træner");
+      toast.error("Den frivillige blev ikke gemt", {
+        description: "Der opstod en fejl. Det, du har skrevet, står her stadig - prøv igen.",
+      });
     }
   };
 

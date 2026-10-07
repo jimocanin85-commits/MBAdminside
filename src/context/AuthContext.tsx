@@ -1,14 +1,26 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { apiFetch, setAdminToken } from "@/lib/api";
+import {
+  UNAUTHORIZED_EVENT,
+  apiFetch,
+  clearStoredSession,
+  getSessionId,
+  getStoredUser,
+  setAdminToken,
+  storeSession,
+} from "@/lib/api";
 
 /**
  * Login, session and admin-mode state for the whole app.
  *
- * This used to live inline in pages/AdminPortal.tsx next to the UI. The
- * behaviour is the same - one session per user, bound to one tab, ended
- * when the tab closes - but it is now in one place and every request
- * carries the session token.
+ * How a session behaves:
+ *  - It belongs to one tab and survives a reload of the page.
+ *  - Closing the tab forgets it on this device; the server ends it after 30
+ *    minutes without activity.
+ *  - One session per user. Logging in somewhere else ends the old one -
+ *    after the user has confirmed it (admin accounts: straight away).
+ *  - When the server stops accepting the session, the user is sent back to
+ *    the login page with an explanation.
  */
 
 // Kept in sync with ADMIN_USERS in api/_lib/auth.ts. Only used to decide
@@ -22,7 +34,13 @@ type AuthStatus = "loading" | "anonymous" | "authenticated";
 
 export type LoginResult =
   | { ok: true }
-  | { ok: false; reason: "INVALID" | "DISABLED" | "SESSION_EXISTS" | "NETWORK"; message: string };
+  | {
+      ok: false;
+      reason: "INVALID" | "DISABLED" | "SESSION_EXISTS" | "LOCKED" | "NETWORK";
+      message: string;
+      /** For SESSION_EXISTS: when the other session was last used (ISO time). */
+      otherSessionLastActive?: string;
+    };
 
 export type AdminUnlockResult = { ok: true } | { ok: false; message: string };
 
@@ -33,9 +51,10 @@ interface AuthContextValue {
   isAdmin: boolean;
   permissions: string[];
   hasPermission: (permission: string) => boolean;
-  /** Message to show above the login form (expired session, other tab...). */
+  /** Message to show above the login form (expired session, taken over...). */
   sessionMessage: string | null;
-  login: (username: string, password: string) => Promise<LoginResult>;
+  /** `takeOver` ends the user's session elsewhere and continues here. */
+  login: (username: string, password: string, options?: { takeOver?: boolean }) => Promise<LoginResult>;
   logout: () => Promise<void>;
   isAdminMode: boolean;
   unlockAdminMode: (code?: string) => Promise<AdminUnlockResult>;
@@ -44,7 +63,8 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// sessionStorage is per tab, so this id tells tabs apart.
+// One id per tab (sessionStorage), sent with the session so the server can
+// tell "the same tab coming back" from "another tab or device".
 const getBrowserId = () => {
   let browserId = sessionStorage.getItem("browserId");
   if (!browserId) {
@@ -57,11 +77,20 @@ const getBrowserId = () => {
 // The session id doubles as the bearer token, so it must be unguessable.
 const generateSessionId = () => `sess_${crypto.randomUUID()}`;
 
-const clearStoredSession = () => {
-  localStorage.removeItem("currentUser");
-  localStorage.removeItem("sessionId");
-  localStorage.removeItem("browserId");
-  localStorage.removeItem("isAdminMode");
+/** Ask the server whether this tab's session is still good. null = could not ask. */
+const validateSession = async (sessionId: string, username: string): Promise<{ valid: boolean; isAdmin?: boolean; message?: string } | null> => {
+  try {
+    const response = await fetch("/api/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "validate", sessionId, browserId: getBrowserId(), username }),
+    });
+    const result = await response.json();
+    if (typeof result.valid !== "boolean") return null;
+    return result;
+  } catch {
+    return null;
+  }
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -72,6 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [sessionMessage, setSessionMessage] = useState<string | null>(null);
   const [isAdminMode, setIsAdminMode] = useState(false);
   const adminTimer = useRef<number | null>(null);
+  const checkingSession = useRef(false);
 
   const lockAdminMode = useCallback(() => {
     if (adminTimer.current !== null) {
@@ -95,68 +125,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     [lockAdminMode],
   );
 
-  // Restore and validate a stored session on first load.
+  // Restore this tab's session on first load (for example after a reload).
   useEffect(() => {
     let cancelled = false;
 
     const restore = async () => {
-      // Admin mode never survives a reload.
-      localStorage.removeItem("isAdminMode");
-
-      let storedUser: string | null = null;
-      let storedSession: string | null = null;
-      let storedBrowserId: string | null = null;
-      try {
-        storedUser = localStorage.getItem("currentUser");
-        storedSession = localStorage.getItem("sessionId");
-        storedBrowserId = localStorage.getItem("browserId");
-      } catch {
-        // Storage unavailable - treat as logged out.
-      }
+      const storedUser = getStoredUser();
+      const storedSession = getSessionId();
 
       if (!storedUser || !storedSession) {
-        if (storedUser) localStorage.removeItem("currentUser");
+        clearStoredSession();
         if (!cancelled) setStatus("anonymous");
         return;
       }
 
-      const browserId = getBrowserId();
+      const check = await validateSession(storedSession, storedUser);
+      if (cancelled) return;
 
-      // A different tab is trying to reuse the session. Leave the stored
-      // session alone (the original tab still needs it) and ask for login.
-      if (storedBrowserId && storedBrowserId !== browserId) {
-        if (!cancelled) {
-          setSessionMessage("Log ud fra den anden fane/browser først for at kunne logge ind her.");
-          setStatus("anonymous");
-        }
+      if (check && check.valid === false) {
+        endSessionLocally(check.message || "Din session er udløbet. Log venligst ind igen.");
         return;
       }
 
-      let adminFromServer: boolean | null = null;
-      try {
-        const response = await apiFetch("/sessions", {
-          method: "POST",
-          body: JSON.stringify({
-            action: "validate",
-            sessionId: storedSession,
-            browserId,
-            username: storedUser,
-          }),
-        });
-        const result = await response.json();
-        if (!result.valid) {
-          if (!cancelled) endSessionLocally(result.message || "Din session er udløbet. Log venligst ind igen.");
-          return;
-        }
-        if (typeof result.isAdmin === "boolean") adminFromServer = result.isAdmin;
-      } catch {
-        // The server could not be reached. Keep the user signed in rather
-        // than locking them out; every later request is still checked.
-      }
-
-      if (cancelled) return;
+      // Valid - or the server could not be reached. In the second case keep
+      // the user signed in rather than locking them out; every later
+      // request is still checked by the server.
       setUsername(storedUser);
-      setIsAdmin(adminFromServer ?? ADMIN_USERS.includes(storedUser));
+      setIsAdmin(check && typeof check.isAdmin === "boolean" ? check.isAdmin : ADMIN_USERS.includes(storedUser));
       setStatus("authenticated");
     };
 
@@ -166,36 +161,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [endSessionLocally]);
 
-  // Heartbeat: keeps the session alive and notices when it was ended
-  // elsewhere (for example an admin unlocked it).
+  /**
+   * The server refused a request, or a heartbeat failed: find out whether
+   * the session really has ended, and if so return to the login page.
+   */
+  const confirmSessionEnded = useCallback(async () => {
+    if (checkingSession.current) return;
+    const sessionId = getSessionId();
+    const user = getStoredUser();
+    if (!sessionId || !user) return;
+
+    checkingSession.current = true;
+    try {
+      const check = await validateSession(sessionId, user);
+      // Only act on a clear "no". A brief server hiccup must not end a
+      // session that is still fine.
+      if (check && check.valid === false) {
+        endSessionLocally("Din session er afsluttet. Den er udløbet, eller du er logget ind et andet sted.");
+      }
+    } finally {
+      checkingSession.current = false;
+    }
+  }, [endSessionLocally]);
+
+  // Heartbeat: keeps the session alive while the tab is open.
   useEffect(() => {
     if (status !== "authenticated") return;
 
     const sendHeartbeat = async () => {
-      const sessionId = localStorage.getItem("sessionId");
+      const sessionId = getSessionId();
       if (!sessionId) return;
       try {
         const response = await apiFetch("/sessions", {
           method: "PUT",
           body: JSON.stringify({ sessionId, browserId: getBrowserId() }),
         });
-        if (response.status === 404) {
-          // Double-check before signing the user out, so a brief database
-          // hiccup on the server does not end a session that is still valid.
-          const check = await apiFetch("/sessions", {
-            method: "POST",
-            body: JSON.stringify({
-              action: "validate",
-              sessionId,
-              browserId: getBrowserId(),
-              username: localStorage.getItem("currentUser"),
-            }),
-          });
-          const result = await check.json();
-          if (check.ok && result.valid === false) {
-            endSessionLocally("Din session er blevet afsluttet. Muligvis har du logget ind et andet sted.");
-          }
-        }
+        if (response.status === 404) confirmSessionEnded();
       } catch {
         // Offline for a moment - try again on the next tick.
       }
@@ -204,26 +205,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     sendHeartbeat();
     const interval = window.setInterval(sendHeartbeat, 5 * 60 * 1000);
     return () => window.clearInterval(interval);
-  }, [status, endSessionLocally]);
+  }, [status, confirmSessionEnded]);
 
-  // End the session when the tab is closed.
+  // Any request answered with 401 while signed in.
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      const sessionId = localStorage.getItem("sessionId");
-      if (sessionId) {
-        // sendBeacon can only POST. Sending a JSON blob (not a bare string)
-        // lets the server parse the body and actually delete the session.
-        const payload = new Blob([JSON.stringify({ _method: "DELETE", sessionId })], {
-          type: "application/json",
-        });
-        navigator.sendBeacon("/api/sessions", payload);
-      }
-      clearStoredSession();
+    if (status !== "authenticated") return;
+    const handleUnauthorized = () => {
+      confirmSessionEnded();
     };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, []);
+    window.addEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+  }, [status, confirmSessionEnded]);
 
   // Load what the signed-in user may see.
   useEffect(() => {
@@ -269,65 +261,70 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [status, username, isAdmin]);
 
-  const login = useCallback(async (rawUsername: string, rawPassword: string): Promise<LoginResult> => {
-    const name = rawUsername.trim();
-    const password = rawPassword.trim();
+  const login = useCallback(
+    async (rawUsername: string, rawPassword: string, options?: { takeOver?: boolean }): Promise<LoginResult> => {
+      const name = rawUsername.trim();
+      const password = rawPassword.trim();
 
-    // One request: the server checks the credentials and, if they are
-    // right, creates the session. A failure here is a failed login - without
-    // a session no other request would be accepted anyway.
-    let adminAccount = false;
-    const sessionId = generateSessionId();
-    const browserId = getBrowserId();
-    try {
-      const response = await fetch("/api/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: name,
-          password,
-          sessionId,
-          browserId,
-          userAgent: navigator.userAgent,
-        }),
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok || !result.success) {
-        if (result.error === "SESSION_EXISTS") {
-          return {
-            ok: false,
-            reason: "SESSION_EXISTS",
-            message: result.message || "Log ud fra den anden fane/browser først for at kunne logge ind her.",
-          };
+      // One request: the server checks the credentials and, if they are
+      // right, creates the session. A failure here is a failed login -
+      // without a session no other request would be accepted anyway.
+      const sessionId = generateSessionId();
+      let adminAccount = false;
+      try {
+        const response = await fetch("/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: name,
+            password,
+            sessionId,
+            browserId: getBrowserId(),
+            userAgent: navigator.userAgent,
+            takeOver: options?.takeOver === true,
+          }),
+        });
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok || !result.success) {
+          if (result.error === "SESSION_EXISTS") {
+            return {
+              ok: false,
+              reason: "SESSION_EXISTS",
+              message: result.message || "Du er allerede logget ind i en anden fane eller på en anden enhed.",
+              otherSessionLastActive: result.existingSession?.lastActivity,
+            };
+          }
+          if (result.error === "USER_DISABLED") {
+            return { ok: false, reason: "DISABLED", message: result.message || "Denne bruger er deaktiveret" };
+          }
+          if (response.status === 429) {
+            return { ok: false, reason: "LOCKED", message: result.message || "For mange forkerte forsøg. Prøv igen senere." };
+          }
+          if (response.status === 400 || response.status === 401) {
+            return { ok: false, reason: "INVALID", message: "Forkert brugernavn eller adgangskode" };
+          }
+          return { ok: false, reason: "NETWORK", message: "Serveren kunne ikke logge dig ind lige nu. Prøv igen." };
         }
-        if (result.error === "USER_DISABLED") {
-          return { ok: false, reason: "DISABLED", message: result.message || "Denne bruger er deaktiveret" };
-        }
-        if (response.status === 400 || response.status === 401) {
-          return { ok: false, reason: "INVALID", message: "Forkert brugernavn eller adgangskode" };
-        }
-        return { ok: false, reason: "NETWORK", message: "Serveren kunne ikke logge dig ind lige nu. Prøv igen." };
+
+        adminAccount = typeof result.isAdmin === "boolean" ? result.isAdmin : ADMIN_USERS.includes(name);
+        // The same tab reconnecting gets its existing session back.
+        storeSession(name, (result.data && result.data.session_id) || sessionId);
+      } catch {
+        return { ok: false, reason: "NETWORK", message: "Kunne ikke forbinde til serveren. Prøv igen." };
       }
 
-      adminAccount = typeof result.isAdmin === "boolean" ? result.isAdmin : ADMIN_USERS.includes(name);
-      // The same tab reconnecting gets its existing session back.
-      const activeSessionId = (result.data && result.data.session_id) || sessionId;
-      localStorage.setItem("currentUser", name);
-      localStorage.setItem("sessionId", activeSessionId);
-      localStorage.setItem("browserId", browserId);
-    } catch {
-      return { ok: false, reason: "NETWORK", message: "Kunne ikke forbinde til serveren. Prøv igen." };
-    }
-
-    setSessionMessage(null);
-    setUsername(name);
-    setIsAdmin(adminAccount);
-    setStatus("authenticated");
-    return { ok: true };
-  }, []);
+      setSessionMessage(null);
+      setUsername(name);
+      setIsAdmin(adminAccount);
+      setStatus("authenticated");
+      return { ok: true };
+    },
+    [],
+  );
 
   const logout = useCallback(async () => {
-    const sessionId = localStorage.getItem("sessionId");
+    const sessionId = getSessionId();
     if (sessionId) {
       try {
         await apiFetch("/sessions", { method: "DELETE", body: JSON.stringify({ sessionId }) });

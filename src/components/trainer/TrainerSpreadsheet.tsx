@@ -258,17 +258,9 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
       
       const fileName = `${editableData.navn.replace(/\s+/g, '_')}.xlsx`;
       
-      // Step 1: Delete all existing versions first
-      try {
-        await functions.invoke('delete-backblaze-file', {
-          body: { fileName }
-        });
-      } catch (deleteError) {
-        // Ignore if file doesn't exist yet
-        console.log("No existing file to delete, proceeding with upload");
-      }
-      
-      // Step 2: Generate and upload the new Excel file
+      // Generate and upload the new Excel file. The new version replaces the
+      // old one in the file list; nothing is deleted first, so a failed
+      // upload can never leave the volunteer without a file.
       const wb = XLSX.utils.book_new();
       
       const excelData: any[][] = [
@@ -332,6 +324,8 @@ const TrainerSpreadsheet = ({ open, onOpenChange, trainer, onSave }: TrainerSpre
         toast.success("Gemt og uploadet til Cloud Files!");
         onSave(updatedTrainer);
         onOpenChange(false);
+      } else {
+        toast.error("Kunne ikke uploade til Cloud Files", { description: "Serveren bekræftede ikke, at filen blev gemt." });
       }
     } catch (error) {
       toast.dismiss();

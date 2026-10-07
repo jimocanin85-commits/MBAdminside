@@ -41,12 +41,6 @@ const MONTHS = [
   "Juli", "August", "September", "Oktober", "November", "December"
 ];
 
-interface SystemUserEmails {
-  [username: string]: string;
-}
-
-const SYSTEM_EMAILS_KEY = 'systemUserEmails';
-
 const AddTaskModal = ({ 
   open, 
   onOpenChange, 
@@ -61,7 +55,6 @@ const AddTaskModal = ({
   const [newSubtask, setNewSubtask] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
-  const [systemUserEmails, setSystemUserEmails] = useState<SystemUserEmails>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
   const [editingSubtaskTitle, setEditingSubtaskTitle] = useState("");
@@ -136,16 +129,6 @@ const AddTaskModal = ({
         setAvailableUsers(JSON.parse(customUsersJson));
       }
     }
-
-    // Load system user emails
-    try {
-      const storedEmails = localStorage.getItem(SYSTEM_EMAILS_KEY);
-      if (storedEmails) {
-        setSystemUserEmails(JSON.parse(storedEmails));
-      }
-    } catch (error) {
-      console.error('Error loading system user emails:', error);
-    }
   };
 
   const handleAddSubtask = () => {
@@ -173,45 +156,18 @@ const AddTaskModal = ({
     );
   };
 
-  // Send email notifications to assigned users
+  // Tell newly assigned users by e-mail. Only the usernames are sent; the
+  // server looks up each user's address itself, so mail can only go to
+  // people who are users of the portal.
   const sendNotifications = async (taskTitle: string, taskDescription: string | undefined, newlyAssignedUsers: string[]) => {
     if (newlyAssignedUsers.length === 0) return;
 
-    // Build recipient list with emails
-    const recipients: { email: string; name: string }[] = [];
-
-    for (const username of newlyAssignedUsers) {
-      // Check if it's a system user with email
-      if (systemUsers.includes(username) && systemUserEmails[username]) {
-        recipients.push({
-          email: systemUserEmails[username],
-          name: username
-        });
-        continue;
-      }
-
-      // Check custom users for email
-      const customUser = availableUsers.find(u => u.username === username);
-      if (customUser && customUser.email) {
-        recipients.push({
-          email: customUser.email,
-          name: `${customUser.firstName} ${customUser.lastName}`
-        });
-      }
-    }
-
-    if (recipients.length === 0) return;
-
     try {
-      const response = await fetch('/api/send-notification', {
+      const response = await apiFetch('/send-notification', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('sessionId')}`
-        },
         body: JSON.stringify({
           type: 'task_assigned',
-          recipients,
+          recipients: newlyAssignedUsers,
           data: {
             taskTitle,
             taskDescription,
@@ -221,9 +177,10 @@ const AddTaskModal = ({
       });
 
       const result = await response.json();
-      
-      if (result.sent) {
-        toast.success(`Email notifikation sendt til ${recipients.length} bruger(e)`);
+
+      const count = result.details?.successful || 0;
+      if (result.sent && count > 0) {
+        toast.success(`Email notifikation sendt til ${count} bruger(e)`);
       }
     } catch (error) {
       console.error('Error sending notifications:', error);

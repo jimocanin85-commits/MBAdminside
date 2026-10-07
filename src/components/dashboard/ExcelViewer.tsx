@@ -122,6 +122,8 @@ export const ExcelViewer = ({ open, onOpenChange, fileName, fileData, onSaved }:
         });
         onSaved?.();
         onOpenChange(false);
+      } else {
+        toast.error("Gem fejlede", { description: "Serveren bekræftede ikke, at filen blev gemt." });
       }
     } catch (error) {
       toast.dismiss();

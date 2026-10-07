@@ -15,6 +15,7 @@ import LoginPage from "@/pages/LoginPage";
 import NotFound from "@/pages/NotFound";
 import Referater from "@/pages/Referater";
 import Brugere from "@/pages/admin/Brugere";
+import Fillager from "@/pages/admin/Fillager";
 import Tilpas from "@/pages/admin/Tilpas";
 
 const queryClient = new QueryClient({
@@ -150,6 +151,14 @@ const Portal = () => {
           element={
             <AdminRoute adminAccountOnly>
               <Brugere />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="admin/fillager"
+          element={
+            <AdminRoute>
+              <Fillager />
             </AdminRoute>
           }
         />

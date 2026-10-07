@@ -41,37 +41,36 @@ Efter at have tilføjet environment variables skal du redeploye:
 3. Klik på de tre prikker (⋯) → **Redeploy**
 4. Eller push en ny commit til din repository
 
-### Trin 4: Verificer
+### Trin 4: Tjek at det virker
 
-Efter redeploy, tjek om det virker:
+1. Log ind i portalen, og slå **admin-tilstand** til (brugermenuen nederst i venstre side).
+2. Vælg **Fillager** i menuen under "Admin", og tryk på **Kør tjek**.
+3. Tjekket gemmer en lille testfil i mappen `Systemtjek/`, henter den igen, sammenligner indholdet og
+   sletter den. Det tæller også de frivillig-filer og referater, der ligger der i forvejen (de ændres ikke).
+4. Når alle trin er grønne, virker fillageret. Er et trin rødt, står årsagen ved trinnet.
 
-1. Åbn din app i browseren
-2. Gå til Cloud Files sektionen
-3. Du skulle nu kunne se filer fra Backblaze (eller en tom liste hvis der ikke er nogen filer)
+Tjekket bruger præcis den kode, portalen selv gemmer og henter filer med (`api/_lib/backblaze.ts`).
+Kør det hver gang en nøgle eller en indstilling er ændret.
 
-## Debugging
+## Hvilken nøgle skal bruges?
 
-Hvis det stadig ikke virker, kan du tjekke logs:
+- Opret nøglen under **Application Keys** hos Backblaze med **Read and Write** til klubbens bucket.
+- Lad **File name prefix** stå tomt. Portalen bruger både `Frivillige/` og `Referater/`.
+- En nøgle, der kun gælder én bucket, er den anbefalede slags, og den virker.
+- En nøgle må aldrig skrives i en fil i dette repository, i en mail eller i en besked. Den hører kun
+  hjemme i Vercel.
 
-1. Gå til Vercel dashboard → **Deployments**
-2. Klik på den seneste deployment
-3. Gå til **Functions** tab
-4. Klik på `api/list-backblaze-files`
-5. Se **Logs** for at se hvilke environment variables der faktisk læses
+## Hvis tjekket er rødt
 
-Du skulle se noget lignende:
-```
-Environment check: {
-  hasKeyId: true,
-  hasApplicationKey: true,
-  hasBucketName: true,
-  keyIdLength: 24,
-  applicationKeyLength: 32,
-  bucketName: 'mb-adminside-files'
-}
-```
+| Trin | Typisk årsag |
+|------|--------------|
+| Nøgler er sat i Vercel | En af de tre værdier mangler - navnet står ved trinnet. Husk Redeploy bagefter. |
+| Backblaze accepterer nøglen | Forkert Key ID eller Application Key, nøglen er slettet, eller den gælder en anden bucket end `BACKBLAZE_BUCKET_NAME`. |
+| Nøglen må læse, gemme og slette | Nøglen er oprettet som "Read Only" eller "Write Only". Opret en ny med "Read and Write". |
+| Nøglen når alle mapper | Nøglen har et "File name prefix". Opret en ny uden. |
+| En testfil kan gemmes / hentes / slettes | Se Backblazes egen besked ved trinnet. Tjek også "Caps & Alerts" hos Backblaze - et nået forbrugsloft stopper alt. |
 
-Hvis nogle af værdierne er `false` eller `0`, betyder det at environment variables ikke er sat op korrekt.
+Fejl skrives også i Vercels log (Deployments → den seneste → Functions) som `Storage error [...]`.
 
 ## Almindelige fejl
 

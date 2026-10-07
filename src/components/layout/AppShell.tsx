@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/context/AuthContext";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, getSessionId } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const sidebarLink =
@@ -131,7 +131,7 @@ const AppShell = () => {
   }, [isAdminMode]);
 
   const clearCache = async () => {
-    const sessionId = localStorage.getItem("sessionId");
+    const sessionId = getSessionId();
     if (sessionId) {
       try {
         await apiFetch("/sessions", { method: "DELETE", body: JSON.stringify({ sessionId }) });
@@ -146,6 +146,7 @@ const AppShell = () => {
         .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
     });
     localStorage.clear();
+    sessionStorage.clear();
     window.location.replace("/");
   };
 

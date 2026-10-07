@@ -37,7 +37,9 @@ interface ActiveSession {
 }
 
 const HARDCODED_USERS = ['admin', 'Brian']; // Admin and Brian are system users
-const SYSTEM_EMAILS_KEY = 'systemUserEmails';
+// Where the admin accounts' addresses used to be kept: in the browser, so
+// they only worked on the device they were typed on. Moved to the server.
+const OLD_SYSTEM_EMAILS_KEY = 'systemUserEmails';
 
 // API base URL
 const API_BASE = '/api';
@@ -83,6 +85,7 @@ const Brugere = () => {
           createdAt: new Date(user.createdAt)
         }));
         setUsers(usersWithDates);
+        await adoptSystemUserEmails(result.systemEmails || {});
         
         // Also sync to localStorage as backup
         localStorage.setItem('customUsers', JSON.stringify(result.data));
@@ -142,7 +145,6 @@ const Brugere = () => {
       if (useCloud && !cloudError) {
         const response = await apiFetch(`${API_BASE}/users`, {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('sessionId')}` },
           body: JSON.stringify({ id: user.id })
         });
         
@@ -175,7 +177,6 @@ const Brugere = () => {
       if (useCloud && !cloudError) {
         const response = await apiFetch(`${API_BASE}/users`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('sessionId')}` },
           body: JSON.stringify({ id: user.id, isActive: false })
         });
         
@@ -210,7 +211,6 @@ const Brugere = () => {
       if (useCloud && !cloudError) {
         const response = await apiFetch(`${API_BASE}/users`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('sessionId')}` },
           body: JSON.stringify({ id: user.id, isActive: true })
         });
         
@@ -261,7 +261,6 @@ const Brugere = () => {
         try {
           const response = await apiFetch(`${API_BASE}/users`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('sessionId')}` },
             body: JSON.stringify({
               firstName: user.firstName,
               lastName: user.lastName,
@@ -290,16 +289,33 @@ const Brugere = () => {
     }
   };
 
-  // Load system user emails from localStorage
-  const loadSystemUserEmails = () => {
+  // The admin accounts' notification addresses live on the server. If this
+  // browser still holds addresses from the old version that the server does
+  // not know, send them up once and then drop the local copy.
+  const adoptSystemUserEmails = async (fromServer: SystemUserEmails) => {
+    let emails = { ...fromServer };
     try {
-      const stored = localStorage.getItem(SYSTEM_EMAILS_KEY);
-      if (stored) {
-        setSystemUserEmails(JSON.parse(stored));
+      const old: SystemUserEmails = JSON.parse(localStorage.getItem(OLD_SYSTEM_EMAILS_KEY) || '{}');
+      let allMoved = true;
+      for (const name of HARDCODED_USERS) {
+        const address = typeof old[name] === 'string' ? old[name].trim() : '';
+        if (!address || emails[name]) continue;
+        const response = await apiFetch(`${API_BASE}/users`, {
+          method: 'PUT',
+          body: JSON.stringify({ systemUser: name, email: address })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (response.ok && result.success) {
+          emails = result.systemEmails || { ...emails, [name]: address };
+        } else {
+          allMoved = false;
+        }
       }
+      if (allMoved) localStorage.removeItem(OLD_SYSTEM_EMAILS_KEY);
     } catch (error) {
-      console.error('Error loading system user emails:', error);
+      console.error('Error moving system user emails to the server:', error);
     }
+    setSystemUserEmails(emails);
   };
 
   // Load active sessions
@@ -325,13 +341,9 @@ const Brugere = () => {
     try {
       const response = await apiFetch(`${API_BASE}/sessions`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('sessionId')}` },
         body: JSON.stringify({
           action: 'unlock',
-          targetUsername: session.username,
-          // The server verifies THIS is an admin's own active session
-          // before allowing it to unlock someone else's session.
-          sessionId: localStorage.getItem('sessionId')
+          targetUsername: session.username
         })
       });
 
@@ -365,12 +377,25 @@ const Brugere = () => {
     return `${diffDays} dage siden`;
   };
 
-  // Save system user email
-  const saveSystemUserEmail = (username: string, email: string) => {
-    const updated = { ...systemUserEmails, [username]: email };
-    setSystemUserEmails(updated);
-    localStorage.setItem(SYSTEM_EMAILS_KEY, JSON.stringify(updated));
-    toast.success(`Email for "${username}" er gemt!`);
+  // Save system user email (on the server, so it works from every device)
+  const saveSystemUserEmail = async (username: string, email: string): Promise<boolean> => {
+    try {
+      const response = await apiFetch(`${API_BASE}/users`, {
+        method: 'PUT',
+        body: JSON.stringify({ systemUser: username, email })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || result.error || 'Failed to save email');
+      }
+      setSystemUserEmails(result.systemEmails || { ...systemUserEmails, [username]: email });
+      toast.success(email ? `Email for "${username}" er gemt!` : `Email for "${username}" er fjernet`);
+      return true;
+    } catch (error) {
+      console.error('Error saving system user email:', error);
+      toast.error('Kunne ikke gemme email. Prøv igen.');
+      return false;
+    }
   };
 
   // Handle system user email edit
@@ -380,7 +405,7 @@ const Brugere = () => {
   };
 
   // Handle save system user email
-  const handleSaveSystemUserEmail = () => {
+  const handleSaveSystemUserEmail = async () => {
     if (!systemUserToEdit) return;
     
     // Email validation (allow empty)
@@ -392,7 +417,8 @@ const Brugere = () => {
       }
     }
     
-    saveSystemUserEmail(systemUserToEdit, editingSystemEmail.trim());
+    // Keep the dialog open if the address could not be saved.
+    if (!(await saveSystemUserEmail(systemUserToEdit, editingSystemEmail.trim()))) return;
     setSystemUserToEdit(null);
     setEditingSystemEmail("");
   };
@@ -400,7 +426,6 @@ const Brugere = () => {
   // Load users and sessions when the page opens
   useEffect(() => {
     loadUsers();
-    loadSystemUserEmails();
     loadActiveSessions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [useCloud]);

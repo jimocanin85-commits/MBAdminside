@@ -20,6 +20,11 @@ const REFERATER_FOLDER = /^Referater\/\d{4}$/;
 // this mostly documents the real limit rather than enforcing a new one.
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
+// Vercel also caps what a function may answer with at 4.5 MB, and a file
+// grows by a third when it is sent as base64. A bigger file (one that was
+// put in the bucket by other means) cannot be handed over through the portal.
+export const MAX_DOWNLOAD_BYTES = 3_300_000;
+
 /** Which section a stored file belongs to, from its full name in the bucket. */
 export function sectionForFile(fullName: string): Permission | null {
   if (fullName.startsWith(`${VOLUNTEER_FOLDER}/`)) return 'frivillig';
@@ -70,23 +75,4 @@ export function resolveUploadTarget(folder: unknown, fileName: unknown): UploadT
 /** Backblaze file ids are opaque tokens; reject anything that is not one. */
 export function isValidFileId(fileId: unknown): fileId is string {
   return typeof fileId === 'string' && /^[A-Za-z0-9_\-:.]{10,200}$/.test(fileId);
-}
-
-/**
- * Look up a stored file's real full name from its id. The browser only
- * knows the display name, so the server must not trust a name sent by it.
- */
-export async function getStoredFileName(
-  apiUrl: string,
-  authorizationToken: string,
-  fileId: string
-): Promise<string | null> {
-  const response = await fetch(`${apiUrl}/b2api/v2/b2_get_file_info`, {
-    method: 'POST',
-    headers: { 'Authorization': authorizationToken, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fileId }),
-  });
-  if (!response.ok) return null;
-  const info = await response.json();
-  return typeof info.fileName === 'string' ? info.fileName : null;
 }

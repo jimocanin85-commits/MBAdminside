@@ -6,28 +6,48 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 
+// "kl. 14.32" for the time the other session was last used.
+const formatLastActive = (iso?: string): string | null => {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return `kl. ${String(date.getHours()).padStart(2, "0")}.${String(date.getMinutes()).padStart(2, "0")}`;
+};
+
 const LoginPage = () => {
   const { login, sessionMessage } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Set when the user is already logged in somewhere else: they can choose
+  // to end that session and continue here.
+  const [otherSession, setOtherSession] = useState<{ lastActive: string | null } | null>(null);
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const submit = async (takeOver: boolean) => {
     if (isSubmitting) return;
 
     setIsSubmitting(true);
     setError(null);
-    const result = await login(username, password);
+    const result = await login(username, password, { takeOver });
     if (result.ok === false) {
-      setError(result.message);
+      if (result.reason === "SESSION_EXISTS") {
+        setOtherSession({ lastActive: formatLastActive(result.otherSessionLastActive) });
+      } else {
+        setOtherSession(null);
+        setError(result.message);
+      }
       setIsSubmitting(false);
     }
     // On success this page is replaced by the portal.
   };
 
-  const notice = error || sessionMessage;
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    submit(false);
+  };
+
+  const notice = otherSession ? null : error || sessionMessage;
 
   return (
     <div className="flex min-h-screen flex-col bg-background md:flex-row">
@@ -74,6 +94,35 @@ const LoginPage = () => {
             </div>
           )}
 
+          {otherSession && (
+            <div role="alert" className="space-y-4 rounded-lg border border-primary/40 bg-accent p-4 text-accent-foreground">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                <div className="space-y-1 text-sm">
+                  <p className="font-semibold">Du er allerede logget ind et andet sted</p>
+                  <p>
+                    {otherSession.lastActive ? `Sidst brugt ${otherSession.lastActive}. ` : ""}
+                    Fortsætter du her, bliver du logget ud det andet sted.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button type="button" className="sm:flex-1" disabled={isSubmitting} onClick={() => submit(true)}>
+                  {isSubmitting ? "Logger ind..." : "Fortsæt her"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="sm:flex-1"
+                  disabled={isSubmitting}
+                  onClick={() => setOtherSession(null)}
+                >
+                  Annuller
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="username" className="text-[15px] font-semibold">
               Brugernavn
@@ -87,6 +136,7 @@ const LoginPage = () => {
               onChange={(event) => {
                 setUsername(event.target.value);
                 setError(null);
+                setOtherSession(null);
               }}
               autoComplete="username"
               autoCapitalize="none"
@@ -109,6 +159,7 @@ const LoginPage = () => {
               onChange={(event) => {
                 setPassword(event.target.value);
                 setError(null);
+                setOtherSession(null);
               }}
               autoComplete="current-password"
               required
@@ -116,8 +167,8 @@ const LoginPage = () => {
             />
           </div>
 
-          <Button type="submit" size="lg" className="h-[52px] w-full text-[17px]" disabled={isSubmitting}>
-            {isSubmitting ? "Logger ind..." : "Log ind"}
+          <Button type="submit" size="lg" className="h-[52px] w-full text-[17px]" disabled={isSubmitting || otherSession !== null}>
+            {isSubmitting && !otherSession ? "Logger ind..." : "Log ind"}
           </Button>
 
           <p className="text-center text-sm text-muted-foreground">Glemt adgangskoden? Kontakt en administrator.</p>

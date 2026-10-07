@@ -98,6 +98,30 @@ Access is checked on the server, not just hidden in the menu:
 Deleting a file also needs admin mode. Uploads are only accepted into those two folders.
 The rules live in `api/_lib/auth.ts` (`requirePermission`) and `api/_lib/files.ts`.
 
+## Logging in
+
+- A login belongs to one browser tab and survives a reload. Closing the tab forgets it; the server
+  ends a session after 30 minutes without activity.
+- One session per user. Logging in somewhere else asks "continue here?" and then ends the other
+  session (the admin accounts skip the question). The tab that lost its session is returned to the
+  login page the next time it talks to the server.
+- Wrong passwords are counted (`api/_lib/loginGuard.ts`): 8 for the same user from the same address,
+  or 40 for the same user from anywhere, within 15 minutes, and further attempts are refused until
+  the 15 minutes have passed. The counts are kept in the `app_settings` table.
+- Task notifications are addressed by username; the server looks up the address
+  (`api/send-notification.ts`). The admin accounts' addresses are set under "Brugere" and stored on
+  the server.
+
+## File storage (Backblaze B2)
+
+- All Backblaze calls live in `api/_lib/backblaze.ts`; the file routes only decide who may do what.
+- "Fillager" in admin mode runs `POST /api/storage-check`: it saves, fetches and removes a test file
+  with that same code and reports each step. Run it after changing a key. See `BACKBLAZE_SETUP.md`.
+- A save is only reported as done when Backblaze has confirmed it. Uploads carry a checksum, lists
+  follow paging, deleting removes every stored version, and every call has a time limit.
+- Files pass through the server, and Vercel caps a request at 4.5 MB, so the practical limit is
+  about 3 MB per file.
+
 ## Checks before every deployment
 
 - `npm run check:functions` fails when `api/` holds more serverless functions than Vercel's plan

@@ -39,36 +39,33 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
   const [selectedFile, setSelectedFile] = useState<{ name: string; data: string } | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<CloudFile | null>(null);
+  // Why the list could not be fetched - shown instead of "no files", which
+  // would wrongly suggest that the storage is empty.
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadFiles = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       
       const { data, error } = await functions.invoke('list-backblaze-files');
 
       if (error) {
         console.error('CloudFiles: Error loading files:', error);
-        toast.error("Kunne ikke indlæse filer", {
-          description: typeof error === 'object' && error !== null && 'message' in error 
-            ? String(error.message) 
-            : String(error)
-        });
+        setFiles([]);
+        setLoadError(
+          typeof error === 'object' && error !== null && 'message' in error
+            ? String(error.message)
+            : 'Ukendt fejl'
+        );
         return;
       }
 
-      if (data?.success) {
-        setFiles(data.files || []);
-        
-        // Show warning if Backblaze is not configured (but don't show toast - it's expected)
-        if (data.error && data.message) {
-          console.warn('CloudFiles:', data.message);
-        }
-      } else {
-        setFiles([]);
-      }
+      setFiles(data?.success ? data.files || [] : []);
     } catch (error) {
       console.error('CloudFiles: Exception loading files:', error);
-      toast.error("Kunne ikke indlæse filer");
+      setFiles([]);
+      setLoadError('Kunne ikke forbinde til serveren');
     } finally {
       setLoading(false);
     }
@@ -221,7 +218,7 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          {files.length === 1 ? "1 fil" : `${files.length} filer`}
+          {loadError ? "Prøv igen om lidt" : files.length === 1 ? "1 fil" : `${files.length} filer`}
           {!isAdminMode && files.length > 0 && " · Sletning kræver admin-tilstand"}
         </p>
         <div className="flex gap-2">
@@ -238,7 +235,13 @@ export const CloudFiles = ({ onTrainerDeleted, onBack }: CloudFilesProps = {}) =
         </div>
       </div>
 
-      {files.length === 0 ? (
+      {loadError ? (
+        <div role="alert" className="rounded-lg border border-warning/40 px-4 py-8 text-center">
+          <p className="font-semibold">Filerne kunne ikke hentes</p>
+          <p className="mt-1 text-sm text-muted-foreground">{loadError}</p>
+          <p className="mt-1 text-sm text-muted-foreground">Det betyder ikke, at filerne er væk - de kan bare ikke vises lige nu.</p>
+        </div>
+      ) : files.length === 0 ? (
         <div className="rounded-lg border border-dashed px-4 py-12 text-center text-muted-foreground">
           <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
           <p>Ingen filer uploadet endnu</p>

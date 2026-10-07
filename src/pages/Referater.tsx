@@ -20,6 +20,9 @@ interface ReferatFile {
   downloadUrl: string;
 }
 
+// Vercel accepts 4.5 MB per request; base64 adds a third, which leaves 3 MB.
+const MAX_FILE_BYTES = 3 * 1024 * 1024;
+
 // Minutes are filed per year, from the first year in the archive up to now.
 const FIRST_YEAR = 2024;
 const currentYear = () => Math.max(new Date().getFullYear(), FIRST_YEAR);
@@ -31,6 +34,8 @@ const Referater = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
   const [viewingFileId, setViewingFileId] = useState<string | null>(null);
+  // Why the list could not be fetched - shown instead of "no minutes".
+  const [loadError, setLoadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -40,6 +45,7 @@ const Referater = () => {
 
   const loadFiles = async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const { data, error } = await functions.invoke('list-referater-files', {
         method: 'POST',
@@ -57,7 +63,9 @@ const Referater = () => {
       }
     } catch (error) {
       console.error('Error loading referater files:', error);
-      toast.error('Kunne ikke indlæse referater');
+      setLoadError(
+        error && typeof error === 'object' && 'message' in error ? String((error as { message: unknown }).message) : 'Ukendt fejl'
+      );
       setFiles([]);
     } finally {
       setIsLoading(false);
@@ -65,6 +73,12 @@ const Referater = () => {
   };
 
   const uploadSingleFile = async (file: File): Promise<void> => {
+    // The server cannot receive more than this in one request, so say it
+    // up front instead of failing halfway with an unclear error.
+    if (file.size > MAX_FILE_BYTES) {
+      throw new Error(`Filen er på ${(file.size / 1024 / 1024).toFixed(1)} MB. Den største fil, der kan uploades, er 3 MB.`);
+    }
+
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       
@@ -91,6 +105,10 @@ const Referater = () => {
             body: JSON.stringify(requestBody)
           });
 
+          if (response.status === 413) {
+            throw new Error('Filen er for stor til at blive uploadet (maks. 3 MB).');
+          }
+
           if (!response.ok) {
             let errorData;
             try {
@@ -100,7 +118,7 @@ const Referater = () => {
               errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
             }
             
-            const errorMessage = errorData.error || errorData.message || `Upload fejlede: ${response.status}`;
+            const errorMessage = errorData.message || errorData.error || `Upload fejlede: ${response.status}`;
             throw new Error(errorMessage);
           }
 
@@ -156,10 +174,16 @@ const Referater = () => {
       if (successCount > 0 && errorCount === 0) {
         toast.success(`${successCount} ${successCount === 1 ? 'fil' : 'filer'} uploadet!`);
       } else if (successCount > 0 && errorCount > 0) {
-        toast.warning(`${successCount} ${successCount === 1 ? 'fil' : 'filer'} uploadet, ${errorCount} ${errorCount === 1 ? 'fil' : 'filer'} fejlede`);
+        toast.warning(`${successCount} ${successCount === 1 ? 'fil' : 'filer'} uploadet, ${errorCount} ${errorCount === 1 ? 'fil' : 'filer'} blev ikke gemt`, {
+          description: errors.slice(0, 3).join(' · '),
+          duration: 12000,
+        });
         console.error('Upload errors:', errors);
       } else {
-        toast.error(`Alle ${totalFiles} ${fileCountText} fejlede`);
+        toast.error(totalFiles === 1 ? 'Filen blev ikke gemt' : `Ingen af de ${totalFiles} filer blev gemt`, {
+          description: errors.slice(0, 3).join(' · '),
+          duration: 12000,
+        });
         console.error('All uploads failed:', errors);
       }
 
@@ -203,7 +227,7 @@ const Referater = () => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `Download fejlede: ${response.status}`);
+        throw new Error(errorData.message || errorData.error || `Download fejlede: ${response.status}`);
       }
 
       const { data: base64Data, fileName: downloadedFileName } = await response.json();
@@ -584,6 +608,15 @@ const Referater = () => {
             <div className="flex items-center justify-center py-10 text-muted-foreground" role="status">
               <Loader2 className="h-6 w-6 animate-spin" />
               <span className="ml-2">Indlæser referater...</span>
+            </div>
+          ) : loadError ? (
+            <div role="alert" className="rounded-lg border border-warning/40 px-4 py-8 text-center">
+              <p className="font-semibold">Referaterne kunne ikke hentes</p>
+              <p className="mt-1 text-sm text-muted-foreground">{loadError}</p>
+              <p className="mt-1 text-sm text-muted-foreground">Det betyder ikke, at filerne er væk - de kan bare ikke vises lige nu.</p>
+              <Button variant="outline" className="mt-4" onClick={loadFiles}>
+                Prøv igen
+              </Button>
             </div>
           ) : files.length === 0 ? (
             <EmptyState>
