@@ -12,6 +12,19 @@
 > The same update moved the admin-mode code to the server
 > (`ADMIN_CODE_HASH`, see `.env.example` and `api/_lib/adminMode.ts`).
 > Where this document mentions `/api/login`, read `POST /api/sessions`.
+>
+> **Also on 2026-10-07:**
+> - The Backblaze key id and application key were written out in
+>   `VERCEL_ENV_SETUP.md` and two test scripts in this public repository.
+>   They have been removed from the files, but they remain in the git
+>   history: **create a new application key in Backblaze, delete the old
+>   one, and update the values in Vercel.**
+> - Section access (`frivillig`, `referater`, `aarshjul`) is now enforced by
+>   the API. Before, it only decided what the menu showed, so any logged-in
+>   user could list and download every file.
+> - Uploads are limited to `Frivillige/` and `Referater/<year>/`.
+> - `PUT /api/tasks` no longer accepts a whole year's tasks (it deleted the
+>   year and re-inserted it). Tasks are saved one at a time.
 
 This documents the auth/security fixes applied on top of the original
 codebase. Read this before deploying.

@@ -85,6 +85,31 @@ deleting files, logs and - for the admin accounts - user management.
   (see `.env.example`); if that variable is not set, only the admin accounts can use admin mode.
 - The server enforces it: saving the layout and deleting files are rejected without admin mode.
 
+## Who may do what
+
+Access is checked on the server, not just hidden in the menu:
+
+| Section (ticked off per user under "Brugere") | Server routes it opens |
+|---|---|
+| `frivillig` | volunteers' spreadsheets in `Frivillige/`: list, open, upload |
+| `referater` | minutes in `Referater/<year>/`: list, open, upload |
+| `aarshjul` | tasks and task notifications |
+
+Deleting a file also needs admin mode. Uploads are only accepted into those two folders.
+The rules live in `api/_lib/auth.ts` (`requirePermission`) and `api/_lib/files.ts`.
+
+## Checks before every deployment
+
+- `npm run check:functions` fails when `api/` holds more serverless functions than Vercel's plan
+  allows (12). It runs automatically before `npm run build`. Shared code belongs in `api/_lib/`,
+  which does not count.
+- `npm run typecheck` type-checks the app and the API.
+- `.github/workflows/ci.yml` runs both, plus the build, on every pull request and on every change
+  to `main`. A red result means the site would not deploy.
+
+Never write keys or passwords into a file in this repository, not even in a guide or a test
+script. They go in Vercel → Settings → Environment Variables (see `.env.example` for the names).
+
 ## Deployment
 
 Build the project for production:
