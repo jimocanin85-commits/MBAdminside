@@ -1,9 +1,7 @@
 /**
- * Shared credential verification, used by both api/login.ts (a pure
- * "are these credentials valid?" check the client uses before showing
- * success/failure) and api/sessions.ts (which MUST also verify credentials
- * itself - otherwise a client could skip /api/login entirely and POST
- * straight to /api/sessions with any username to mint a valid session).
+ * Credential verification for api/sessions.ts, which is the login endpoint:
+ * it calls verifyCredentials() before it creates a session, so nobody can
+ * mint a session for an arbitrary username without the right password.
  */
 import { supabaseAdmin as supabase } from './supabaseAdmin.js';
 import { verifyPassword } from './passwords.js';

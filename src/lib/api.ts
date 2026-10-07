@@ -1,7 +1,7 @@
 /**
  * One place for talking to /api.
  *
- * Every route except /api/login needs the caller's session as a bearer
+ * Every route except logging in needs the caller's session as a bearer
  * token (see api/_lib/auth.ts). Several call sites used to call fetch()
  * directly and forgot the header, so the server answered 401 and the UI
  * silently fell back to stale data. Use apiFetch() instead of fetch() for

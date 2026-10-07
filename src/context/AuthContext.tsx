@@ -273,28 +273,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const name = rawUsername.trim();
     const password = rawPassword.trim();
 
-    // Step 1: are the credentials right? Checked entirely on the server.
+    // One request: the server checks the credentials and, if they are
+    // right, creates the session. A failure here is a failed login - without
+    // a session no other request would be accepted anyway.
     let adminAccount = false;
-    try {
-      const response = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: name, password }),
-      });
-      const result = await response.json();
-      if (!response.ok || !result.success) {
-        if (result.error === "USER_DISABLED") {
-          return { ok: false, reason: "DISABLED", message: result.message || "Denne bruger er deaktiveret" };
-        }
-        return { ok: false, reason: "INVALID", message: "Forkert brugernavn eller adgangskode" };
-      }
-      adminAccount = result.isAdmin === true;
-    } catch {
-      return { ok: false, reason: "NETWORK", message: "Kunne ikke forbinde til serveren. Prøv igen." };
-    }
-
-    // Step 2: create the session. Without one no other request would be
-    // accepted, so a failure here is a failed login.
     const sessionId = generateSessionId();
     const browserId = getBrowserId();
     try {
@@ -307,11 +289,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           sessionId,
           browserId,
           userAgent: navigator.userAgent,
-          forceLogin: adminAccount,
         }),
       });
-      const result = await response.json();
-      if (!response.ok) {
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) {
         if (result.error === "SESSION_EXISTS") {
           return {
             ok: false,
@@ -319,9 +300,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             message: result.message || "Log ud fra den anden fane/browser først for at kunne logge ind her.",
           };
         }
-        return { ok: false, reason: "NETWORK", message: "Kunne ikke oprette en session. Prøv igen." };
+        if (result.error === "USER_DISABLED") {
+          return { ok: false, reason: "DISABLED", message: result.message || "Denne bruger er deaktiveret" };
+        }
+        if (response.status === 400 || response.status === 401) {
+          return { ok: false, reason: "INVALID", message: "Forkert brugernavn eller adgangskode" };
+        }
+        return { ok: false, reason: "NETWORK", message: "Serveren kunne ikke logge dig ind lige nu. Prøv igen." };
       }
 
+      adminAccount = typeof result.isAdmin === "boolean" ? result.isAdmin : ADMIN_USERS.includes(name);
       // The same tab reconnecting gets its existing session back.
       const activeSessionId = (result.data && result.data.session_id) || sessionId;
       localStorage.setItem("currentUser", name);

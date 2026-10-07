@@ -237,9 +237,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Username, sessionId, and browserId are required' });
       }
 
-      // Re-verify credentials here too (not just in /api/login). Without
-      // this, anyone could skip /api/login and POST straight here with an
-      // arbitrary username to mint themselves a valid session.
+      // This is the login endpoint: credentials are verified here, on the
+      // server, before any session is created. (There used to be a separate
+      // /api/login that checked the same credentials first; it was folded
+      // into this route so the project stays within Vercel's limit of 12
+      // serverless functions per deployment on the Hobby plan.)
       if (!password) {
         return res.status(400).json({ error: 'Password is required' });
       }
@@ -255,16 +257,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
 
+      const isAdmin = credCheck.isAdmin;
+      // Only the admin accounts may take over an existing session. The flag
+      // comes from the browser, so it is never trusted on its own.
+      const mayForceLogin = Boolean(forceLogin) && isAdmin;
+
       // Check if user already has an active session
       const existingSession = await getActiveSession(username);
       
-      if (existingSession && !forceLogin) {
+      if (existingSession && !mayForceLogin) {
         // Check if it's the same browser trying to reconnect
         if (existingSession.browser_id === browserId) {
           // Same browser - allow reconnection, update the session
           await updateSessionActivity(existingSession.session_id);
           return res.status(200).json({ 
             success: true, 
+            isAdmin,
             data: existingSession,
             message: 'Session genoprettet'
           });
@@ -318,14 +326,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           console.error('Error creating session:', error);
           // Fallback to in-memory
           inMemorySessions.push(newSession);
-          return res.status(201).json({ success: true, data: newSession });
+          return res.status(201).json({ success: true, isAdmin, data: newSession });
         }
 
-        return res.status(201).json({ success: true, data });
+        return res.status(201).json({ success: true, isAdmin, data });
       } else {
         // In-memory fallback
         inMemorySessions.push(newSession);
-        return res.status(201).json({ success: true, data: newSession });
+        return res.status(201).json({ success: true, isAdmin, data: newSession });
       }
     }
 
