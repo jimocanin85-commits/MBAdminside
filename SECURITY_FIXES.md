@@ -1,5 +1,18 @@
 # Security Fixes — 2026-09-24
 
+> **Update 2026-10-07 — these fixes were never live.** Every Vercel
+> deployment after the first fix failed, because `api/login.ts` was the
+> 13th serverless function and the Hobby plan allows 12 per deployment.
+> Production kept serving the February build. `api/login.ts` has now been
+> removed (`POST /api/sessions` was already verifying the same credentials
+> and is the login endpoint), which brings the project back to 12
+> functions. **The deploy checklist below still has to be completed before
+> merging to `main`**, or nobody will be able to log in.
+>
+> The same update moved the admin-mode code to the server
+> (`ADMIN_CODE_HASH`, see `.env.example` and `api/_lib/adminMode.ts`).
+> Where this document mentions `/api/login`, read `POST /api/sessions`.
+
 This documents the auth/security fixes applied on top of the original
 codebase. Read this before deploying.
 
@@ -56,7 +69,7 @@ codebase. Read this before deploying.
    Set the result as `ADMIN_PASSWORD_HASH` (for `admin`) and
    `BRIAN_PASSWORD_HASH` (for `Brian`) in Vercel → Settings → Environment
    Variables. **Pick new passwords while you're at it** — the old
-   hardcoded one (`Monne1935`) was visible in the public GitHub repo and
+   hardcoded one was visible in the public GitHub repo and
    must be considered compromised.
 
 2. **Set `ALLOWED_ORIGIN`** to your real domain(s), comma-separated, e.g.
